@@ -1,0 +1,5 @@
+from django.shortcuts import render
+
+# Create your views here.
+from f5restapi.f5views.f5_devicelist import f5_devicelist 
+
