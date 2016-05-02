@@ -10,3 +10,5 @@ USER_PASSWORD = "Skplanet8!"
 ENCAP_PASSWORD = "Adfakladjfqern@sdfjlaf1!"
 
 LOG_FILE = USER_F5_DIR + "access.log"
+
+THREAD_TIMEOUT = 1
