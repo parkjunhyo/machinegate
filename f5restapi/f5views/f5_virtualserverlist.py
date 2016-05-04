@@ -66,7 +66,7 @@ def f5_virtualserverlist(request,format=None):
 
       _contents_in_ = []
       fileindatabasedir = os.listdir(USER_DATABASES_DIR)
-      for _filename_ in os.listdir(USER_DATABASES_DIR):
+      for _filename_ in fileindatabasedir:
          if re.search("virtualserverlist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
             _contents_in_.append(get_virtualserverlist_name(_filename_))
       # return value 
@@ -94,16 +94,16 @@ def f5_virtualserverlist(request,format=None):
            stream = BytesIO(_string_contents_[0])
            _data_from_devicelist_db_= JSONParser().parse(stream)
 
-           # active server list
-           active_device_list = []           
+           # standby server list
+           standby_device_list = []           
            for _dict_information_ in _data_from_devicelist_db_:
-              if re.match('active',str(_dict_information_[u'failover'])):
-                 if str(_dict_information_[u'ip']) not in active_device_list:
-                    active_device_list.append(str(_dict_information_[u'ip']))
+              if re.match('standby',str(_dict_information_[u'failover'])):
+                 if str(_dict_information_[u'ip']) not in standby_device_list:
+                    standby_device_list.append(str(_dict_information_[u'ip']))
 
            # send curl command to device
            _threads_ = []
-           for _ip_address_ in active_device_list:
+           for _ip_address_ in standby_device_list:
               th = threading.Thread(target=transfer_crul_to_get_virtualserver_info, args=(_ip_address_,))
               th.start()
               _threads_.append(th)
@@ -113,7 +113,7 @@ def f5_virtualserverlist(request,format=None):
            # get the result data
            _contents_in_ = []
            fileindatabasedir = os.listdir(USER_DATABASES_DIR)
-           for _filename_ in os.listdir(USER_DATABASES_DIR):
+           for _filename_ in fileindatabasedir:
                if re.search("virtualserverlist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
                   _contents_in_.append(get_virtualserverlist_name(_filename_))
             
