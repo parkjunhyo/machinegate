@@ -137,7 +137,6 @@ def get_poolinfo():
                 #
                 _Re_Poolinfo_[str(_dict_Data_[u'name'])] = _dict_Data_[u'poolmember_status']
 
-             print _Re_Poolinfo_
              # Virtual Server Information
              _filename_for_virtualserver_ = USER_DATABASES_DIR+"virtualserverlist."+_database_target_+".txt"
              f = open(_filename_for_virtualserver_,"r")
