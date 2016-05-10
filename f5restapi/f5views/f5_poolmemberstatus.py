@@ -57,7 +57,9 @@ def f5_poolmemberstatus(request,poolname,format=None):
       data_from_file = JSONParser().parse(stream)
 
       _standby_list_ = []
+      _device_list_ = {}
       for _dict_Data_ in data_from_file:
+          _device_list_[str(_dict_Data_[u'ip'])] = _dict_Data_[u'name'] 
           if (_dict_Data_[u'ip'] in _matched_all_.keys() or _dict_Data_[str(u'ip')] in _matched_all_.keys()) and (re.match(_dict_Data_[u'failover'],'standby') or re.match(_dict_Data_[str(u'failover')],'standby')):
              _standby_list_.append(str(_dict_Data_[u'ip']))
     
@@ -72,6 +74,7 @@ def f5_poolmemberstatus(request,poolname,format=None):
           for _dict_Data_ in data_from_file[u'items']:
               _member_status_[str(_dict_Data_[u'name'])] = str(_dict_Data_[u'state'])
           _status_all_[_matched_all_[str(_standby_ip_)]] = _member_status_
+          _status_all_[str(_standby_ip_)] = _device_list_[str(_standby_ip_)]
 
       # get the result data and return
       message = _status_all_
