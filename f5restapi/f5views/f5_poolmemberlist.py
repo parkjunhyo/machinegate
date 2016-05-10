@@ -77,11 +77,14 @@ def transfer_crul_to_get_poolmember_info(_DEVICE_IP_):
                 data_from_file = JSONParser().parse(stream)
 
                 POOLMEMBER_list = []
+                POOLMEMBER_status = {}
                 for _POOLDATA_ in data_from_file[u'items']:
                     if str(_POOLDATA_[u'fullPath']) not in POOLMEMBER_list:
                        POOLMEMBER_list.append(str(_POOLDATA_[u'fullPath']))
+                       POOLMEMBER_status[str(_POOLDATA_[u'fullPath'])] = str(_POOLDATA_[u'state'])
 
                 dictionary_tray['poolmember_names'] = POOLMEMBER_list
+                dictionary_tray['poolmember_status'] = POOLMEMBER_status
                 _temp_list_box_.append(dictionary_tray)
 
           # database for pool information create
@@ -96,44 +99,63 @@ def transfer_crul_to_get_poolmember_info(_DEVICE_IP_):
   
 def get_poolinfo():
 
-    fileindatabasedir = os.listdir(USER_DATABASES_DIR)
+    # read db file
+    _devicelist_db_ = USER_DATABASES_DIR + "devicelist.txt"
+    f = open(_devicelist_db_,'r')
+    _string_contents_ = f.readlines()
+    f.close()
+    stream = BytesIO(_string_contents_[0])
+    _data_from_devicelist_db_= JSONParser().parse(stream)
 
+    # standby server list
+    standby_device_list = []           
+    for _dict_information_ in _data_from_devicelist_db_:
+        if re.match('standby',str(_dict_information_[u'failover'])):
+           if str(_dict_information_[u'ip']) not in standby_device_list:
+              standby_device_list.append(str(_dict_information_[u'ip']))
+
+    fileindatabasedir = os.listdir(USER_DATABASES_DIR)
     # re-arrange the pool information
     virtualserver_and_pool_info_dict = {}
     for _filename_ in fileindatabasedir:
        if re.search("poollist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
 
           _database_target_ = re.search("[0-9]+.[0-9]+.[0-9]+.[0-9]+",_filename_).group(0)
+          if str(_database_target_).strip() in standby_device_list:
 
-          # Pool information Re-arrange.
-          f = open(USER_DATABASES_DIR+_filename_,"r")
-          _contents_ = f.readlines()
-          f.close()
-          stream = BytesIO(_contents_[0])
-          data_from_file = JSONParser().parse(stream)
+             # Pool information Re-arrange.
+             f = open(USER_DATABASES_DIR+_filename_,"r")
+             _contents_ = f.readlines()
+             f.close()
+             stream = BytesIO(_contents_[0])
+             data_from_file = JSONParser().parse(stream)
 
-          _Re_Poolinfo_ = {}
-          for _dict_Data_ in data_from_file[u'items']:
-             _Re_Poolinfo_[str(_dict_Data_[u'name'])] = _dict_Data_[u'poolmember_names']
+             _Re_Poolinfo_ = {}
+             for _dict_Data_ in data_from_file[u'items']:
+                ### 2016.05.11 : change pool name to pool name with status information 
+                # _Re_Poolinfo_[str(_dict_Data_[u'name'])] = _dict_Data_[u'poolmember_names']
+                #
+                _Re_Poolinfo_[str(_dict_Data_[u'name'])] = _dict_Data_[u'poolmember_status']
 
-          # Virtual Server Information
-          _filename_for_virtualserver_ = USER_DATABASES_DIR+"virtualserverlist."+_database_target_+".txt"
-          f = open(_filename_for_virtualserver_,"r")
-          _contents_ = f.readlines()
-          f.close()
-          stream = BytesIO(_contents_[0])
-          data_from_file = JSONParser().parse(stream)
+             print _Re_Poolinfo_
+             # Virtual Server Information
+             _filename_for_virtualserver_ = USER_DATABASES_DIR+"virtualserverlist."+_database_target_+".txt"
+             f = open(_filename_for_virtualserver_,"r")
+             _contents_ = f.readlines()
+             f.close()
+             stream = BytesIO(_contents_[0])
+             data_from_file = JSONParser().parse(stream)
 
-          virtualserver_and_pool_info_list = []
-          for _dict_Data_ in data_from_file[u'items']:
-             _temp_dict_box_ = {}
-             if u'pool' in _dict_Data_.keys() or str(u'pool') in _dict_Data_.keys():
-                _temp_dict_box_[str(_dict_Data_[u"fullPath"]).strip().split("/")[-1]] = str(_dict_Data_[u"destination"]).strip().split("/")[-1]
-                _temp_dict_box_[str(_dict_Data_[u"pool"]).strip().split("/")[-1]] = _Re_Poolinfo_[str(_dict_Data_[u"pool"]).strip().split("/")[-1]]
-                virtualserver_and_pool_info_list.append(_temp_dict_box_)
+             virtualserver_and_pool_info_list = []
+             for _dict_Data_ in data_from_file[u'items']:
+                _temp_dict_box_ = {}
+                if u'pool' in _dict_Data_.keys() or str(u'pool') in _dict_Data_.keys():
+                   _temp_dict_box_[str(_dict_Data_[u"fullPath"]).strip().split("/")[-1]] = str(_dict_Data_[u"destination"]).strip().split("/")[-1]
+                   _temp_dict_box_[str(_dict_Data_[u"pool"]).strip().split("/")[-1]] = _Re_Poolinfo_[str(_dict_Data_[u"pool"]).strip().split("/")[-1]]
+                   virtualserver_and_pool_info_list.append(_temp_dict_box_)
 
-          # Virtual Server Information
-          virtualserver_and_pool_info_dict[_database_target_] = virtualserver_and_pool_info_list
+             # Virtual Server Information
+             virtualserver_and_pool_info_dict[_database_target_] = virtualserver_and_pool_info_list
 
     # threading must have
     time.sleep(0)
@@ -180,7 +202,13 @@ def f5_poolmemberlist(request,format=None):
                  if str(_dict_information_[u'ip']) not in standby_device_list:
                     standby_device_list.append(str(_dict_information_[u'ip']))
 
-           # send curl command to device
+           # delete all databasefile
+           fileindatabasedir = os.listdir(USER_DATABASES_DIR)
+           for _filename_ in fileindatabasedir:
+               if re.search("poollist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_) or re.search("virtualserverlist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
+                  os.popen("rm -rf "+USER_DATABASES_DIR+_filename_)
+
+           # send curl command to device for virtual serverlist update
            _threads_ = []
            for _ip_address_ in standby_device_list:
               th = threading.Thread(target=transfer_crul_to_get_virtualserver_info, args=(_ip_address_,))
