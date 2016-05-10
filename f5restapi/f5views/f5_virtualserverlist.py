@@ -8,7 +8,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.utils.six import BytesIO
 
-import os,re,copy,json,threading,time
+import os,re,copy,json,threading,time,subprocess
 
 from f5restapi.setting import LOG_FILE
 from f5restapi.setting import USER_DATABASES_DIR 
@@ -64,11 +64,29 @@ def f5_virtualserverlist(request,format=None):
    # get method
    if request.method == 'GET':
 
+      # read db file
+      _devicelist_db_ = USER_DATABASES_DIR + "devicelist.txt"
+      f = open(_devicelist_db_,'r')
+      _string_contents_ = f.readlines()
+      f.close()
+      stream = BytesIO(_string_contents_[0])
+      _data_from_devicelist_db_= JSONParser().parse(stream)
+
+      # standby server list
+      standby_device_list = []
+      for _dict_information_ in _data_from_devicelist_db_:
+          if re.match('standby',str(_dict_information_[u'failover'])):
+             if str(_dict_information_[u'ip']) not in standby_device_list:
+                standby_device_list.append(str(_dict_information_[u'ip']))
+
+      # get the view for the get request
       _contents_in_ = []
       fileindatabasedir = os.listdir(USER_DATABASES_DIR)
       for _filename_ in fileindatabasedir:
          if re.search("virtualserverlist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
-            _contents_in_.append(get_virtualserverlist_name(_filename_))
+            _database_target_ = re.search("[0-9]+.[0-9]+.[0-9]+.[0-9]+",_filename_).group(0)
+            if str(_database_target_).strip() in standby_device_list:
+               _contents_in_.append(get_virtualserverlist_name(_filename_))
       # return value 
       return Response(_contents_in_)
 
@@ -101,6 +119,12 @@ def f5_virtualserverlist(request,format=None):
                  if str(_dict_information_[u'ip']) not in standby_device_list:
                     standby_device_list.append(str(_dict_information_[u'ip']))
 
+           # delete all virtualserver databasefile
+           fileindatabasedir = os.listdir(USER_DATABASES_DIR)
+           for _filename_ in fileindatabasedir:
+               if re.search("virtualserverlist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
+                  os.popen("rm -rf "+USER_DATABASES_DIR+_filename_)
+
            # send curl command to device
            _threads_ = []
            for _ip_address_ in standby_device_list:
@@ -115,7 +139,9 @@ def f5_virtualserverlist(request,format=None):
            fileindatabasedir = os.listdir(USER_DATABASES_DIR)
            for _filename_ in fileindatabasedir:
                if re.search("virtualserverlist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
-                  _contents_in_.append(get_virtualserverlist_name(_filename_))
+                  _database_target_ = re.search("[0-9]+.[0-9]+.[0-9]+.[0-9]+",_filename_).group(0)
+                  if str(_database_target_).strip() in standby_device_list:
+                     _contents_in_.append(get_virtualserverlist_name(_filename_))
             
            message = _contents_in_
            return Response(message)
