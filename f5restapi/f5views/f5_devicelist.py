@@ -101,19 +101,7 @@ def f5_devicelist(request,format=None):
                     _result_dict_["ip"] = str(_dictData_[u'managementIp'])
      
               # curl message command
-              #_result_dict_ = {}
               #curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+str(_param_['ip']).strip()+"/mgmt/tm/sys/failover -H 'Content-Type: application/json'"
-              #raw_data= os.popen(curl_command).read().strip()
-              #stream = BytesIO(raw_data)
-              #data_from_response = JSONParser().parse(stream)
-
-              # failover status and version
-              #_status_ = str(data_from_response['apiRawValues']['apiAnonymous']).split()[1]
-              #_uptime_ = ':'.join([str(data_from_response['apiRawValues']['apiAnonymous']).split()[3].strip(),str(data_from_response['apiRawValues']['apiAnonymous']).split()[4].strip()])
-              #_result_dict_['failover'] = _status_
-              #_result_dict_['failover_uptime'] = _uptime_
-              #_result_dict_['version'] = str(data_from_response['selfLink']).split('?')[-1].strip().split('=')[-1].strip()
-
 
               # cluster information 
               curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_result_dict_["ip"].strip()+"/mgmt/tm/cm/trust-domain -H 'Content-Type: application/json'"

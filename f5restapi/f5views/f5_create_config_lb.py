@@ -211,22 +211,24 @@ def f5_create_config_lb(request,format=None):
               if _device_name_ not in _valid_dictData_.keys():
                  _valid_dictData_[_device_name_] = {}                  
 
+
            for _dictData_ in _valid_virtual_ip_port_dictData_list_:
               _device_name_ = str(_dictData_[u'device'])
-              _host_name_ = str(_dictData_[u'hostname'])
-              if _host_name_ not in _valid_dictData_[_device_name_].keys():
-                 _valid_dictData_[_device_name_][_host_name_] = int(1)
+              _server_name_ = str(_dictData_[u'servername'])
+              if _server_name_ not in _valid_dictData_[_device_name_].keys():
+                 _valid_dictData_[_device_name_][_server_name_] = int(1)
               else:
-                 _valid_dictData_[_device_name_][_host_name_] = _valid_dictData_[_device_name_][_host_name_] + 1
+                 _valid_dictData_[_device_name_][_server_name_] = _valid_dictData_[_device_name_][_server_name_] + 1
 
            _valid_dictData_list_ = []              
            for _dictData_ in _valid_virtual_ip_port_dictData_list_:
               _device_name_ = str(_dictData_[u'device'])
-              _host_name_ = str(_dictData_[u'hostname'])
-              if int(_valid_dictData_[_device_name_][_host_name_]) == int(1):
+              _server_name_ = str(_dictData_[u'servername'])
+              if int(_valid_dictData_[_device_name_][_server_name_]) == int(1):
                  _valid_dictData_list_.append(_dictData_)
 
            _valid_input_dictData_list_ = copy.copy(_valid_dictData_list_)
+
            print _valid_input_dictData_list_
            
 
