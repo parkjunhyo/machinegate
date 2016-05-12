@@ -49,6 +49,7 @@ def f5_poolmemberstatus(request,poolname,format=None):
                       if re.match(_dict_Data_[u'name'],poolname.strip()) or re.match(_dict_Data_[u'pool'].strip().split('/')[-1],poolname.strip()):
                          _matched_all_[str(re.search("[0-9]+.[0-9]+.[0-9]+.[0-9]+",_filename_).group(0))] = _dict_Data_[u'pool'].strip().split('/')[-1] 
 
+
          devicelist_file = USER_DATABASES_DIR + "devicelist.txt"
          f = open(devicelist_file,"r")
          _contents_ = f.readlines()
@@ -56,13 +57,15 @@ def f5_poolmemberstatus(request,poolname,format=None):
          stream = BytesIO(_contents_[0])
          data_from_file = JSONParser().parse(stream)
 
+
          _standby_list_ = []
          _device_list_ = {}
          for _dict_Data_ in data_from_file:
-             _device_list_[str(_dict_Data_[u'ip'])] = _dict_Data_[u'name'] 
+             _device_list_[str(_dict_Data_[u'ip'])] = _dict_Data_[u'devicehostname'] 
              if (_dict_Data_[u'ip'] in _matched_all_.keys() or _dict_Data_[str(u'ip')] in _matched_all_.keys()) and (re.match(_dict_Data_[u'failover'],'standby') or re.match(_dict_Data_[str(u'failover')],'standby')):
                 _standby_list_.append(str(_dict_Data_[u'ip']))
     
+
          _status_all_ = {} 
          for _standby_ip_ in _standby_list_:
              CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_standby_ip_+"/mgmt/tm/ltm/pool/"+_matched_all_[_standby_ip_]+"/members/ -H 'Content-Type: application/json'"
