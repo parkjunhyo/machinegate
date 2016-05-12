@@ -7,6 +7,7 @@ urlpatterns = [
     url(r'^f5/virtualserverlist/$', views.f5_virtualserverlist),
     url(r'^f5/poolmemberlist/$', views.f5_poolmemberlist),
     url(r'^f5/poolmemberlist/(?P<poolname>[0-9A-Za-z_.-]+)/$', views.f5_poolmemberstatus),
+    url(r'^f5/create/config/lb/$', views.f5_create_config_lb),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

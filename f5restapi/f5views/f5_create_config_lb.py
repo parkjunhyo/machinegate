@@ -169,7 +169,7 @@ def get_poolinfo():
 
 @api_view(['GET','POST'])
 @csrf_exempt
-def f5_poolmemberlist(request,format=None):
+def f5_create_config_lb(request,format=None):
 
    # get method
    if request.method == 'GET':
@@ -182,57 +182,105 @@ def f5_poolmemberlist(request,format=None):
    elif request.method == 'POST':
 
       try:
+
         _input_ = JSONParser().parse(request)
+        
         if re.match(ENCAP_PASSWORD,str(_input_[0]['auth_key'])):
 
+           # virtual server ip and port validation check
+           _keyname_count_ = {}
+           for _dictData_ in _input_[0][u'items']:
+              _keyname_string_ = str(_dictData_[u'virtual_ip_port'])
+              if _keyname_string_ not in _keyname_count_.keys():
+                 _keyname_count_[_keyname_string_] = int(1)
+              else:
+                 _keyname_count_[_keyname_string_] = _keyname_count_[_keyname_string_] + 1
+
+           _valid_dictData_list_ = []
+           for _dictData_ in _input_[0][u'items']:
+              _keyname_string_ = str(_dictData_[u'virtual_ip_port'])
+              if int(_keyname_count_[_keyname_string_]) == int(1):
+                 _valid_dictData_list_.append(_dictData_)
+
+           _valid_virtual_ip_port_dictData_list_ = copy.copy(_valid_dictData_list_)
+
+           # host name duplication check according to device
+           _valid_dictData_ = {}
+           for _dictData_ in _valid_virtual_ip_port_dictData_list_:
+              _device_name_ = str(_dictData_[u'device'])
+              if _device_name_ not in _valid_dictData_.keys():
+                 _valid_dictData_[_device_name_] = {}                  
+
+           for _dictData_ in _valid_virtual_ip_port_dictData_list_:
+              _device_name_ = str(_dictData_[u'device'])
+              _host_name_ = str(_dictData_[u'hostname'])
+              if _host_name_ not in _valid_dictData_[_device_name_].keys():
+                 _valid_dictData_[_device_name_][_host_name_] = int(1)
+              else:
+                 _valid_dictData_[_device_name_][_host_name_] = _valid_dictData_[_device_name_][_host_name_] + 1
+
+           _valid_dictData_list_ = []              
+           for _dictData_ in _valid_virtual_ip_port_dictData_list_:
+              _device_name_ = str(_dictData_[u'device'])
+              _host_name_ = str(_dictData_[u'hostname'])
+              if int(_valid_dictData_[_device_name_][_host_name_]) == int(1):
+                 _valid_dictData_list_.append(_dictData_)
+
+           _valid_input_dictData_list_ = copy.copy(_valid_dictData_list_)
+           print _valid_input_dictData_list_
+           
+
+           #[{u'device': u'KRIS10-PUBS01-5000L4', u'poolmembers': [u'172.22.192.51:80', u'172.22.192.52:80', u'172.22.192.53:80'], u'hostname': u'testhost', u'virtual_ip_port': u'172.22.198.48:443'}, {u'device': u'KRIS10-PUBS01-5000L4', u'poolmembers': [u'172.22.192.51:80', u'172.22.192.52:80', u'172.22.192.53:80'], u'hostname': u'testhost', u'virtual_ip_port': u'172.22.198.48:443'}]
+
            # log message
-           f = open(LOG_FILE,"a")
-           _date_ = os.popen("date").read().strip()
-           log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" , method POST request to run f5_poolmemberlist function!\n"
-           f.write(log_msg)
-           f.close()
+           #f = open(LOG_FILE,"a")
+           #_date_ = os.popen("date").read().strip()
+           #log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" , method POST request to run f5_poolmemberlist function!\n"
+           #f.write(log_msg)
+           #f.close()
 
            # read db file
-           _devicelist_db_ = USER_DATABASES_DIR + "devicelist.txt"
-           f = open(_devicelist_db_,'r')
-           _string_contents_ = f.readlines()
-           f.close()
-           stream = BytesIO(_string_contents_[0])
-           _data_from_devicelist_db_= JSONParser().parse(stream)
+           #_devicelist_db_ = USER_DATABASES_DIR + "devicelist.txt"
+           #f = open(_devicelist_db_,'r')
+           #_string_contents_ = f.readlines()
+           #f.close()
+           #stream = BytesIO(_string_contents_[0])
+           #_data_from_devicelist_db_= JSONParser().parse(stream)
 
            # standby server list
-           standby_device_list = []           
-           for _dict_information_ in _data_from_devicelist_db_:
-              if re.match('standby',str(_dict_information_[u'failover'])):
-                 if str(_dict_information_[u'ip']) not in standby_device_list:
-                    standby_device_list.append(str(_dict_information_[u'ip']))
+           #standby_device_list = []           
+           #for _dict_information_ in _data_from_devicelist_db_:
+           #   if re.match('standby',str(_dict_information_[u'failover'])):
+           #      if str(_dict_information_[u'ip']) not in standby_device_list:
+           #         standby_device_list.append(str(_dict_information_[u'ip']))
 
            # delete all databasefile
-           fileindatabasedir = os.listdir(USER_DATABASES_DIR)
-           for _filename_ in fileindatabasedir:
-               if re.search("poollist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_) or re.search("virtualserverlist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
-                  os.popen("rm -rf "+USER_DATABASES_DIR+_filename_)
+           #fileindatabasedir = os.listdir(USER_DATABASES_DIR)
+           #for _filename_ in fileindatabasedir:
+           #    if re.search("poollist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_) or re.search("virtualserverlist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
+           #       os.popen("rm -rf "+USER_DATABASES_DIR+_filename_)
 
            # send curl command to device for virtual serverlist update
-           _threads_ = []
-           for _ip_address_ in standby_device_list:
-              th = threading.Thread(target=transfer_crul_to_get_virtualserver_info, args=(_ip_address_,))
-              th.start()
-              _threads_.append(th)
-           for th in _threads_:
-              th.join()
+           #_threads_ = []
+           #for _ip_address_ in standby_device_list:
+           #   th = threading.Thread(target=transfer_crul_to_get_virtualserver_info, args=(_ip_address_,))
+           #   th.start()
+           #   _threads_.append(th)
+           #for th in _threads_:
+           #   th.join()
            
            # get pool member information from the database file
-           _threads_ = []
-           for _ip_address_ in standby_device_list:
-              th = threading.Thread(target=transfer_crul_to_get_poolmember_info, args=(_ip_address_,))
-              th.start()
-              _threads_.append(th)
-           for th in _threads_:
-              th.join()
+           #_threads_ = []
+           #for _ip_address_ in standby_device_list:
+           #   th = threading.Thread(target=transfer_crul_to_get_poolmember_info, args=(_ip_address_,))
+           #   th.start()
+           #   _threads_.append(th)
+           #for th in _threads_:
+           #   th.join()
 
            # get the result data and return
-           message = get_poolinfo()
+           #message = get_poolinfo()
+           message = [{}]
            return Response(message)
 
 

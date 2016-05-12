@@ -55,6 +55,7 @@ def f5_devicelist(request,format=None):
 
       try:
         _input_ = JSONParser().parse(request)
+
         if re.match(ENCAP_PASSWORD,str(_input_[0]['auth_key'])):
 
            # log message
@@ -70,40 +71,63 @@ def f5_devicelist(request,format=None):
            f.close()
 
            # get from database file
-           stream = BytesIO(string_content[0])
+           stream = BytesIO(string_content[0].strip())
            data_from_databasefile = JSONParser().parse(stream)
 
            # init database file
-           f = open(devicelist_file,"w")
-           f.close()
+  #         f = open(devicelist_file,"w")
+  #         f.close()
 
            # update database file
            message = []
            for _param_ in data_from_databasefile:
 
-              # curl message command
-              _result_dict_ = {}
-              curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+str(_param_['ip']).strip()+"/mgmt/tm/sys/failover -H 'Content-Type: application/json'"
-              raw_data= os.popen(curl_command).read().strip()
-              stream = BytesIO(raw_data)
-              data_from_response = JSONParser().parse(stream)
-
-              # failover status and version
-              _status_ = str(data_from_response['apiRawValues']['apiAnonymous']).split()[1]
-              _uptime_ = ':'.join([str(data_from_response['apiRawValues']['apiAnonymous']).split()[3].strip(),str(data_from_response['apiRawValues']['apiAnonymous']).split()[4].strip()])
-              _result_dict_['failover'] = _status_
-              _result_dict_['failover_uptime'] = _uptime_
-              _result_dict_['version'] = str(data_from_response['selfLink']).split('?')[-1].strip().split('=')[-1].strip()
-
               # ip information
               if not re.match("[0-9]+.[0-9]+.[0-9]+.[0-9]+",str(_param_['ip']).strip()):
                  message = ["device list database is not normal, please check the device database file!"]
                  return Response(message, status=status.HTTP_400_BAD_REQUEST)
-              else:
-                 _result_dict_['ip'] = str(_param_['ip']).strip()
 
-              # hostname
-              _result_dict_["name"] = str(_param_['name']).strip()
+              curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+str(_param_['ip']).strip()+"/mgmt/tm/cm/device -H 'Content-Type: application/json'"
+              _response_ = os.popen(curl_command).read().strip()
+              stream = BytesIO(_response_)
+              data_from_response = JSONParser().parse(stream)
+
+              _result_dict_ = {} 
+              for _dictData_ in data_from_response[u'items']:
+                 if re.match(str(_dictData_[u'managementIp']),str(_param_['ip']).strip()):
+                    _result_dict_["failover"] = str(_dictData_[u'failoverState'])
+                    _result_dict_["clustername"] = str(_dictData_[u'name'])
+                    _result_dict_["devicehostname"] = str(_dictData_[u'hostname'])
+                    _result_dict_["ip"] = str(_dictData_[u'managementIp'])
+     
+              # curl message command
+              #_result_dict_ = {}
+              #curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+str(_param_['ip']).strip()+"/mgmt/tm/sys/failover -H 'Content-Type: application/json'"
+              #raw_data= os.popen(curl_command).read().strip()
+              #stream = BytesIO(raw_data)
+              #data_from_response = JSONParser().parse(stream)
+
+              # failover status and version
+              #_status_ = str(data_from_response['apiRawValues']['apiAnonymous']).split()[1]
+              #_uptime_ = ':'.join([str(data_from_response['apiRawValues']['apiAnonymous']).split()[3].strip(),str(data_from_response['apiRawValues']['apiAnonymous']).split()[4].strip()])
+              #_result_dict_['failover'] = _status_
+              #_result_dict_['failover_uptime'] = _uptime_
+              #_result_dict_['version'] = str(data_from_response['selfLink']).split('?')[-1].strip().split('=')[-1].strip()
+
+
+              # cluster information 
+              curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_result_dict_["ip"].strip()+"/mgmt/tm/cm/trust-domain -H 'Content-Type: application/json'"
+              raw_data= os.popen(curl_command).read().strip()
+              stream = BytesIO(raw_data)
+              data_from_response = JSONParser().parse(stream)
+
+              _temp_list_ = []
+              for _target_ in data_from_response[u'items']:
+                  for _caDevices_ in _target_[u'caDevices']:
+                      _Dname_ = _caDevices_.strip().split('/')[-1]
+                      if not re.match(str(_Dname_),str(_result_dict_["clustername"])):
+                         _temp_list_.append(str(_Dname_))
+              _result_dict_["haclustername"] = _temp_list_[-1]
 
               # result add
               message.append(_result_dict_)
@@ -115,6 +139,6 @@ def f5_devicelist(request,format=None):
 
 
       except:
-        message = ["need information to activate"]
+        message = [{}]
         return Response(message, status=status.HTTP_400_BAD_REQUEST)
 

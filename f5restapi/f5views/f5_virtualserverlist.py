@@ -153,6 +153,6 @@ def f5_virtualserverlist(request,format=None):
 
 
       except:
-        message = ["need information to activate"]
+        message = [{}]
         return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
