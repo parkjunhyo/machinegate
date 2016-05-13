@@ -117,6 +117,16 @@ def f5_devicelist(request,format=None):
                          _temp_list_.append(str(_Dname_))
               _result_dict_["haclustername"] = _temp_list_[-1]
 
+              # find device-group
+              curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_result_dict_["ip"].strip()+"/mgmt/tm/cm/device-group -H 'Content-Type: application/json'"
+              raw_data= os.popen(curl_command).read().strip()
+              stream = BytesIO(raw_data)
+              data_from_response = JSONParser().parse(stream)
+ 
+              for _target_ in data_from_response[u'items']:
+                 if re.search(str(_target_[u'type']),str('sync-failover')):
+                    _result_dict_["devicegroupname"] = str(_target_[u'name'])
+
               # result add
               message.append(_result_dict_)
            # return and update database file

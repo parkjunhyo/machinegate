@@ -229,8 +229,42 @@ def f5_create_config_lb(request,format=None):
 
            _valid_input_dictData_list_ = copy.copy(_valid_dictData_list_)
 
-           print _valid_input_dictData_list_
+           # find out the target host
+           _devicelist_db_ = USER_DATABASES_DIR + "devicelist.txt"
+           f = open(_devicelist_db_,'r')
+           _string_contents_ = f.readlines()
+           f.close()
+           stream = BytesIO(_string_contents_[0])
+           _data_from_devicelist_db_= JSONParser().parse(stream)
+
+           _target_matched_valid_input_dictData_list_ = []
+           for _dictData_ex_ in _valid_input_dictData_list_:
+              _input_device_data_ = _dictData_ex_[u'device']
+              for _dictData_ in _data_from_devicelist_db_:
+                 if re.search(_input_device_data_.strip(),str(_dictData_[u'devicehostname'])) or re.search(_input_device_data_.strip(),str(_dictData_[u'clustername'])) or re.search(_input_device_data_.strip(),str(_dictData_[u'ip'])):
+                    _target_matched_valid_input_dictData_list_.append(_dictData_ex_)
            
+           print _target_matched_valid_input_dictData_list_ 
+
+           #_devicename_clustername_ = {}
+           #_devicename_haclustername_ = {}
+           #_clustername_ip_ = {}
+           #for _dictData_ in _data_from_devicelist_db_:
+           #   _devicename_clustername_[str(_dictData_[u'devicehostname'])] = str(_dictData_[u'clustername'])
+           #   _devicename_haclustername_[str(_dictData_[u'devicehostname'])] = str(_dictData_[u'haclustername'])
+           #   _clustername_ip_[str(_dictData_[u'clustername'])] = str(_dictData_[u'ip'])
+
+           #print _devicename_clustername_
+           #print _devicename_haclustername_
+           #print _clustername_ip_
+
+           for _dictData_ in _data_from_devicelist_db_:
+              print str(_dictData_[u'ip'])
+
+
+
+           #print _data_from_devicelist_db_
+           #u'device': u'KRIS10-PUBS01-5000L4'           
 
            #[{u'device': u'KRIS10-PUBS01-5000L4', u'poolmembers': [u'172.22.192.51:80', u'172.22.192.52:80', u'172.22.192.53:80'], u'hostname': u'testhost', u'virtual_ip_port': u'172.22.198.48:443'}, {u'device': u'KRIS10-PUBS01-5000L4', u'poolmembers': [u'172.22.192.51:80', u'172.22.192.52:80', u'172.22.192.53:80'], u'hostname': u'testhost', u'virtual_ip_port': u'172.22.198.48:443'}]
 
