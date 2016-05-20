@@ -15,6 +15,7 @@ from f5restapi.setting import USER_DATABASES_DIR
 from f5restapi.setting import USER_NAME,USER_PASSWORD
 from f5restapi.setting import ENCAP_PASSWORD
 from f5restapi.setting import THREAD_TIMEOUT
+from f5restapi.setting import RUNSERVER_PORT
 
 class JSONResponse(HttpResponse):
     """
@@ -25,77 +26,6 @@ class JSONResponse(HttpResponse):
         kwargs['content_type'] = 'application/json'
         super(JSONResponse, self).__init__(content, **kwargs)
 
-def transfer_crul_to_get_virtualserver_info(_DEVICE_IP_):
-
-    # clean up database file
-    database_filename = USER_DATABASES_DIR+"virtualserverlist."+_DEVICE_IP_+".txt"
-    f = open(database_filename,"w")
-    f.close()
-
-    # send curl message
-    CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json'"
-    get_info = os.popen(CURL_command).read().strip()
-    f = open(database_filename,"w")
-    f.write(get_info)
-    f.close()
-    
-    # threading must have
-    time.sleep(0)
-
-
-def transfer_crul_to_get_poolmember_info(_DEVICE_IP_):
-    
-    fileindatabasedir = os.listdir(USER_DATABASES_DIR)
-    for _filename_ in fileindatabasedir:
-       if re.search("virtualserverlist."+_DEVICE_IP_+".txt",_filename_):
-          
-          f = open(USER_DATABASES_DIR+_filename_,"r")
-          _contents_ = f.readlines()
-          f.close()
-          stream = BytesIO(_contents_[0])
-          data_from_file = JSONParser().parse(stream)
-
-          _temp_list_box_ = []
-          for _dict_Data_ in data_from_file["items"]:
-
-             # findout pool information and virtual server information
-             if u'pool' in _dict_Data_.keys() or str(u'pool') in _dict_Data_.keys():
-
-                dictionary_tray = {}
-
-                _poolname_ = str(_dict_Data_[u'pool']).strip().split("/")[-1]
-                CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/ltm/pool/"+_poolname_+" -H 'Content-Type: application/json'"
-                get_info = os.popen(CURL_command).read().strip()
-                stream = BytesIO(get_info)
-                data_from_file = JSONParser().parse(stream)
-
-                dictionary_tray = copy.copy(data_from_file)
-
-                CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/ltm/pool/"+_poolname_+"/members/ -H 'Content-Type: application/json'"
-                get_info = os.popen(CURL_command).read().strip()
-                stream = BytesIO(get_info)
-                data_from_file = JSONParser().parse(stream)
-
-                POOLMEMBER_list = []
-                POOLMEMBER_status = {}
-                for _POOLDATA_ in data_from_file[u'items']:
-                    if str(_POOLDATA_[u'fullPath']) not in POOLMEMBER_list:
-                       POOLMEMBER_list.append(str(_POOLDATA_[u'fullPath']))
-                       POOLMEMBER_status[str(_POOLDATA_[u'fullPath'])] = str(_POOLDATA_[u'state'])
-
-                dictionary_tray['poolmember_names'] = POOLMEMBER_list
-                dictionary_tray['poolmember_status'] = POOLMEMBER_status
-                _temp_list_box_.append(dictionary_tray)
-
-          # database for pool information create
-          _temp_write_ = {}
-          _temp_write_['items'] = _temp_list_box_
-          f = open(USER_DATABASES_DIR+"poollist."+_DEVICE_IP_+".txt","w")
-          f.write(json.dumps(_temp_write_))
-          f.close()
-
-    # threading must have
-    time.sleep(0)
   
 def get_poolinfo():
 
@@ -187,49 +117,7 @@ def f5_create_config_lb(request,format=None):
         
         if re.match(ENCAP_PASSWORD,str(_input_[0]['auth_key'])):
 
-           # virtual server ip and port validation check
-           _keyname_count_ = {}
-           for _dictData_ in _input_[0][u'items']:
-              _keyname_string_ = str(_dictData_[u'virtual_ip_port'])
-              if _keyname_string_ not in _keyname_count_.keys():
-                 _keyname_count_[_keyname_string_] = int(1)
-              else:
-                 _keyname_count_[_keyname_string_] = _keyname_count_[_keyname_string_] + 1
-
-           _valid_dictData_list_ = []
-           for _dictData_ in _input_[0][u'items']:
-              _keyname_string_ = str(_dictData_[u'virtual_ip_port'])
-              if int(_keyname_count_[_keyname_string_]) == int(1):
-                 _valid_dictData_list_.append(_dictData_)
-
-           _valid_virtual_ip_port_dictData_list_ = copy.copy(_valid_dictData_list_)
-
-           # host name duplication check according to device
-           _valid_dictData_ = {}
-           for _dictData_ in _valid_virtual_ip_port_dictData_list_:
-              _device_name_ = str(_dictData_[u'device'])
-              if _device_name_ not in _valid_dictData_.keys():
-                 _valid_dictData_[_device_name_] = {}                  
-
-
-           for _dictData_ in _valid_virtual_ip_port_dictData_list_:
-              _device_name_ = str(_dictData_[u'device'])
-              _server_name_ = str(_dictData_[u'servername'])
-              if _server_name_ not in _valid_dictData_[_device_name_].keys():
-                 _valid_dictData_[_device_name_][_server_name_] = int(1)
-              else:
-                 _valid_dictData_[_device_name_][_server_name_] = _valid_dictData_[_device_name_][_server_name_] + 1
-
-           _valid_dictData_list_ = []              
-           for _dictData_ in _valid_virtual_ip_port_dictData_list_:
-              _device_name_ = str(_dictData_[u'device'])
-              _server_name_ = str(_dictData_[u'servername'])
-              if int(_valid_dictData_[_device_name_][_server_name_]) == int(1):
-                 _valid_dictData_list_.append(_dictData_)
-
-           _valid_input_dictData_list_ = copy.copy(_valid_dictData_list_)
-
-           # find out the target host
+           # read device list file
            _devicelist_db_ = USER_DATABASES_DIR + "devicelist.txt"
            f = open(_devicelist_db_,'r')
            _string_contents_ = f.readlines()
@@ -237,14 +125,180 @@ def f5_create_config_lb(request,format=None):
            stream = BytesIO(_string_contents_[0])
            _data_from_devicelist_db_= JSONParser().parse(stream)
 
-           _target_matched_valid_input_dictData_list_ = []
-           for _dictData_ex_ in _valid_input_dictData_list_:
-              _input_device_data_ = _dictData_ex_[u'device']
-              for _dictData_ in _data_from_devicelist_db_:
-                 if re.search(_input_device_data_.strip(),str(_dictData_[u'devicehostname'])) or re.search(_input_device_data_.strip(),str(_dictData_[u'clustername'])) or re.search(_input_device_data_.strip(),str(_dictData_[u'ip'])):
-                    _target_matched_valid_input_dictData_list_.append(_dictData_ex_)
-           
-           print _target_matched_valid_input_dictData_list_ 
+           _devicelist_file_db_cache_ = copy.copy(_data_from_devicelist_db_)
+
+           # CHANGE THE DEVICE NAME TO IP ADDRESS
+           _user_input_ = copy.copy(_input_[0][u'items'])
+           _device_converted_to_ip_user_input_ = []
+           for _loop_1_ in _user_input_:
+              _device_name_ = str(_loop_1_[u'device'])
+              for _loop_2_ in _data_from_devicelist_db_:
+                  _clustername_ = str(_loop_2_[u'clustername'])
+                  _devicehostname_ = str(_loop_2_[u'devicehostname'])
+                  _device_failover_ = str(_loop_2_[u'failover'])
+                  if (re.search(_device_name_,_clustername_) or re.search(_device_name_,_devicehostname_)) and re.search(_device_failover_,'active'):
+                     _loop_1_[u'device'] = str(_loop_2_[u'ip'])
+                     _device_converted_to_ip_user_input_.append(_loop_1_)
+
+           # CONFIRM THE INPUT VIRTUAL IP AND PORT UNIQUE
+           _temp_box_ = {}
+           for _loop_1_ in _device_converted_to_ip_user_input_:
+              _keyname_ = str(_loop_1_[u'device'])
+              if _keyname_ not in _temp_box_.keys():
+                 _temp_box_[_keyname_] = {}
+
+           for _loop_1_ in _device_converted_to_ip_user_input_:
+              _keyname_ = str(_loop_1_[u'device'])
+              _virtualipport_ = str(_loop_1_[u'virtual_ip_port'])
+              if _virtualipport_ not in _temp_box_[_keyname_].keys():
+                 _temp_box_[_keyname_][_virtualipport_] = int(1)
+              else:
+                 _temp_box_[_keyname_][_virtualipport_] = _temp_box_[_keyname_][_virtualipport_] + int(1)
+
+           _virtualipport_unique_user_input_ = []
+           for _loop_1_ in _device_converted_to_ip_user_input_:
+              _keyname_ = str(_loop_1_[u'device'])
+              _virtualipport_ = str(_loop_1_[u'virtual_ip_port'])
+              if int(_temp_box_[_keyname_][_virtualipport_]) == int(1):
+                 _virtualipport_unique_user_input_.append(_loop_1_)
+
+           # CONFIRM THE INPUT SERVER NAME IS UNIQUE
+           _temp_box_ = {}
+           for _loop_1_ in _virtualipport_unique_user_input_:
+              _keyname_ = str(_loop_1_[u'device'])
+              if _keyname_ not in _temp_box_.keys():
+                 _temp_box_[_keyname_] = {}
+ 
+           for _loop_1_ in _virtualipport_unique_user_input_:
+              _keyname_ = str(_loop_1_[u'device'])
+              _servername_ = str(_loop_1_[u'servername']) 
+              if _servername_ not in _temp_box_[_keyname_].keys():
+                _temp_box_[_keyname_][_servername_] = int(1)
+              else:
+                _temp_box_[_keyname_][_servername_] = _temp_box_[_keyname_][_servername_] + int(1)
+
+           _servername_unique_user_input_ = []
+           for _loop_1_ in _virtualipport_unique_user_input_:
+              _keyname_ = str(_loop_1_[u'device'])
+              _servername_ = str(_loop_1_[u'servername'])
+              if int(_temp_box_[_keyname_][_servername_]) == int(1):
+                 _servername_unique_user_input_.append(_loop_1_)
+
+           # CREATE THE POOL AND VIRTUAL NAME
+
+# {u'haclustername': u'KRIS10-SRPS02-2000L4.com', u'clustername': u'KRIS10-SRPS01-2000L4.com', u'ip': u'10.10.77.45', u'failover': u'active', u'devicehostname': u'KRIS10-SRPS01-2000L4.com', u'devicegroupname': u'dg'}
+
+           # [{u'device': u'KRIS10-PUBS01-5000L4', u'poolmembers': [u'172.22.192.51:80', u'172.22.192.52:80', u'172.22.192.53:80'], u'servername': u'testhost', u'virtual_ip_port': u'172.22.198.48:443'}, {u'device': u'KRIS10-DMZS01-5000L4', u'poolmembers': [u'172.22.192.51:80', u'172.22.192.52:80', u'172.22.192.53:80'], u'servername': u'testhost', u'virtual_ip_port': u'172.22.198.47:443'}]
+
+
+           _added_createname_user_input_ = []
+           for _loop_1_ in _servername_unique_user_input_:
+              # FIND SERVER PORT and create pool name
+              _serverport_list_ = []
+              for _loop_2_ in _loop_1_[u'poolmembers']:
+                 _server_port_ = str(str(_loop_2_).strip().split(':')[-1])
+                 if _server_port_ not in _serverport_list_:
+                   _serverport_list_.append(_server_port_)
+              _created_pool_name_ = str('p_')+str(_loop_1_[u'servername'])+str('_')+str('_'.join(_serverport_list_))
+              _virtualip_ = str(str(_loop_1_[u'virtual_ip_port']).strip().split(':')[0])
+              _virtualip_name_ = str('.'.join(_virtualip_.strip().split('.')[2:]))
+              _virtualport_ = str(str(_loop_1_[u'virtual_ip_port']).strip().split(':')[1])
+              _created_virtualserver_name_ = str('v_')+_virtualip_name_+str('_')+str(_loop_1_[u'servername'])+str('_')+_virtualport_
+              # add information into the dict
+              _loop_1_[u'created_poolname'] = str(_created_pool_name_)
+              _loop_1_[u'created_virtualservername'] = str(_created_virtualserver_name_)
+              _added_createname_user_input_.append(_loop_1_)
+             
+
+           # UPDATE DATABASE FILE
+           CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'[{\"auth_key\":\""+ENCAP_PASSWORD+"\"}]\' http://0.0.0.0:"+RUNSERVER_PORT+"/f5/poolmemberlist/"
+
+           # FIND OUT NODE Validation
+           _nodestatus_confirmed_user_input_ = []
+           for _dict_Data_ in _added_createname_user_input_:
+
+              _target_deviceip_ = str(_dict_Data_[u'device'])
+              for _loop1_ in _devicelist_file_db_cache_:
+                 if re.search(str(_loop1_[u'ip']),_target_deviceip_):
+                    _backup_devicename_ = str(_loop1_[u'haclustername'])
+                    break
+              for _loop1_ in _devicelist_file_db_cache_:
+                 if re.search(str(_loop1_[u'clustername']),_backup_devicename_):
+                    _backup_deviceip_ = str(_loop1_[u'ip'])
+
+              #CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+str(_backup_deviceip_)+"/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json'"
+              #print CURL_command
+              #get_info = os.popen(CURL_command).read().strip()
+              #stream = BytesIO(get_info)
+              #data_from_file = JSONParser().parse(stream)
+   
+              #print data_from_file
+              _matched_poollist_dbfile_name_ = USER_DATABASES_DIR + 'poollist.'+str(_backup_deviceip_)+'.txt'
+              f = open(_matched_poollist_dbfile_name_,'r')
+              _string_contents_ = f.readlines()
+              f.close()
+              stream = BytesIO(_string_contents_[0])
+              _data_from_file_ = JSONParser().parse(stream)
+
+              _temp_dict_bay_ = {}
+              for _loop1_ in _data_from_file_[u'items']:
+                 _temp_dict_bay_[str(_loop1_[u'name'])] = []
+                 for _loop2_ in _loop1_[u'poolmember_names']:
+                    if str(_loop2_) not in _temp_dict_bay_[str(_loop1_[u'name'])]:
+                      _temp_dict_bay_[str(_loop1_[u'name'])].append(str(_loop2_))
+
+              print _temp_dict_bay_.keys()
+              print len(_temp_dict_bay_.keys())
+
+              _counting_bay_ = {}
+              for _loop1_ in _dict_Data_[u'poolmembers']:
+                 for _loop2_ in _temp_dict_bay_.keys():
+                    for _loop3_ in _temp_dict_bay_[_loop2_]:
+                        if re.search(str(_loop1_),str(_loop3_)):
+                           if str(_loop2_) not in _counting_bay_.keys():
+                              _counting_bay_[str(_loop2_)] = int(1)
+                           else:
+                              _counting_bay_[str(_loop2_)] = _counting_bay_[str(_loop2_)] + int(1)
+
+              valid_poolname_list = []
+              for _loop1_ in _counting_bay_.keys():
+                 if (len(_dict_Data_[u'poolmembers']) == int(_counting_bay_[_loop1_])) and (len(_dict_Data_[u'poolmembers']) == len(_temp_dict_bay_[_loop1_])):
+                    if str(_loop1_) not in valid_poolname_list:
+                       valid_poolname_list.append(str(_loop1_))
+
+              if len(valid_poolname_list) != 0:
+                valid_poolname_list.sort()
+                _dict_Data_[u'created_poolname'] = str(valid_poolname_list[0])
+                _dict_Data_[u'poolname_matchstatus'] = 'matched'
+              else:
+                _dict_Data_[u'poolname_matchstatus'] = 'none'
+              _nodestatus_confirmed_user_input_.append(_dict_Data_) 
+
+
+           # FIND OUT DUPLICATION WITH DATABASE FILE
+           print _added_createname_user_input_
+           print "#####"
+           print _nodestatus_confirmed_user_input_
+
+           print "----"
+
+           fileindatabasedir = os.listdir(USER_DATABASES_DIR)
+           for _filename_ in fileindatabasedir:
+              if re.search("virtualserverlist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
+                 _filename_ = USER_DATABASES_DIR + _filename_
+                 f = open(_filename_,'r')
+                 _string_contents_ = f.readlines()
+                 f.close()
+                 stream = BytesIO(_string_contents_[0])
+                 _data_from_file_ = JSONParser().parse(stream)
+                 print _filename_
+              if re.search("poollist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
+                 _filename_ = USER_DATABASES_DIR + _filename_
+                 print _filename_
+
+
+
+
 
            #_devicename_clustername_ = {}
            #_devicename_haclustername_ = {}
@@ -258,8 +312,6 @@ def f5_create_config_lb(request,format=None):
            #print _devicename_haclustername_
            #print _clustername_ip_
 
-           for _dictData_ in _data_from_devicelist_db_:
-              print str(_dictData_[u'ip'])
 
 
 

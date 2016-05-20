@@ -1,6 +1,8 @@
 #! /usr/bin/env bash
 
-python manage.py runserver 0.0.0.0:8080
+PORT=$(cat f5restapi/setting.py | grep -i 'RUNSERVER_PORT' | awk -F"[ ']" '{print $4}')
+
+python manage.py runserver 0.0.0.0:$PORT
 
 
 

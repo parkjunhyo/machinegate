@@ -8,13 +8,14 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.utils.six import BytesIO
 
-import os,re,copy,json,threading,time
+import os,re,copy,json,threading,time,sys
 
 from f5restapi.setting import LOG_FILE
 from f5restapi.setting import USER_DATABASES_DIR 
 from f5restapi.setting import USER_NAME,USER_PASSWORD
 from f5restapi.setting import ENCAP_PASSWORD
 from f5restapi.setting import THREAD_TIMEOUT
+from f5restapi.setting import RUNSERVER_PORT
 
 class JSONResponse(HttpResponse):
     """
@@ -25,76 +26,89 @@ class JSONResponse(HttpResponse):
         kwargs['content_type'] = 'application/json'
         super(JSONResponse, self).__init__(content, **kwargs)
 
-def transfer_crul_to_get_virtualserver_info(_DEVICE_IP_):
+#def transfer_crul_to_get_virtualserver_info(_DEVICE_IP_):
+#
+#    # clean up database file
+#    database_filename = USER_DATABASES_DIR+"virtualserverlist."+_DEVICE_IP_+".txt"
+#    f = open(database_filename,"w")
+#    f.close()
+#
+#    # send curl message
+#    CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json'"
+#    get_info = os.popen(CURL_command).read().strip()
+#    f = open(database_filename,"w")
+#    f.write(get_info)
+#    f.close()
+#    
+#    # threading must have
+#    time.sleep(0)
 
-    # clean up database file
-    database_filename = USER_DATABASES_DIR+"virtualserverlist."+_DEVICE_IP_+".txt"
-    f = open(database_filename,"w")
-    f.close()
-
-    # send curl message
-    CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json'"
-    get_info = os.popen(CURL_command).read().strip()
-    f = open(database_filename,"w")
-    f.write(get_info)
-    f.close()
-    
-    # threading must have
-    time.sleep(0)
 
 
 def transfer_crul_to_get_poolmember_info(_DEVICE_IP_):
+
+    CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json'"
+    get_info = os.popen(CURL_command).read().strip()
+    stream = BytesIO(get_info)
+    data_from_CURL_command = JSONParser().parse(stream)
+
+    all_data_poollist_from_command = copy.copy(data_from_CURL_command)
+
+
+    all_data_poollist_recreated = []
+    for _dictdata_poollist_ in all_data_poollist_from_command[u'items']:
+
+       _poolname_ = str(_dictdata_poollist_[u'name'])
+       # find virtual server
+       fileindatabasedir = os.listdir(USER_DATABASES_DIR)
+       for _filename_ in fileindatabasedir:
+
+          if re.search("virtualserverlist."+_DEVICE_IP_+".txt",_filename_):
+            f = open(USER_DATABASES_DIR+_filename_,"r")
+            _contents_ = f.readlines()
+            stream = BytesIO(_contents_[0])
+            data_from_file = JSONParser().parse(stream)
+
+            virtual_servername_list = []
+            for _loop1_ in data_from_file[u'items']:
+                if u'pool' in _loop1_.keys() or str(u'pool') in _loop1_.keys():
+                  if re.search(_poolname_,_loop1_[u'pool']):
+                    if str(_loop1_[u'name']) not in virtual_servername_list:
+                      virtual_servername_list.append(str(_loop1_[u'name']))
+            continue      
+       # find virtual server
+       _virtualserver_names_list_ = copy.copy(virtual_servername_list)
+
+       # get pool information
+       CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/ltm/pool/"+_poolname_+" -H 'Content-Type: application/json'"
+       get_info = os.popen(CURL_command).read().strip()
+       stream = BytesIO(get_info)
+       data_from_CURL_command = JSONParser().parse(stream)
+       spec_data_pool_from_command = copy.copy(data_from_CURL_command)
+       
+       CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/ltm/pool/"+_poolname_+"/members/ -H 'Content-Type: application/json'" 
+       get_info = os.popen(CURL_command).read().strip()
+       stream = BytesIO(get_info)
+       data_from_CURL_command = JSONParser().parse(stream)
+       spec_data_poolmember_from_command = copy.copy(data_from_CURL_command)
+
+       members_status_dict = {}
+       for _loop1_ in spec_data_poolmember_from_command[u'items']:
+          members_status_dict[str(_loop1_[u'fullPath'])] = str(_loop1_[u'state'])
+
+       spec_data_pool_from_command[u'virtualserver_names_list'] = _virtualserver_names_list_
+       spec_data_pool_from_command[u'poolmembers_status_list'] = members_status_dict
+
+       all_data_poollist_recreated.append(spec_data_pool_from_command)
+
+    # create db file
+    _temp_write_ = {}
+    _temp_write_['items'] = all_data_poollist_recreated
+    f = open(USER_DATABASES_DIR+"poollist."+_DEVICE_IP_+".txt","w")
+    f.write(json.dumps(_temp_write_))
+    f.close()
     
-    fileindatabasedir = os.listdir(USER_DATABASES_DIR)
-    for _filename_ in fileindatabasedir:
-       if re.search("virtualserverlist."+_DEVICE_IP_+".txt",_filename_):
-          
-          f = open(USER_DATABASES_DIR+_filename_,"r")
-          _contents_ = f.readlines()
-          f.close()
-          stream = BytesIO(_contents_[0])
-          data_from_file = JSONParser().parse(stream)
-
-          _temp_list_box_ = []
-          for _dict_Data_ in data_from_file["items"]:
-
-             # findout pool information and virtual server information
-             if u'pool' in _dict_Data_.keys() or str(u'pool') in _dict_Data_.keys():
-
-                dictionary_tray = {}
-
-                _poolname_ = str(_dict_Data_[u'pool']).strip().split("/")[-1]
-                CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/ltm/pool/"+_poolname_+" -H 'Content-Type: application/json'"
-                get_info = os.popen(CURL_command).read().strip()
-                stream = BytesIO(get_info)
-                data_from_file = JSONParser().parse(stream)
-
-                dictionary_tray = copy.copy(data_from_file)
-
-                CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/ltm/pool/"+_poolname_+"/members/ -H 'Content-Type: application/json'"
-                get_info = os.popen(CURL_command).read().strip()
-                stream = BytesIO(get_info)
-                data_from_file = JSONParser().parse(stream)
-
-                POOLMEMBER_list = []
-                POOLMEMBER_status = {}
-                for _POOLDATA_ in data_from_file[u'items']:
-                    if str(_POOLDATA_[u'fullPath']) not in POOLMEMBER_list:
-                       POOLMEMBER_list.append(str(_POOLDATA_[u'fullPath']))
-                       POOLMEMBER_status[str(_POOLDATA_[u'fullPath'])] = str(_POOLDATA_[u'state'])
-
-                dictionary_tray['poolmember_names'] = POOLMEMBER_list
-                dictionary_tray['poolmember_status'] = POOLMEMBER_status
-                _temp_list_box_.append(dictionary_tray)
-
-          # database for pool information create
-          _temp_write_ = {}
-          _temp_write_['items'] = _temp_list_box_
-          f = open(USER_DATABASES_DIR+"poollist."+_DEVICE_IP_+".txt","w")
-          f.write(json.dumps(_temp_write_))
-          f.close()
-
-    # threading must have
+    # thread timeout 
     time.sleep(0)
   
 def get_poolinfo():
@@ -130,32 +144,12 @@ def get_poolinfo():
                 f.close()
                 stream = BytesIO(_contents_[0])
                 data_from_file = JSONParser().parse(stream)
-
-                _Re_Poolinfo_ = {}
+                virtualserver_and_pool_info_dict[str(_database_target_)] = {}
                 for _dict_Data_ in data_from_file[u'items']:
-                   ### 2016.05.11 : change pool name to pool name with status information 
-                   # _Re_Poolinfo_[str(_dict_Data_[u'name'])] = _dict_Data_[u'poolmember_names']
-                   #
-                   _Re_Poolinfo_[str(_dict_Data_[u'name'])] = _dict_Data_[u'poolmember_status']
+                   virtualserver_and_pool_info_dict[str(_database_target_)][str(_dict_Data_[u'name'])] = {}
+                   virtualserver_and_pool_info_dict[str(_database_target_)][str(_dict_Data_[u'name'])][u'virtualserver_names'] = _dict_Data_[u'virtualserver_names_list']
+                   virtualserver_and_pool_info_dict[str(_database_target_)][str(_dict_Data_[u'name'])][u'poolmembers_status'] = _dict_Data_[u'poolmembers_status_list']
 
-                # Virtual Server Information
-                _filename_for_virtualserver_ = USER_DATABASES_DIR+"virtualserverlist."+_database_target_+".txt"
-                f = open(_filename_for_virtualserver_,"r")
-                _contents_ = f.readlines()
-                f.close()
-                stream = BytesIO(_contents_[0])
-                data_from_file = JSONParser().parse(stream)
-
-                virtualserver_and_pool_info_list = []
-                for _dict_Data_ in data_from_file[u'items']:
-                   _temp_dict_box_ = {}
-                   if u'pool' in _dict_Data_.keys() or str(u'pool') in _dict_Data_.keys():
-                      _temp_dict_box_[str(_dict_Data_[u"fullPath"]).strip().split("/")[-1]] = str(_dict_Data_[u"destination"]).strip().split("/")[-1]
-                      _temp_dict_box_[str(_dict_Data_[u"pool"]).strip().split("/")[-1]] = _Re_Poolinfo_[str(_dict_Data_[u"pool"]).strip().split("/")[-1]]
-                      virtualserver_and_pool_info_list.append(_temp_dict_box_)
-
-                # Virtual Server Information
-                virtualserver_and_pool_info_dict[_database_target_] = virtualserver_and_pool_info_list
     except:
        # except
        virtualserver_and_pool_info_dict = {}
@@ -211,16 +205,19 @@ def f5_poolmemberlist(request,format=None):
            fileindatabasedir = os.listdir(USER_DATABASES_DIR)
            for _filename_ in fileindatabasedir:
                if re.search("poollist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_) or re.search("virtualserverlist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
-                  os.popen("rm -rf "+USER_DATABASES_DIR+_filename_)
+                  get_info = os.popen("rm -rf "+USER_DATABASES_DIR+_filename_)
 
            # send curl command to device for virtual serverlist update
-           _threads_ = []
-           for _ip_address_ in standby_device_list:
-              th = threading.Thread(target=transfer_crul_to_get_virtualserver_info, args=(_ip_address_,))
-              th.start()
-              _threads_.append(th)
-           for th in _threads_:
-              th.join()
+           CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'[{\"auth_key\":\""+ENCAP_PASSWORD+"\"}]\' http://0.0.0.0:"+RUNSERVER_PORT+"/f5/virtualserverlist/"
+           get_info = os.popen(CURL_command).read().strip()
+
+           #_threads_ = []
+           #for _ip_address_ in standby_device_list:
+           #   th = threading.Thread(target=transfer_crul_to_get_virtualserver_info, args=(_ip_address_,))
+           #   th.start()
+           #   _threads_.append(th)
+           #for th in _threads_:
+           #   th.join()
            
            # get pool member information from the database file
            _threads_ = []
