@@ -35,38 +35,44 @@ DEFAULT_SETTING = [
                     }
                   ]
 
-F5_LTM_VIRTUAL_CURL_URL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json'"
-F5_LTM_POOL_CURL_URL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json'"
 
+#### command formatting
+# virtual
+F5_LTM_VIRTUAL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/"
+F5_LTM_VIRTUAL_CURL_URL = F5_LTM_VIRTUAL + " -H 'Content-Type: application/json'"
 F5_LTM_VIRTUAL_POST_CURL_URL = F5_LTM_VIRTUAL_CURL_URL + " -X POST -d "
+
+# pool
+F5_LTM_POOL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/"
+F5_LTM_POOL_CURL_URL = F5_LTM_POOL + " -H 'Content-Type: application/json'"
 F5_LTM_POOL_POST_CURL_URL = F5_LTM_POOL_CURL_URL + " -X POST -d "
 
+# default parameter values
+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST = "\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"persist\":[%(persist_option)s]"
+
+POOL_DEFAULT_SETTING_ROUNDROBIN = "\"name\":\"%(poolname)s\",\"members\":\"%(poolmembers)s\",\"serviceDownAction\":\"reset\",\"loadBalancingMode\":\"round-robin\""
 
 VIRTUALSERVER_CREATE_CMD_FORMAT = [
                                     {
                                       "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46"],
-                                      "created_command_sticky":F5_LTM_VIRTUAL_POST_CURL_URL + "'{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"persist\":[{\"name\":\"source_addr_300\",\"partition\":\"Common\",\"tmDefault\":\"yes\"}],\"sourceAddressTranslation\":{}}'",
-                                      "created_command_basic":F5_LTM_VIRTUAL_POST_CURL_URL + "'{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"persist\":[],\"sourceAddressTranslation\":{}}'",
-                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"persist\":[%(persist_option)s],\"sourceAddressTranslation\":{}}'"
+                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"sourceAddressTranslation\":{}"+"}'"
                                     },
                                     {
                                       "device":["10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
-                                      "created_command_sticky":F5_LTM_VIRTUAL_POST_CURL_URL + "'{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"rules\":[],\"persist\":[{\"name\":\"source_addr_300\",\"partition\":\"Common\",\"tmDefault\":\"yes\"}],\"sourceAddressTranslation\":{\"type\":\"automap\"}}'",
-                                      "created_command_basic":F5_LTM_VIRTUAL_POST_CURL_URL + "'{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"rules\":[],\"persist\":[],\"sourceAddressTranslation\":{\"type\":\"automap\"}}'",
-                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"rules\":[],\"persist\":[%(persist_option)s],\"sourceAddressTranslation\":{\"type\":\"automap\"}}'"
+                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"automap\"}"+"}'"
                                     }  
                                   ]
 
 POOL_CREATE_CMD_FORMAT = [
                            {
                              "device":["10.10.77.29","10.10.77.30","10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34","10.10.77.45","10.10.77.46"],
-                             "created_command":F5_LTM_POOL_POST_CURL_URL + "'{\"name\":\"%(poolname)s\",\"members\":\"%(poolmembers)s\",\"monitor\":\"/Common/tcp_skp\",\"serviceDownAction\":\"reset\",\"loadBalancingMode\":\"round-robin\"}'"
+                             "created_command":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'"
                            }
                          ]
 
 COMMOM_CMD_FORMAT = {
-                      "delete_pool_command":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/%(poolname)s -H 'Content-Type: application/json' -X DELETE",
-                      "delete_virtualserver_command":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/%(virtualservername)s -H 'Content-Type: application/json' -X DELETE",
+                      "delete_pool_command":F5_LTM_POOL + "%(poolname)s -H 'Content-Type: application/json' -X DELETE",
+                      "delete_virtualserver_command":F5_LTM_VIRTUAL + "%(virtualservername)s -H 'Content-Type: application/json' -X DELETE",
                       "sync_command":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json' -X POST -d '{\"command\":\"run\",\"utilCmdArgs\":\"config-sync to-group %(syncgroup)s\"}'"
                     }
 
@@ -137,8 +143,10 @@ def f5_create_config_lb(request,format=None):
       try:
 
         _input_ = JSONParser().parse(request)
+
         
         if re.match(ENCAP_PASSWORD,str(_input_[0]['auth_key'])):
+
 
            message = [] 
 
@@ -339,8 +347,8 @@ def f5_create_config_lb(request,format=None):
            # virtual server name should be empty
            # _valid_user_input_data_ : is full varified data
 
-           for _loop1_ in _valid_user_input_data_:
-              _loop1_[u'configCmd'] = {}
+           #for _loop1_ in _valid_user_input_data_:
+           #   _loop1_[u'configCmd'] = {}
 
            _return_message_list_ = []
            for _loop1_ in _valid_user_input_data_:
@@ -382,8 +390,6 @@ def f5_create_config_lb(request,format=None):
                  command_format_to_virtualserver = {}
                  for _loop2_ in VIRTUALSERVER_CREATE_CMD_FORMAT:
                     if str(info_in_device) in _loop2_["device"]:
-                      #command_format_to_virtualserver[u'create_basic'] = _loop2_["created_command_basic"] 
-                      #command_format_to_virtualserver[u'create_sticky'] = _loop2_["created_command_sticky"] 
                       command_format_to_virtualserver[u'create'] = _loop2_["created_command"]
                       command_format_to_virtualserver[u'delete'] = COMMOM_CMD_FORMAT["delete_virtualserver_command"]
                       break
@@ -431,16 +437,14 @@ def f5_create_config_lb(request,format=None):
                  f = open(LOG_FILE,"a")
                  _date_ = os.popen("date").read().strip()
                  for _loop2_ in [_F5_POOL_create_,_F5_POOL_delete_,_F5_VIRTUAL_Server_create_,_F5_VIRTUAL_Server_delete_]:
-                    log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" , created command :["+_loop2_+"]!\n"
+                    log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" , COMMAND :["+_loop2_+"]!\n"
                     f.write(log_msg)
                  f.close()
 
                  ## 
                  _final_command_ = {
-                                     "create_pool":_F5_POOL_create_,
-                                     "create_virtual_server":_F5_VIRTUAL_Server_create_,
-                                     "delete_pool":_F5_POOL_delete_,
-                                     "delete_virtual_server":_F5_VIRTUAL_Server_delete_
+                                     "create":[_F5_POOL_create_,_F5_VIRTUAL_Server_create_],
+                                     "delete":[_F5_POOL_delete_,_F5_VIRTUAL_Server_delete_]
                                    }
                  _return_message_list_.append(_final_command_)
 

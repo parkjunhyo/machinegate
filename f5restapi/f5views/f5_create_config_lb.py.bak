@@ -16,37 +16,69 @@ from f5restapi.setting import USER_NAME,USER_PASSWORD
 from f5restapi.setting import ENCAP_PASSWORD
 from f5restapi.setting import THREAD_TIMEOUT
 from f5restapi.setting import RUNSERVER_PORT
-from f5restapi.setting import VIRTUALIP_SPLITE_COUNT
 
 
 ## Curl Command Format
 ## This is the Global Setting Configuration
 ## 
+
+VIRTUALIP_SPLITE_COUNT = 2
+
+DEFAULT_SETTING = [
+                    { 
+                      "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46"],
+                      "sticky":"{\"name\":\"source_addr_300\"}"
+                    },
+                    {
+                      "device":["10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
+                      "sticky":""
+                    }
+                  ]
+
+
+#### command formatting
+# virtual
+F5_LTM_VIRTUAL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/"
+F5_LTM_VIRTUAL_CURL_URL = F5_LTM_VIRTUAL + " -H 'Content-Type: application/json'"
+F5_LTM_VIRTUAL_POST_CURL_URL = F5_LTM_VIRTUAL_CURL_URL + " -X POST -d "
+
+# pool
+F5_LTM_POOL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/"
+F5_LTM_POOL_CURL_URL = F5_LTM_POOL + " -H 'Content-Type: application/json'"
+F5_LTM_POOL_POST_CURL_URL = F5_LTM_POOL_CURL_URL + " -X POST -d "
+
+# default parameter values
+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST = "\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"persist\":[%(persist_option)s]"
+
+POOL_DEFAULT_SETTING_ROUNDROBIN = "\"name\":\"%(poolname)s\",\"members\":\"%(poolmembers)s\",\"serviceDownAction\":\"reset\",\"loadBalancingMode\":\"round-robin\""
+
 VIRTUALSERVER_CREATE_CMD_FORMAT = [
                                     {
                                       "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46"],
-                                      "created_command_sticky":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"persist\":[{\"name\":\"source_addr_300\",\"partition\":\"Common\",\"tmDefault\":\"yes\"}],\"sourceAddressTranslation\":{}}'",
-                                      "created_command_basic":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"persist\":[],\"sourceAddressTranslation\":{}}'"
+                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"sourceAddressTranslation\":{}"+"}'"
+                                      #"created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"persist\":[%(persist_option)s],\"sourceAddressTranslation\":{}}'"
                                     },
                                     {
                                       "device":["10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
-                                      "created_command_sticky":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"rules\":[],\"persist\":[{\"name\":\"source_addr_300\",\"partition\":\"Common\",\"tmDefault\":\"yes\"}],\"sourceAddressTranslation\":{\"type\":\"automap\"}}'",
-                                      "created_command_basic":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"rules\":[],\"persist\":[],\"sourceAddressTranslation\":{\"type\":\"automap\"}}'"
+                                      #"created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"rules\":[],\"persist\":[%(persist_option)s],\"sourceAddressTranslation\":{\"type\":\"automap\"}}'"
+                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"automap\"}"+"}'"
                                     }  
                                   ]
 
 POOL_CREATE_CMD_FORMAT = [
                            {
                              "device":["10.10.77.29","10.10.77.30","10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34","10.10.77.45","10.10.77.46"],
-                             "created_command":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(poolname)s\",\"members\":\"%(poolmembers)s\",\"monitor\":\"/Common/tcp_skp\",\"serviceDownAction\":\"reset\",\"loadBalancingMode\":\"round-robin\"}'"
+                             "created_command":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'"
+                             #"created_command":F5_LTM_POOL_POST_CURL_URL + "'{\"name\":\"%(poolname)s\",\"members\":\"%(poolmembers)s\",\"monitor\":\"/Common/tcp_skp\",\"serviceDownAction\":\"reset\",\"loadBalancingMode\":\"round-robin\"}'"
                            }
                          ]
 
-COMMOM_CMD_FORMAT = { 
-                      "delete_pool_command":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/%(poolname)s -H 'Content-Type: application/json' -X DELETE",
-                      "delete_virtualserver_command":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/%(virtualservername)s -H 'Content-Type: application/json' -X DELETE",
+COMMOM_CMD_FORMAT = {
+                      "delete_pool_command":F5_LTM_POOL + "%(poolname)s -H 'Content-Type: application/json' -X DELETE",
+                      "delete_virtualserver_command":F5_LTM_VIRTUAL + "%(virtualservername)s -H 'Content-Type: application/json' -X DELETE",
                       "sync_command":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json' -X POST -d '{\"command\":\"run\",\"utilCmdArgs\":\"config-sync to-group %(syncgroup)s\"}'"
                     }
+
 
 
 class JSONResponse(HttpResponse):
@@ -57,77 +89,7 @@ class JSONResponse(HttpResponse):
         content = JSONRenderer().render(data)
         kwargs['content_type'] = 'application/json'
         super(JSONResponse, self).__init__(content, **kwargs)
-
   
-def get_poolinfo():
-
-    try:
-       # read db file
-       _devicelist_db_ = USER_DATABASES_DIR + "devicelist.txt"
-       f = open(_devicelist_db_,'r')
-       _string_contents_ = f.readlines()
-       f.close()
-       stream = BytesIO(_string_contents_[0])
-       _data_from_devicelist_db_= JSONParser().parse(stream)
-
-       # standby server list
-       standby_device_list = []           
-       for _dict_information_ in _data_from_devicelist_db_:
-           if re.match('standby',str(_dict_information_[u'failover'])):
-              if str(_dict_information_[u'ip']) not in standby_device_list:
-                 standby_device_list.append(str(_dict_information_[u'ip']))
-
-       fileindatabasedir = os.listdir(USER_DATABASES_DIR)
-       # re-arrange the pool information
-       virtualserver_and_pool_info_dict = {}
-       for _filename_ in fileindatabasedir:
-          if re.search("poollist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
-
-             _database_target_ = re.search("[0-9]+.[0-9]+.[0-9]+.[0-9]+",_filename_).group(0)
-             if str(_database_target_).strip() in standby_device_list:
-
-                # Pool information Re-arrange.
-                f = open(USER_DATABASES_DIR+_filename_,"r")
-                _contents_ = f.readlines()
-                f.close()
-                stream = BytesIO(_contents_[0])
-                data_from_file = JSONParser().parse(stream)
-
-                _Re_Poolinfo_ = {}
-                for _dict_Data_ in data_from_file[u'items']:
-                   ### 2016.05.11 : change pool name to pool name with status information 
-                   # _Re_Poolinfo_[str(_dict_Data_[u'name'])] = _dict_Data_[u'poolmember_names']
-                   #
-                   _Re_Poolinfo_[str(_dict_Data_[u'name'])] = _dict_Data_[u'poolmember_status']
-
-                # Virtual Server Information
-                _filename_for_virtualserver_ = USER_DATABASES_DIR+"virtualserverlist."+_database_target_+".txt"
-                f = open(_filename_for_virtualserver_,"r")
-                _contents_ = f.readlines()
-                f.close()
-                stream = BytesIO(_contents_[0])
-                data_from_file = JSONParser().parse(stream)
-
-                virtualserver_and_pool_info_list = []
-                for _dict_Data_ in data_from_file[u'items']:
-                   _temp_dict_box_ = {}
-                   if u'pool' in _dict_Data_.keys() or str(u'pool') in _dict_Data_.keys():
-                      _temp_dict_box_[str(_dict_Data_[u"fullPath"]).strip().split("/")[-1]] = str(_dict_Data_[u"destination"]).strip().split("/")[-1]
-                      _temp_dict_box_[str(_dict_Data_[u"pool"]).strip().split("/")[-1]] = _Re_Poolinfo_[str(_dict_Data_[u"pool"]).strip().split("/")[-1]]
-                      virtualserver_and_pool_info_list.append(_temp_dict_box_)
-
-                # Virtual Server Information
-                virtualserver_and_pool_info_dict[_database_target_] = virtualserver_and_pool_info_list
-    except:
-       # except
-       virtualserver_and_pool_info_dict = {}
-       return virtualserver_and_pool_info_dict
-    
-
-    # threading must have
-    time.sleep(0)
-    return virtualserver_and_pool_info_dict
-
 
 @api_view(['GET','POST'])
 @csrf_exempt
@@ -137,7 +99,45 @@ def f5_create_config_lb(request,format=None):
    if request.method == 'GET':
 
       # get the result data and return
-      message = get_poolinfo()
+##[
+##    {
+##        "items": [
+##            {
+##                "device": "KRIS10-PUBS01-5000L4 or 10.10.77.29",
+##                "poolmembers": [
+##                    "172.22.192.251:8080",
+##                    "172.22.192.252:8080",
+##                    "172.22.192.253:8080"
+##                ],
+##                "servername": "OCBPASS_WEB",
+##                "virtual_ip_port": "172.22.198.254:8080",
+##                "options": [
+##                    "sticky"
+##                ]
+##            },
+##            {}
+##        ],
+##        "auth_key": "Adfakladjfqern@sdfjlaf1!"
+##    }
+##]
+
+
+      message = [{
+                   "items":[
+                               {
+                                 "virtual_ip_port":"172.22.198.254:8080",
+                                 "device":"KRIS10-PUBS01-5000L4 or 10.10.77.29",
+                                 "servername":"OCBPASS_WEB",
+                                 "poolmembers":["172.22.192.251:8080","172.22.192.252:8080","172.22.192.253:8080"],
+                                 "options":["sticky"]
+                                },
+                                {
+                                }  
+                            ]
+                 }]
+
+
+
       return Response(message)
 
 
@@ -146,15 +146,32 @@ def f5_create_config_lb(request,format=None):
       try:
 
         _input_ = JSONParser().parse(request)
+
         
         if re.match(ENCAP_PASSWORD,str(_input_[0]['auth_key'])):
-           
+
+
+           message = [] 
+
            # log message
            f = open(LOG_FILE,"a")
            _date_ = os.popen("date").read().strip()
            log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" , method POST request to run f5_create_config_lb.py function!\n"
            f.write(log_msg)
            f.close()
+
+           # input variable check
+           _musthave_key_ = [u'device',u'poolmembers',u'servername',u'virtual_ip_port']
+           for _loop1_ in _input_[0][u'items']:
+              for _loop2_ in _musthave_key_:
+                 if _loop2_ not in _loop1_.keys():
+                   f = open(LOG_FILE,"a")
+                   _date_ = os.popen("date").read().strip()
+                   log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" , parameter ["+str(_loop2_)+"] is required !\n"
+                   f.write(log_msg)
+                   f.close()
+                   # terminated
+                   sys.exit(0)
 
            # read device list file
            _devicelist_db_ = USER_DATABASES_DIR + "devicelist.txt"
@@ -316,6 +333,7 @@ def f5_create_config_lb(request,format=None):
 
            # virtual server and pool name creation
            # _user_input_data_nodes_confirm_ : perfect varidation checked
+           # virtual server information should be empty to create something new one.
            _valid_user_input_data_ = []
            for _loop1_ in _user_input_data_nodes_confirm_:
               if len(_loop1_[u'virtualserver_names_list']) != int(0):
@@ -331,25 +349,51 @@ def f5_create_config_lb(request,format=None):
            # command creation and f5 rest_api command
            # virtual server name should be empty
            # _valid_user_input_data_ : is full varified data
+
            for _loop1_ in _valid_user_input_data_:
               _loop1_[u'configCmd'] = {}
 
+           _return_message_list_ = []
            for _loop1_ in _valid_user_input_data_:
               if len(_loop1_[u'virtualserver_names_list']) == int(0):
 
+                 # Parameter re-arrange
+                 info_in_pairdevice = _loop1_[u'pairdevice']
+                 info_in_poolnames_list = _loop1_[u'poolnames_list']
+                 info_in_virtual_ip_port = _loop1_[u'virtual_ip_port']
+                 info_in_servername = _loop1_[u'servername']
+                 info_in_poolmembers = _loop1_[u'poolmembers']
+                 info_in_device = _loop1_[u'device']
+                 info_in_syncgroup = _loop1_[u'syncgroup']
+
+                 ### server name recreation
+                 SERVERHOST_name = str('_'.join(info_in_servername.strip().split('-')))
+
+                 ### option check confirmation
+                 ### this part will be upgrade if you add new option
+                 ###
+                 info_in_sticky = ""
+                 if u'options' in _loop1_.keys():
+                   # option : sticky
+                   if u'sticky' in _loop1_[u'options']:
+                     for _loop2_ in DEFAULT_SETTING:
+                        if str(info_in_device) in _loop2_['device']:
+                          info_in_sticky = _loop2_['sticky']
+                          break 
+ 
+   
                  # find out the command format to create the pool
                  command_format_to_pool = {}
                  for _loop2_ in POOL_CREATE_CMD_FORMAT:
-                    if str(_loop1_[u'device']) in _loop2_["device"]:
+                    if str(info_in_device) in _loop2_["device"]:
                       command_format_to_pool[u'create'] = _loop2_["created_command"]
                       command_format_to_pool[u'delete'] = COMMOM_CMD_FORMAT["delete_pool_command"]
                       break
 
                  command_format_to_virtualserver = {}
                  for _loop2_ in VIRTUALSERVER_CREATE_CMD_FORMAT:
-                    if str(_loop1_[u'device']) in _loop2_["device"]:
-                      command_format_to_virtualserver[u'create_basic'] = _loop2_["created_command_basic"] 
-                      command_format_to_virtualserver[u'create_sticky'] = _loop2_["created_command_sticky"] 
+                    if str(info_in_device) in _loop2_["device"]:
+                      command_format_to_virtualserver[u'create'] = _loop2_["created_command"]
                       command_format_to_virtualserver[u'delete'] = COMMOM_CMD_FORMAT["delete_virtualserver_command"]
                       break
 
@@ -363,69 +407,53 @@ def f5_create_config_lb(request,format=None):
                       _temp_box_.append(str(_port_info_))
                     if str(_string_value_) not in _temp_string_box_:
                       _temp_string_box_.append(str(_string_value_))
-
                  _name_with_ports_ = str("_".join(_temp_box_)) 
                  _poolmember_string_ = str(" ".join(_temp_string_box_))
-
-                 _servername_ = str('_'.join(str(_loop1_[u'servername']).strip().split('-')))
-                 _poolname_created_ = "p_%(servername)s_%(portname)s" % {"servername":_servername_,"portname":_name_with_ports_}
+                 _poolname_created_ = "p_%(servername)s_%(portname)s" % {"servername":SERVERHOST_name,"portname":_name_with_ports_}
 
                  # create virtual server
-                 _splited_ip_ = str(_loop1_[u'virtual_ip_port']).strip().split()[0]
-                 _splited_port_ = str(_loop1_[u'virtual_ip_port']).strip().split()[-1]
+                 _splited_ip_ = str(_loop1_[u'virtual_ip_port']).strip().split(':')[0]
+                 _splited_port_ = str(_loop1_[u'virtual_ip_port']).strip().split(':')[-1]
                  _rename_ip_value_ = str('.'.join(str(_splited_ip_).split('.')[int(VIRTUALIP_SPLITE_COUNT):]))
-                 _virtualservername_created_ = "v_%(ipport)s_%(servername)s_%(portname)s" % {"ipport":_rename_ip_value_,"servername":_servername_,"portname":_splited_port_}
-             
-                 # create the curl
-                 dict_values = {"username":USER_NAME,"password":USER_PASSWORD,"device":str(_loop1_[u'device']),"poolname":_poolname_created_,"syncgroup":str(_loop1_[u'syncgroup']),"poolmembers":_poolmember_string_,"virtualservername":_virtualservername_created_,"destination":str(_loop1_[u'virtual_ip_port'])} 
-                 _create_status_ = 1
-                 if len(_loop1_[u'poolnames_list']) != int(0):
-                   _temp_box_ = []
-                   for _loop2_ in _loop1_[u'poolnames_list']:
-                      _temp_box_.append(str(_loop2_))
-                   if _poolname_created_ in _temp_box_:
-                     _create_status_ = 0
-
-                 if _create_status_:
-                   _loop1_[u'configCmd'][u'create_pool'] = command_format_to_pool[u'create'] % dict_values
-                   _loop1_[u'configCmd'][u'delete_pool'] = command_format_to_pool[u'delete'] % dict_values
-                   _loop1_[u'poolnames_list'].append(str(_poolname_created_))
-
-                 # create virtual server curl u'sticky'
-                 if u'option' in _loop1_.keys():
-                    _temp_box_ = []
-                    for _loop2_ in _loop1_[u'option']:
-                       _temp_box_.append(str(_loop2_))
-                    if str('sticky') in _temp_box_:
-                       _loop1_[u'configCmd'][u'create_virtualserver'] = command_format_to_virtualserver[u'create_sticky'] % dict_values
-                    else:
-                       _loop1_[u'configCmd'][u'create_virtualserver'] = command_format_to_virtualserver[u'create_basic'] % dict_values
-                 else:
-                    _loop1_[u'configCmd'][u'create_virtualserver'] = command_format_to_virtualserver[u'create_basic'] % dict_values
-                 _loop1_[u'configCmd'][u'delete_virtualserver'] = command_format_to_virtualserver[u'delete'] % dict_values
-
-                 # create virtual server curl u'sticky'
-
-                  
-                   
-           # _valid_user_input_data_ : is full varified data
+                 _virtualservername_created_ = "v_%(ipport)s_%(servername)s_%(portname)s" % {"ipport":_rename_ip_value_,"servername":SERVERHOST_name,"portname":_splited_port_}
 
 
-           #print _command_added_user_input_data_
-           print _valid_user_input_data_
-            
-  
- 
+                 # create the diction value for input
+                 _string_formatting_dictionary_ = {
+                                                    "username":USER_NAME,
+                                                    "password":USER_PASSWORD,
+                                                    "device":str(info_in_device),
+                                                    "poolname":str(_poolname_created_),
+                                                    "virtualservername":str(_virtualservername_created_),
+                                                    "syncgroup":str(info_in_syncgroup),
+                                                    "destination":str(info_in_virtual_ip_port),
+                                                    "poolmembers":str(_poolmember_string_),
+                                                    "persist_option":str(info_in_sticky)   
+                                                  }
 
+                 ### F5 curl command creation and log messeges left
+                 _F5_POOL_create_ = command_format_to_pool[u'create'] % _string_formatting_dictionary_
+                 _F5_POOL_delete_ = command_format_to_pool[u'delete'] % _string_formatting_dictionary_
+                 _F5_VIRTUAL_Server_create_ = command_format_to_virtualserver[u'create'] % _string_formatting_dictionary_
+                 _F5_VIRTUAL_Server_delete_ = command_format_to_virtualserver[u'delete'] % _string_formatting_dictionary_
 
+                 f = open(LOG_FILE,"a")
+                 _date_ = os.popen("date").read().strip()
+                 for _loop2_ in [_F5_POOL_create_,_F5_POOL_delete_,_F5_VIRTUAL_Server_create_,_F5_VIRTUAL_Server_delete_]:
+                    log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" , created command :["+_loop2_+"]!\n"
+                    f.write(log_msg)
+                 f.close()
 
- 
+                 ## 
+                 _final_command_ = {
+                                     "create_pool":_F5_POOL_create_,
+                                     "create_virtual_server":_F5_VIRTUAL_Server_create_,
+                                     "delete_pool":_F5_POOL_delete_,
+                                     "delete_virtual_server":_F5_VIRTUAL_Server_delete_
+                                   }
+                 _return_message_list_.append(_final_command_)
 
-           sys.exit()
-
-
-
-           message = [{}]
+           message = _return_message_list_ 
            return Response(message)
 
 
