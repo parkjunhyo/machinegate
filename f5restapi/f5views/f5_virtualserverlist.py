@@ -52,7 +52,16 @@ def get_virtualserverlist_name(_FILENAME_):
 
     _combination_ = {}
     for _dict_Data_ in data_from_file["items"]:
-       _combination_[str(_dict_Data_["fullPath"])] = str(_dict_Data_["destination"])
+
+       _combination_[str(_dict_Data_["fullPath"])] = {}
+       _combination_[str(_dict_Data_["fullPath"])][u'destination'] = str(_dict_Data_["destination"])
+
+       _persistance_options_ = "none"
+       if u'persist' in _dict_Data_.keys():
+         _persistance_options_ = str(_dict_Data_[u'persist'][0][u'name'])
+
+       #_combination_[str(_dict_Data_["fullPath"])] = str(_dict_Data_["destination"])+"(persist:"+_persistance_options_+")"
+       _combination_[str(_dict_Data_["fullPath"])][u'persist'] = _persistance_options_
     # return dictionary value
     return _combination_
 

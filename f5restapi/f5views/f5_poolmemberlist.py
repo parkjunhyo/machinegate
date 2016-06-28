@@ -149,6 +149,10 @@ def get_poolinfo():
                    virtualserver_and_pool_info_dict[str(_database_target_)][str(_dict_Data_[u'name'])] = {}
                    virtualserver_and_pool_info_dict[str(_database_target_)][str(_dict_Data_[u'name'])][u'virtualserver_names'] = _dict_Data_[u'virtualserver_names_list']
                    virtualserver_and_pool_info_dict[str(_database_target_)][str(_dict_Data_[u'name'])][u'poolmembers_status'] = _dict_Data_[u'poolmembers_status_list']
+                   monitors_list = []
+                   if u'monitor' in _dict_Data_.keys():
+                     monitors_list = str(_dict_Data_[u'monitor']).split(" and ")
+                   virtualserver_and_pool_info_dict[str(_database_target_)][str(_dict_Data_[u'name'])][u'monitors'] = monitors_list 
 
     except:
        # except
