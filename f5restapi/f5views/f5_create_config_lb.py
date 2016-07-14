@@ -22,16 +22,24 @@ from f5restapi.setting import RUNSERVER_PORT
 ## This is the Global Setting Configuration
 ## 
 
+## this value is used to create the virtual server name
 VIRTUALIP_SPLITE_COUNT = 2
 
 DEFAULT_SETTING = [
                     { 
                       "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46"],
-                      "sticky":"{\"name\":\"source_addr_300\"}"
+                      "sticky":"{\"name\":\"source_addr_300\"}",
+                      "profiles":"\"fastL4\""
+                    },
+                    {
+                      "device":["10.10.30.101","10.10.30.102"],
+                      "sticky":"{\"name\":\"source_addr_300\"}",
+                      "profiles":"\"fastL4_loose\""
                     },
                     {
                       "device":["10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
-                      "sticky":""
+                      "sticky":"",
+                      "profiles":"\"fastL4\""
                     }
                   ]
 
@@ -48,24 +56,28 @@ F5_LTM_POOL_CURL_URL = F5_LTM_POOL + " -H 'Content-Type: application/json'"
 F5_LTM_POOL_POST_CURL_URL = F5_LTM_POOL_CURL_URL + " -X POST -d "
 
 # default parameter values
-VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST = "\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"mirror\":\"enabled\",\"profiles\":[\"fastL4\"],\"persist\":[%(persist_option)s]"
+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST = "\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"profiles\":[%(profiles_option)s],\"persist\":[%(persist_option)s],\"mirror\":\"enabled\",\"translatePort\":\"enabled\""
 
 POOL_DEFAULT_SETTING_ROUNDROBIN = "\"name\":\"%(poolname)s\",\"members\":\"%(poolmembers)s\",\"serviceDownAction\":\"reset\",\"loadBalancingMode\":\"round-robin\""
 
 VIRTUALSERVER_CREATE_CMD_FORMAT = [
                                     {
                                       "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46"],
-                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"sourceAddressTranslation\":{}"+"}'"
+                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"sourceAddressTranslation\":{}"+"}'"
                                     },
                                     {
                                       "device":["10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
-                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"automap\"}"+"}'"
-                                    }  
+                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"automap\"}"+"}'"
+                                    },
+                                    {
+                                      "device":["10.10.30.101","10.10.30.102"],
+                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"disabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'"
+                                    }
                                   ]
 
 POOL_CREATE_CMD_FORMAT = [
                            {
-                             "device":["10.10.77.29","10.10.77.30","10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34","10.10.77.45","10.10.77.46"],
+                             "device":["10.10.77.29","10.10.77.30","10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34","10.10.77.45","10.10.77.46","10.10.30.101","10.10.30.102"],
                              "created_command":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'"
                            }
                          ]
@@ -377,7 +389,13 @@ def f5_create_config_lb(request,format=None):
                         if str(info_in_device) in _loop2_['device']:
                           info_in_sticky = _loop2_['sticky']
                           break 
- 
+
+                 ### option check confirmation
+                 info_in_profiles = ""
+                 for _loop2_ in DEFAULT_SETTING:
+                    if str(info_in_device) in _loop2_['device']:
+                      info_in_profiles = _loop2_['profiles']
+                      break
    
                  # find out the command format to create the pool
                  command_format_to_pool = {}
@@ -425,7 +443,8 @@ def f5_create_config_lb(request,format=None):
                                                     "syncgroup":str(info_in_syncgroup),
                                                     "destination":str(info_in_virtual_ip_port),
                                                     "poolmembers":str(_poolmember_string_),
-                                                    "persist_option":str(info_in_sticky)   
+                                                    "persist_option":str(info_in_sticky),
+                                                    "profiles_option":str(info_in_profiles)
                                                   }
 
                  ### F5 curl command creation and log messeges left
