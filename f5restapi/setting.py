@@ -3,6 +3,8 @@ USER_F5_DIR = "/root/machinegate/f5restapi/"
 
 USER_DATABASES_DIR = USER_F5_DIR + "databases/"
 
+USER_VAR_STATS = USER_F5_DIR + "var/stats/"
+
 USER_NAME = "admin"
 
 USER_PASSWORD = "Skplanet8!"
