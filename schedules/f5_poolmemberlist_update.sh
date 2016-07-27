@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-F5RESTAPI_PATH=$(find / -name 'f5restapi')
+F5RESTAPI_PATH=$(find / -name 'f5restapi' 2>&1 | grep -v 'Permission denied')
 
 SETTING_DIR=$F5RESTAPI_PATH/setting.py
 
