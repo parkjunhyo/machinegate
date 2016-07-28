@@ -5,9 +5,9 @@ USER_DATABASES_DIR = USER_F5_DIR + "databases/"
 
 USER_VAR_STATS = USER_F5_DIR + "var/stats/"
 
-USER_NAME = "admin"
+USER_NAME = ""
 
-USER_PASSWORD = "Skplanet8!"
+USER_PASSWORD = ""
 
 ENCAP_PASSWORD = "Adfakladjfqern@sdfjlaf1!"
 
