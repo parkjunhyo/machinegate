@@ -5,15 +5,17 @@ USER_DATABASES_DIR = USER_F5_DIR + "databases/"
 
 USER_VAR_STATS = USER_F5_DIR + "var/stats/"
 
-USER_NAME = ""
+USER_NAME = "admin"
 
-USER_PASSWORD = ""
+USER_PASSWORD = "Skplanet8!"
 
 ENCAP_PASSWORD = "Adfakladjfqern@sdfjlaf1!"
 
 LOG_FILE = USER_F5_DIR + "access.log"
 
 THREAD_TIMEOUT = 1
+
+STATS_VIEWER_COUNT = 300
 
 RUNSERVER_PORT = '8080'
 
