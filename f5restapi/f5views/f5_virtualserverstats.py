@@ -38,14 +38,39 @@ def f5_virtualserverstats(request,virtualservername,format=None):
          matched_filename = str(virtualservername)
          matched_fullpath = USER_VAR_STATS+matched_filename+"*"
          matched_filelist = glob.glob(matched_fullpath)
-         return Response(matched_filelist)
+
+         stats_inform_dict = {} 
+         all_stats_list = []
+         for _filename_ in matched_filelist:
+
+            parsed_filename = str(str(_filename_).strip().split("/")[-1])
+            stats_inform_dict[unicode(parsed_filename)] = {}
+
+            id_count = int(0)
+            f = open(_filename_,'r')
+            while True:
+              _read_content_ = f.readline().strip()
+              if not _read_content_:
+                break
+              stats_inform_dict[unicode(parsed_filename)][id_count] = {}
+
+              stream = BytesIO(_read_content_) 
+              datafrom_filestring = JSONParser().parse(stream)
+              if len(datafrom_filestring.keys()) != 1:
+                continue
+              dictkey_datafrom_filestring = datafrom_filestring.keys()
+
+              stats_inform_dict[unicode(parsed_filename)][id_count][u'stats'] = datafrom_filestring[dictkey_datafrom_filestring[0]]
+              id_count = id_count + int(1)
+            f.close()
+            all_stats_list.append(stats_inform_dict)
+
+         return Response(all_stats_list)
+
       except:
-         _status_all_ = {} 
-         message = _status_all_
-         return Response(message)
+         return Response("stats data is not normal!")
 
 
       # get the result data and return
       message = _status_all_
       return Response(message)
-
