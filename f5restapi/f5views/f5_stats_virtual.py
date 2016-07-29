@@ -45,7 +45,7 @@ def calculation_gap(_from_,_to_):
      raise Exception
    return abs(float(_float_to_ - _float_from_))
 
-def parsing_from_items_with_keyname(_keyname_,_origin_items_,_updated_items_,time_gab,interval_string):
+def parsing_from_items_with_keyname(_keyname_,_origin_items_,_updated_items_,time_gab,interval_string,end_time_time):
    virservername_keyname = str(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'tmName'][u'description']).strip().split("/")[-1]
    # init output values
    output_values = {}
@@ -96,6 +96,7 @@ def parsing_from_items_with_keyname(_keyname_,_origin_items_,_updated_items_,tim
 
    # interval
    output_values[unicode(str(virservername_keyname))][unicode('interval')] = interval_string
+   output_values[unicode(str(virservername_keyname))][unicode('updated_time')] = end_time_time 
 
    return output_values
 
@@ -156,7 +157,7 @@ def get_viewer():
           for _loop2_ in updated_inform_keys:
 
              virservername_keyname = str(updated_inform[_loop2_][u'nestedStats'][u'entries'][u'tmName'][u'description']).strip().split("/")[-1]
-             _this_value_ = parsing_from_items_with_keyname(_loop2_,origin_inform,updated_inform,time_gab,interval_string)
+             _this_value_ = parsing_from_items_with_keyname(_loop2_,origin_inform,updated_inform,time_gab,interval_string,end_time_time)
              _result_[uncode_active_device_ip].update(_this_value_)
 
        if len(_result_.keys()) == 0:
@@ -220,7 +221,7 @@ def get_virtual_status_info():
           for _loop2_ in updated_inform_keys:
 
              virservername_keyname = str(updated_inform[_loop2_][u'nestedStats'][u'entries'][u'tmName'][u'description']).strip().split("/")[-1]
-             _this_value_ = parsing_from_items_with_keyname(_loop2_,origin_inform,updated_inform,time_gab,interval_string)
+             _this_value_ = parsing_from_items_with_keyname(_loop2_,origin_inform,updated_inform,time_gab,interval_string,end_time_time)
              _result_[uncode_active_device_ip].update(_this_value_)
 
              # var/stats file update

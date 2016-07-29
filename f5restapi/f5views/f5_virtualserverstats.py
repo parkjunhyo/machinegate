@@ -60,7 +60,7 @@ def f5_virtualserverstats(request,virtualservername,format=None):
                 continue
               dictkey_datafrom_filestring = datafrom_filestring.keys()
 
-              stats_inform_dict[unicode(parsed_filename)][id_count][u'stats'] = datafrom_filestring[dictkey_datafrom_filestring[0]]
+              stats_inform_dict[unicode(parsed_filename)][id_count] = datafrom_filestring[dictkey_datafrom_filestring[0]]
               id_count = id_count + int(1)
             f.close()
             all_stats_list.append(stats_inform_dict)
