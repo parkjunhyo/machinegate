@@ -39,8 +39,8 @@ def f5_virtualstats_top(request,key_value,format=None):
       try:
 
          # send curl command to device for virtual serverlist update
-         CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'[{\"auth_key\":\""+ENCAP_PASSWORD+"\"}]\' http://0.0.0.0:"+RUNSERVER_PORT+"/f5/stats/virtual/"
-         get_info = os.popen(CURL_command).read().strip()
+         #CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'[{\"auth_key\":\""+ENCAP_PASSWORD+"\"}]\' http://0.0.0.0:"+RUNSERVER_PORT+"/f5/stats/virtual/"
+         #get_info = os.popen(CURL_command).read().strip()
 
          category_value = str(key_value).lower()
 
@@ -131,64 +131,6 @@ def f5_virtualstats_top(request,key_value,format=None):
 
                rank_dict_data[unicode(_active_device_)][unicode(_keyname_)] = sorted_container 
          
-               
-
-
-
-         #matching_info_category = ["cps","bpsIn","interval","updated_time","bpsOut","session","ppsOut","ppsIn"]
-         #matchstatus = False
-         #for _in_ in matching_info_category:
-         #   if re.search(category_value,_in_.lower()):
-         #     matchstatus = True
-         #     break
-         
-         #if matchstatus:     
-
-         #   # find out the active device
-         #   f = open(USER_DATABASES_DIR + "devicelist.txt",'r')
-         #   _string_contents_ = f.readlines()
-         #   f.close()
-         #   stream = BytesIO(_string_contents_[0])
-         #   _data_from_devicelist_db_= JSONParser().parse(stream)
-
-         #   # active server list
-         #   active_device_list = []
-         #   for _dict_information_ in _data_from_devicelist_db_:
-         #       if re.match('active',str(_dict_information_[u'failover'])):
-         #          if str(_dict_information_[u'devicehostname']) not in active_device_list:
-         #             active_device_list.append(str(_dict_information_[u'devicehostname'])) 
-
-         #   # init container 
-         #   _container_ = {}
-         #   for _active_device_ in active_device_list:
-         #      _container_[_active_device_] = {}
-
-         #   for _active_device_ in active_device_list:
-         #      matched_fullpath = USER_VAR_STATS+"*@*"+str(_active_device_)+"*.virtual.stats"
-         #      matched_filelist = glob.glob(matched_fullpath)
-        
-         #      last_values_list = []
-         #      for _filename_ in matched_filelist:
-         #         f = open(_filename_,'r')
-         #         _string_contents_ = f.readlines()
-         #         f.close()
-         #         last_string = _string_contents_[-1].strip()
-         #         stream = BytesIO(last_string)
-         #         _dictdata_ = JSONParser().parse(stream)
-
-         #         # findout criteron
-         #         matched_key_value = []
-         #         for _keyname_ in _dictdata_.keys():
-         #            _secondkey_ = _dictdata_[_keyname_].keys()
-         #            for _onekey_ in _secondkey_:
-         #               if re.search(category_value,_onekey_.lower()):
-         #                  matched_key_value.append(_onekey_)
-
-                  # 
-                    
-                  
-         #         print matched_key_value
-         #         last_values_list.append(JSONParser().parse(stream))
 
          return Response(rank_dict_data)
 
