@@ -18,6 +18,7 @@ from f5restapi.setting import ENCAP_PASSWORD
 from f5restapi.setting import THREAD_TIMEOUT
 from f5restapi.setting import USER_VAR_STATS
 from f5restapi.setting import STATS_TOP_COUNT
+from f5restapi.setting import RUNSERVER_PORT
 
 class JSONResponse(HttpResponse):
     """
@@ -36,6 +37,11 @@ def f5_virtualstats_top(request,key_value,format=None):
    # get method
    if request.method == 'GET':
       try:
+
+         # send curl command to device for virtual serverlist update
+         CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'[{\"auth_key\":\""+ENCAP_PASSWORD+"\"}]\' http://0.0.0.0:"+RUNSERVER_PORT+"/f5/stats/virtual/"
+         get_info = os.popen(CURL_command).read().strip()
+
          category_value = str(key_value).lower()
 
          # find out the active device 
@@ -73,6 +79,7 @@ def f5_virtualstats_top(request,key_value,format=None):
                  continue
 
                _keyname_ = _dictdata_.keys()[-1].strip()
+               _interval_ = _dictdata_[_keyname_][unicode("interval")]
                _matched_inner_keyname_ = [] 
                for _inner_keyname_ in _dictdata_[unicode(_keyname_)].keys():
                   _value_ = str(_inner_keyname_.lower())
@@ -88,6 +95,7 @@ def f5_virtualstats_top(request,key_value,format=None):
 
                for _inner_keyname_ in _matched_inner_keyname_:
                   _float_id_ = float(_dictdata_[unicode(_keyname_)][unicode(_inner_keyname_)]) 
+                  
 
                   if _float_id_ not in compare_container[unicode(_inner_keyname_)].keys():
                     compare_container[unicode(_inner_keyname_)][_float_id_] = []
@@ -102,7 +110,6 @@ def f5_virtualstats_top(request,key_value,format=None):
             sorted_container = {}
             for _keyname_ in _container_keyname_:
 
-               print _keyname_
                rank_dict_data[unicode(_active_device_)][unicode(_keyname_)] = {}
                sorted_container = {}
                sorted_id = compare_container[_keyname_].keys()
