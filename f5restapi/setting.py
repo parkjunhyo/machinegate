@@ -7,9 +7,9 @@ USER_VAR_STATS = USER_F5_DIR + "var/stats/"
 
 USER_NAME = ""
 
-USER_PASSWORD = "!"
+USER_PASSWORD = ""
 
-ENCAP_PASSWORD = "Adfakladjfqern@sdfjlaf1!"
+ENCAP_PASSWORD = ""
 
 LOG_FILE = USER_F5_DIR + "access.log"
 
