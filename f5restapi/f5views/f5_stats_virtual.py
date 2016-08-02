@@ -18,6 +18,8 @@ from f5restapi.setting import ENCAP_PASSWORD
 from f5restapi.setting import THREAD_TIMEOUT
 from f5restapi.setting import RUNSERVER_PORT
 from f5restapi.setting import USER_VAR_STATS
+from f5restapi.setting import STATS_VIEWER_COUNT
+from f5restapi.setting import STATS_SAVEDDATA_MULTI
 
 class Param_container():
    active_devices_list = []
@@ -237,8 +239,20 @@ def get_virtual_status_info():
                 f.write(json_dumps_msg+"\n")
                 f.close()
              else:
-                f = open(writing_file_path,'a')
-                f.write(json_dumps_msg+"\n")
+                f = open(writing_file_path,'r')
+                linelist = f.readlines()
+                f.close()
+
+                linelist.append(json_dumps_msg+"\n")
+                index_start = int(0)
+                if len(linelist) > (int(STATS_VIEWER_COUNT)*int(STATS_SAVEDDATA_MULTI)):
+                  index_start = int(len(linelist) - (int(STATS_VIEWER_COUNT)*int(STATS_SAVEDDATA_MULTI)))
+                 
+                writing_msg_list = linelist[index_start:]
+
+                f = open(writing_file_path,'w')
+                for _wmsg_ in writing_msg_list:
+                  f.write(_wmsg_.strip()+"\n")
                 f.close()
 
        # file remove which currently not existed.
