@@ -29,17 +29,20 @@ DEFAULT_SETTING = [
                     { 
                       "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46"],
                       "sticky":"{\"name\":\"source_addr_300\"}",
-                      "profiles":"\"fastL4\""
+                      "profiles":"\"fastL4\"",
+                      "portforward":None
                     },
                     {
                       "device":["10.10.30.101","10.10.30.102"],
                       "sticky":"{\"name\":\"source_addr_300\"}",
-                      "profiles":"\"fastL4_loose\""
+                      "profiles":"\"fastL4_loose\"",
+                      "portforward":None
                     },
                     {
                       "device":["10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
                       "sticky":"",
-                      "profiles":"\"fastL4\""
+                      "profiles":"\"fastL4\"",
+                      "portforward":None
                     }
                   ]
 
@@ -98,6 +101,28 @@ class JSONResponse(HttpResponse):
         content = JSONRenderer().render(data)
         kwargs['content_type'] = 'application/json'
         super(JSONResponse, self).__init__(content, **kwargs)
+
+
+getview_message = [{
+                   "items":[
+                               ## Basci Parameter (Must Have, essencial values)
+                               {
+                                 "virtual_ip_port":"172.22.198.252:443",
+                                 "device":"KRIS10-PUBS01-5000L4 or 10.10.77.29",
+                                 "servername":"SYRUPWALLET",
+                                 "poolmembers":["172.22.192.240:443","172.22.192.241:443"]
+                                },
+                               ## Option added Parameter
+                                {
+                                 "virtual_ip_port":"172.22.198.254:8080",
+                                 "device":"KRIS10-PUBS01-5000L4 or 10.10.77.29",
+                                 "servername":"OCBPASS_WEB",
+                                 "poolmembers":["172.22.192.251:8080","172.22.192.252:8080","172.22.192.253:8080"],
+                                 "options":["sticky"]
+                                }
+                            ]
+                   }]
+
   
 
 @api_view(['GET','POST'])
@@ -130,25 +155,8 @@ def f5_create_config_lb(request,format=None):
 ##    }
 ##]
 
-
-      message = [{
-                   "items":[
-                               {
-                                 "virtual_ip_port":"172.22.198.254:8080",
-                                 "device":"KRIS10-PUBS01-5000L4 or 10.10.77.29",
-                                 "servername":"OCBPASS_WEB",
-                                 "poolmembers":["172.22.192.251:8080","172.22.192.252:8080","172.22.192.253:8080"],
-                                 "options":["sticky"]
-                                },
-                                {
-                                }  
-                            ]
-                 }]
-
-
-
+      message = getview_message 
       return Response(message)
-
 
    elif request.method == 'POST':
 
@@ -169,20 +177,42 @@ def f5_create_config_lb(request,format=None):
            f.write(log_msg)
            f.close()
 
-           # input variable check
-           _musthave_key_ = [u'device',u'poolmembers',u'servername',u'virtual_ip_port']
-           for _loop1_ in _input_[0][u'items']:
-              for _loop2_ in _musthave_key_:
-                 if _loop2_ not in _loop1_.keys():
-                   f = open(LOG_FILE,"a")
-                   _date_ = os.popen("date").read().strip()
-                   log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" , parameter ["+str(_loop2_)+"] is required !\n"
-                   f.write(log_msg)
-                   f.close()
-                   # terminated
-                   sys.exit(0)
+           # This part will check the essecial parameters (this use the first value in getview_message parameter)
+           _musthave_key_ = []
+           for _item_ in getview_message[0]["items"][0].keys():
+              unicode_item = unicode(_item_)
+              if unicode_item not in _musthave_key_:
+                 _musthave_key_.append(unicode_item)
 
-           # read device list file
+           ## [2018.08.09] removed and exchanged with above  ##
+           # _musthave_key_ = [u'device',u'poolmembers',u'servername',u'virtual_ip_port']
+
+           # This part will be check the essencial parametes with input data values
+           input_inform_items_list = _input_[0][u'items']
+           for element_dict in input_inform_items_list:
+              element_keynames_list = element_dict.keys()
+              element_keynames_list_string = []
+              for _elem_ in element_keynames_list:
+                 element_keynames_list_string.append(str(_elem_))
+              for ess_keyname in _musthave_key_:
+                 ess_keyname_string = str(ess_keyname)
+                 if ess_keyname_string not in element_keynames_list_string:
+                   message = "%(ess_keyname_string)s is not existed from input datas" % {"ess_keyname_string":ess_keyname_string} 
+                   return Response(message, status=status.HTTP_400_BAD_REQUEST)
+                   
+ 
+           #for _loop1_ in _input_[0][u'items']:
+           #   for _loop2_ in _musthave_key_:
+           #      if _loop2_ not in _loop1_.keys():
+           #        f = open(LOG_FILE,"a")
+           #        _date_ = os.popen("date").read().strip()
+           #        log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" , parameter ["+str(_loop2_)+"] is required !\n"
+           #        f.write(log_msg)
+           #        f.close()
+           #        # terminated
+           #        sys.exit(0)
+
+           ## Read the devices list database file.
            _devicelist_db_ = USER_DATABASES_DIR + "devicelist.txt"
            f = open(_devicelist_db_,'r')
            _string_contents_ = f.readlines()
@@ -191,51 +221,123 @@ def f5_create_config_lb(request,format=None):
            _data_from_file_ = JSONParser().parse(stream)
            _data_from_devicelist_db_  = copy.copy(_data_from_file_)
 
-           # user data input values
-           _user_input_data_ = copy.copy(_input_[0][u'items'])
+           ######### start ###########
+           _user_input_data_ = copy.copy(input_inform_items_list)
+           ## [2018.08.09] removed and exchanged with above  ##
+           # _user_input_data_ = copy.copy(_input_[0][u'items'])
 
-           # device input will be exchanged to the active device ip address
-           # _user_input_data_device_ip_changed_ is list form 
+           ## Whatever the device information of your input data will be exchaged to the active device ip address 
+
            _user_input_data_device_ip_changed_ = []
            copy_loop_param = copy.copy(_user_input_data_)
+
            for _loop1_ in copy_loop_param:
               _device_input_ = str(_loop1_[u'device'])
-           
-              _target_device_ip_ = '' 
-              if re.search("[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+",_device_input_):
+              ## this value is the target ip address : active device ip address
+              _target_device_ip_ = None 
+              search_re = re.search("([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)",_device_input_,re.I)
+              if search_re:
+                # input device information will be ip address                
+                devicename_status = None
+                searched_re_ip = str(search_re.groups()[0])
                 for _loop2_ in _data_from_devicelist_db_:
-                   if re.search(str(_device_input_),str(_loop2_[u'ip'])):
+                   if re.search(searched_re_ip,str(_loop2_[u'ip'])):
                       if re.search(str('active'),(_loop2_[u'failover'])):
                          _target_device_ip_ = str(_loop2_[u'ip'])
+                         devicename_status = True
                          break
                       else:
                          _object_ = str(_loop2_[u'haclustername'])
                          for _loop3_ in _data_from_devicelist_db_:
                             if re.search(_object_,str(_loop3_[u'clustername'])):
                               _target_device_ip_ = str(_loop3_[u'ip'])
+                              devicename_status = True
                               break
+                if not devicename_status:
+                   message = "the device name [%(_device_input_)s] is not in the device list!" % {"_device_input_":str(_device_input_)}
+                   return Response(message, status=status.HTTP_400_BAD_REQUEST)
+                  
               else:
+                # input device information will be name 
+                devicename_status = None
                 for _loop2_ in _data_from_devicelist_db_:
-                   if re.search(_device_input_,str(_loop2_[u'devicehostname'])) or re.search(_device_input_,str(_loop2_[u'clustername'])):
-                      if re.search(str('active'),(_loop2_[u'failover'])):
+                   search_re_devicehostname = re.search(_device_input_,str(_loop2_[u'devicehostname']),re.I)
+                   search_re_clustername = re.search(_device_input_,str(_loop2_[u'clustername']),re.I)
+                   if search_re_devicehostname or search_re_clustername:
+                      if re.search(str('active'),(_loop2_[u'failover']),re.I):
                          _target_device_ip_ = str(_loop2_[u'ip'])
+                         devicename_status = True
                          break
                       else:
                          _object_ = str(_loop2_[u'haclustername'])
                          for _loop3_ in _data_from_devicelist_db_:
-                            if re.search(_object_,str(_loop3_[u'clustername'])):
+                            if re.search(_object_,str(_loop3_[u'clustername']),re.I):
                               _target_device_ip_ = str(_loop3_[u'ip'])
+                              devicename_status = True
                               break
-                   else:
-                      _object_ = str(_loop2_[u'haclustername'])
-                      for _loop3_ in _data_from_devicelist_db_:
-                         if re.search(_object_,str(_loop3_[u'clustername'])):
-                           _target_device_ip_ = str(_loop3_[u'ip'])
-                           break
+                if not devicename_status:
+                   message = "the device name [%(_device_input_)s] is not in the device list!" % {"_device_input_":str(_device_input_)}
+                   return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-              if re.match('',str(_target_device_ip_)):
+                   #else:
+                   #   
+                   #
+                   #   secondary_name = str(_loop2_[u'haclustername']) 
+                   #   for _loop3_ in _data_from_devicelist_db_:
+                   #       search_re_devicehostname = re.search(_device_input_,str(_loop3_[u'devicehostname']),re.I)
+                   #       search_re_clustername = re.search(_device_input_,str(_loop3_[u'clustername']),re.I)
+                   #       if search_re_devicehostname or search_re_clustername:
+                   #          _target_device_ip_ = str(_loop3_[u'ip'])
+                   #          break
+                   #       else:
+                   #          message = "the device name [%(_device_input_)s] is not in the device list!" % {"_device_input_":str(_device_input_)}
+                   #          return Response(message, status=status.HTTP_400_BAD_REQUEST)
+                   #elif search_re_haclustername:
+                   #   _object_ = str(_loop2_[u'haclustername'])
+                   #   for _loop3_ in _data_from_devicelist_db_:
+                   #      if re.search(_object_,str(_loop3_[u'clustername']),re.I):
+                   #        _target_device_ip_ = str(_loop3_[u'ip'])
+                   #        break
+                   #else:
+                   #   message = "the device name [%(_device_input_)s] is not in the device list!" % {"_device_input_":str(_device_input_)}
+                   #   return Response(message, status=status.HTTP_400_BAD_REQUEST) 
+
+              if _target_device_ip_:
                 _loop1_[u'device'] = _target_device_ip_
-                _user_input_data_device_ip_changed_.append(_loop1_)
+                _user_input_data_device_ip_changed_.append(_loop1_) 
+
+              ## [2018.08.09] removed and exchanged with below  ##
+              #if re.match('',str(_target_device_ip_)):
+              #  _loop1_[u'device'] = _target_device_ip_
+              #  _user_input_data_device_ip_changed_.append(_loop1_)
+
+           ## This part will check the this operation policy is allow that port Forwarding is enable
+           for _item_dict_ in _user_input_data_device_ip_changed_:
+
+              active_device_ipaddr = str(_item_dict_[u'device'])
+              # basically port forwarding is not allowed
+              port_forward_status = None
+              for _dict_value_ in DEFAULT_SETTING:
+                 if active_device_ipaddr in _dict_value_["device"]:
+                   port_forward_status = _dict_value_["portforward"] 
+                   break
+
+              if not port_forward_status:
+                 virtualport = str(_item_dict_[u'virtual_ip_port']).strip().split(":")[-1]
+                 realport = []
+                 for _dict_ in _item_dict_[u'poolmembers']:
+                    portservice = str(_dict_).strip().split(":")[-1]
+                    if portservice not in realport:
+                      realport.append(portservice)
+                 if len(realport) != 1:
+                    realport_string = str(",".join(realport))
+                    message = "port forwarding is not allow, real server port use [%(realport_string)s], not matched!" % {"realport_string":str(realport_string)}
+                    return Response(message, status=status.HTTP_400_BAD_REQUEST)
+                 if not re.match(virtualport,realport[-1],re.I):
+                    message = "port forwarding is not allow, virtual port [%(virtualport)s], server port [%(realport)s]!" % {"virtualport":str(virtualport),"realport":str(realport[-1])}
+                    return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
+                 
 
            # virtual ip address confirmation
            # virtual ip address should be unique according to the device.
@@ -256,14 +358,18 @@ def f5_create_config_lb(request,format=None):
            for _loop1_ in _user_input_data_device_ip_changed_:
               if _temp_dictbox_[str(_loop1_[u'device'])][str(_loop1_[u'virtual_ip_port'])] == int(1):
                 _user_input_data_virtualipport_unique_.append(_loop1_)  
+              else:
+                dup_viport = str(_loop1_[u'virtual_ip_port'])
+                message = "input virtual ip and port [%(dup_viport)s] is duplicated!" % {"dup_viport":dup_viport}
+                return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-           # find out the database file name
+           # Using the Backup database file, We want to search the usage of the virtual server ip address and port
            for _loop1_ in _user_input_data_virtualipport_unique_:
               for _loop2_ in _data_from_devicelist_db_:
-                 if re.search(str(_loop1_[u'device']),str(_loop2_[u'ip'])):
+                 if re.search(str(_loop1_[u'device']),str(_loop2_[u'ip']),re.I):
                    _loop1_[u'syncgroup'] = str(_loop2_[u'devicegroupname'])
                    for _loop3_ in _data_from_devicelist_db_:
-                      if re.match(str(_loop2_[u'haclustername']),str(_loop3_[u'clustername'])):
+                      if re.match(str(_loop2_[u'haclustername']),str(_loop3_[u'clustername']),re.I):
                         _loop1_[u'pairdevice'] = str(_loop3_[u'ip'])
            
            # virtual server ip port usage confirmation
@@ -277,10 +383,23 @@ def f5_create_config_lb(request,format=None):
               stream = BytesIO(_contents_[0])
               data_from_file = JSONParser().parse(stream)
 
-              _loop1_[u'virtualserver_names_list'] = []
+              pairdevicename = str(_loop1_[u'pairdevice'])
+              compvipport = str(_loop1_[u'virtual_ip_port'])
+
+
               for _loop2_ in data_from_file[u'items']:
-                 if re.search(str(_loop1_[u'virtual_ip_port']),str(_loop2_[u'destination'])):
-                   _loop1_[u'virtualserver_names_list'].append(str(_loop2_[u'fullPath']))
+                 if re.search(compvipport,str(_loop2_[u'destination']),re.I):
+                   message = "input virtual ip and port [%(compvipport)s] has already used on [%(pairdevicename)s]" % {"compvipport":compvipport,"pairdevicename":pairdevicename}
+                   return Response(message, status=status.HTTP_400_BAD_REQUEST)   
+                 
+
+              ## [2018.08.09] removed and exchanged with below  ##
+              #_loop1_[u'virtualserver_names_list'] = []
+              #for _loop2_ in data_from_file[u'items']:
+              #   if re.search(str(_loop1_[u'virtual_ip_port']),str(_loop2_[u'destination']),re.I):
+              #     _loop1_[u'virtualserver_names_list'].append(str(_loop2_[u'fullPath']))
+
+
             
            # node usage confirmation
            # pool information will be necessary according to node information
@@ -340,20 +459,22 @@ def f5_create_config_lb(request,format=None):
                         _temp_listbox_.append(str(_loop3_[u'name']))
               _loop1_[u'poolnames_list'] = _temp_listbox_
 
+
            # virtual server and pool name creation
-           # _user_input_data_nodes_confirm_ : perfect varidation checked
-           # virtual server information should be empty to create something new one.
-           _valid_user_input_data_ = []
-           for _loop1_ in _user_input_data_nodes_confirm_:
-              if len(_loop1_[u'virtualserver_names_list']) != int(0):
-                # log message
-                f = open(LOG_FILE,"a")
-                _date_ = os.popen("date").read().strip()
-                log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" virtual ip port : "+str(_loop1_[u'virtual_ip_port'])+", assigned virtual server :  "+str(','.join(_loop1_[u'virtualserver_names_list']))+" !\n"
-                f.write(log_msg)
-                f.close()
-              else:
-                _valid_user_input_data_.append(_loop1_)
+
+           #_valid_user_input_data_ = []
+           #for _loop1_ in _user_input_data_nodes_confirm_:
+           #   if len(_loop1_[u'virtualserver_names_list']) != int(0):
+           #     # log message
+           #     f = open(LOG_FILE,"a")
+           #     _date_ = os.popen("date").read().strip()
+           #     log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" virtual ip port : "+str(_loop1_[u'virtual_ip_port'])+", assigned virtual server :  "+str(','.join(_loop1_[u'virtualserver_names_list']))+" !\n"
+           #     f.write(log_msg)
+           #     f.close()
+           #   else:
+           #     _valid_user_input_data_.append(_loop1_)
+
+           _valid_user_input_data_ = copy.copy(_user_input_data_nodes_confirm_)
 
            # command creation and f5 rest_api command
            # virtual server name should be empty
@@ -364,7 +485,8 @@ def f5_create_config_lb(request,format=None):
 
            _return_message_list_ = []
            for _loop1_ in _valid_user_input_data_:
-              if len(_loop1_[u'virtualserver_names_list']) == int(0):
+
+              ## if len(_loop1_[u'virtualserver_names_list']) == int(0):
 
                  # Parameter re-arrange
                  info_in_pairdevice = _loop1_[u'pairdevice']
@@ -426,6 +548,11 @@ def f5_create_config_lb(request,format=None):
                  _poolmember_string_ = str(" ".join(_temp_string_box_))
                  _poolname_created_ = "p_%(servername)s_%(portname)s" % {"servername":SERVERHOST_name,"portname":_name_with_ports_}
 
+                 for _pname_ in info_in_poolnames_list:
+                    if re.search(_poolname_created_,_pname_,re.I) or re.search(_pname_,_poolname_created_,re.I):
+                       message = "pool name [%(_poolname_created_)s] has been already used over [%(info_in_device)s] device!" % {"_poolname_created_":_poolname_created_,"info_in_device":info_in_device}
+                       return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
                  # create virtual server
                  _splited_ip_ = str(_loop1_[u'virtual_ip_port']).strip().split(':')[0]
                  _splited_port_ = str(_loop1_[u'virtual_ip_port']).strip().split(':')[-1]
@@ -467,11 +594,12 @@ def f5_create_config_lb(request,format=None):
                                    }
                  _return_message_list_.append(_final_command_)
 
+
            message = _return_message_list_ 
            return Response(message)
 
 
       except:
-        message = [{}]
+        message = "post algorithm has some problem!"
         return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
