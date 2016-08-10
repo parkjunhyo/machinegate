@@ -8,6 +8,7 @@ urlpatterns = [
     url(r'^f5/poolmemberlist/$', views.f5_poolmemberlist),
     url(r'^f5/poolmemberlist/(?P<poolname>[0-9A-Za-z_.-]+)/$', views.f5_poolmemberstatus),
     url(r'^f5/create/config/lb/$', views.f5_create_config_lb),
+    url(r'^f5/create/config/lb/app/create/postentry/$', views.f5_create_config_lb_app_create_postentry),
     url(r'^f5/stats/virtual/$', views.f5_stats_virtual),
     url(r'^f5/stats/virtual/(?P<virtualservername>[0-9A-Za-z_.-]+)/$', views.f5_virtualserverstats),
     url(r'^f5/stats/virtual/top/(?P<key_value>[0-9A-Za-z_.-]+)/$', views.f5_virtualstats_top),
