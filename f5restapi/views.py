@@ -10,3 +10,4 @@ from f5restapi.f5views.f5_create_config_lb_app_create_postentry import f5_create
 from f5restapi.f5views.f5_stats_virtual import f5_stats_virtual
 from f5restapi.f5views.f5_virtualserverstats import f5_virtualserverstats
 from f5restapi.f5views.f5_virtualstats_top import f5_virtualstats_top 
+from f5restapi.f5views.f5_change_monitor import f5_change_monitor
