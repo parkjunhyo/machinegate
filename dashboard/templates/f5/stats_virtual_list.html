@@ -1,0 +1,35 @@
+<!doctype html>
+<title>f5 stats virtual list</title>
+
+{% for key, value in devicehost_virtuallist_dict.iteritems() %}
+<table border=1>
+
+   <h4> Device Host : 
+   {% for name in deviceip_devicehostname_dict[key] %}
+   {{ name }} ({{ key }})
+   {% endfor %}
+   </h4>
+
+   <tr>
+   <th>virtual server name</th>
+   <th>stats name</th>
+   </tr>
+   
+   {% for item in value %}
+   {% if (item!="route_tcp") %}
+   {% if (item!="route_udp") %}
+   {% if (item!="route_icmp") %}
+   <tr>
+   <td><font size='2'> {{ item }}</font></td>
+   <td>
+       {% for name in deviceip_devicehostname_dict[key] %}
+       <font size='2', color='red'>{{ item }}@{{ name }} </font><br>
+       {% endfor %}
+   </td>
+   </tr>
+   {% endif %}
+   {% endif %}
+   {% endif %}
+   {% endfor %}
+</table>
+{% endfor%}
