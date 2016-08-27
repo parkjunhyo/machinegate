@@ -14,11 +14,11 @@ def dashboard_f5_stats_list():
       return f5_stats_virtual_list()
 
 from f5.stats_chart import stats_chart as f5_stats_chart 
-@app.route('/dashboard/f5/stats/<target>/')
+@app.route('/dashboard/f5/stats/virtual/<target>/')
 def dashboard_f5_stats_chart(target=None):
-    if not target:
-      return "virtualserver name is required!"
-    else:
+    #if not target:
+    #  return "virtualserver name is required!"
+    #else:
       return f5_stats_chart(target)
 
 
