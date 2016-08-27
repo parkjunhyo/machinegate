@@ -1,41 +1,65 @@
-<!doctype html>
-<title>Hello from Flask</title>
-{% if name %}
-  <h1>Hello {{ name }}!</h1>
-{% else %}
-  <h1>Hello World!</h1>
-{% endif %}
-
 <html>
+  <title> virtual server : {{ virtualhostname }}, host : {{ activedevicename }} </title>
   <head>
+    <br><br>
+    <h2 align="center"><font color='red'> virtual server name is {{ virtualhostname }} </font></h1>
+    <h4 align="center"> ( installed device name is {{ activedevicename }} ) </h3>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript">
-      google.charts.load('current', {'packages':['corechart']});
+      google.charts.load('current', {'packages':['corechart', 'line']});
       google.charts.setOnLoadCallback(drawChart);
 
       function drawChart() {
-        var data = google.visualization.arrayToDataTable([
-          ['Year', 'Sales', 'Expenses'],
-          ['2004',  1000,      400],
-          ['2005',  1170,      460],
-          ['2006',  660,       1120],
-          ['2007',  1030,      540]
-        ]);
+        var bps_chart = google.visualization.arrayToDataTable({{ bps_chart|safe }});
+        var pps_chart = google.visualization.arrayToDataTable({{ pps_chart|safe }});
+        var cps_chart = google.visualization.arrayToDataTable({{ cps_chart|safe }});
+        var session_chart = google.visualization.arrayToDataTable({{ session_chart|safe }});
 
-        var options = {
-          title: 'Company Performance',
-          curveType: 'function',
-          legend: { position: 'bottom' },
+        var bps_chart_options = {
+          title: 'bps_chart',
           fontSize: 10,
+          curveType: 'function',
+          hAxis: { title: 'time' },
+          vAxis: { title: 'bps [bit/s]' }
+        };
+        var pps_chart_options = {
+          title: 'pps_chart',
+          fontSize: 10,
+          curveType: 'function',
+          hAxis: { title: 'time' },
+          vAxis: { title: 'pps [packet/s]' }
+        };
+        var cps_chart_options = {
+          title: 'cps_chart',
+          fontSize: 10,
+          curveType: 'function',
+          hAxis: { title: 'time' },
+          vAxis: { title: 'cps [connection/s]' }
+        };
+        var session_chart_options = {
+          title: 'session_chart',
+          fontSize: 10,
+          curveType: 'function',
+          hAxis: { title: 'time' },
+          vAxis: { title: 'connection' }
         };
 
-        var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+        var bps_chart_draw = new google.visualization.LineChart(document.getElementById('bps_chart_draw'));
+        var pps_chart_draw = new google.visualization.LineChart(document.getElementById('pps_chart_draw'));
+        var cps_chart_draw = new google.visualization.LineChart(document.getElementById('cps_chart_draw'));
+        var session_chart_draw = new google.visualization.LineChart(document.getElementById('session_chart_draw'));
 
-        chart.draw(data, options);
+        bps_chart_draw.draw(bps_chart,bps_chart_options)
+        pps_chart_draw.draw(pps_chart,pps_chart_options)
+        cps_chart_draw.draw(cps_chart,cps_chart_options)
+        session_chart_draw.draw(session_chart,session_chart_options)
       }
     </script>
   </head>
   <body>
-    <div id="curve_chart" style="width: 900px; height: 500px"></div>
+    <div id="bps_chart_draw" style="width: 1200px; height: 500px"></div>
+    <div id="pps_chart_draw" style="width: 1200px; height: 500px"></div>
+    <div id="cps_chart_draw" style="width: 1200px; height: 500px"></div>
+    <div id="session_chart_draw" style="width: 1200px; height: 500px"></div>
   </body>
 </html>
