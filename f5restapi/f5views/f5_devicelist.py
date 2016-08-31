@@ -92,13 +92,16 @@ def f5_devicelist(request,format=None):
               stream = BytesIO(_response_)
               data_from_response = JSONParser().parse(stream)
 
+
               _result_dict_ = {} 
               for _dictData_ in data_from_response[u'items']:
-                 if re.match(str(_dictData_[u'managementIp']),str(_param_['ip']).strip()):
+                 if re.match(str(_dictData_[u'managementIp']),str(_param_['mgmtip']).strip()):
+                 #if re.match(str(_dictData_[u'managementIp']),str(_param_['ip']).strip()):
                     _result_dict_["failover"] = str(_dictData_[u'failoverState'])
                     _result_dict_["clustername"] = str(_dictData_[u'name'])
                     _result_dict_["devicehostname"] = str(_dictData_[u'hostname'])
-                    _result_dict_["ip"] = str(_dictData_[u'managementIp'])
+                    #_result_dict_["ip"] = str(_dictData_[u'managementIp'])
+                    _result_dict_["ip"] = str(_param_['ip']).strip()
      
               # curl message command
               #curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+str(_param_['ip']).strip()+"/mgmt/tm/sys/failover -H 'Content-Type: application/json'"
