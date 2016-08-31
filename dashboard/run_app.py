@@ -5,8 +5,6 @@ from setting import RUN_HOST, RUN_PORT
 from flask import Flask
 app = Flask(__name__)
 
-
-
 from f5.stats_virtual_list import stats_virtual_list as f5_stats_virtual_list
 @app.route('/dashboard/f5/stats/virtual/')
 @app.route('/dashboard/f5/stats/virtual/list/')
@@ -16,11 +14,20 @@ def dashboard_f5_stats_list():
 from f5.stats_chart import stats_chart as f5_stats_chart 
 @app.route('/dashboard/f5/stats/virtual/<target>/')
 @app.route('/dashboard/f5/stats/virtual/<target>/<before_time>/')
-def dashboard_f5_stats_chart(target=None,before_time=0):
+def dashboard_f5_stats_chart(target=None,before_time=int(0)):
     #if not target:
     #  return "virtualserver name is required!"
     #else:
       return f5_stats_chart(target,before_time)
+
+from f5.stats_top_chart import stats_top_chart as f5_stats_top_chart
+@app.route('/dashboard/f5/stats/top/<device_name>/')
+@app.route('/dashboard/f5/stats/top/<device_name>/<before_time>/')
+def dashboard_f5_stats_top_chart(device_name=None,before_time=0):
+      if not device_name:
+        return "device host name is required."
+      return f5_stats_top_chart(device_name,before_time)
+
 
 
 

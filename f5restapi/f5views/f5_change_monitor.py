@@ -49,21 +49,18 @@ DEFAULT_MONITOR_CURL_STRING = "curl -sk -u %(USER_NAME)s:%(USER_PASSWORD)s https
 getview_message = [{
                      "items":[
                                {
-                                 "poolnames" : ["pool names"],
-                                 "withssl" : "withssl or withoutssl"
-                               },
-                               {
-                                 "poolnames" : ["p_ICDEc_clapiweb_80"],
-                                 "withssl"   : "withoutssl"                    
+                                 "device" : "KRIS10-DMZS01-5000L4.skplanet.com",
+                                 "withssl" : ["p_ICDEc_clapiweb_80"],
+                                 "withoutssl" : []
                                }
                              ]
                   }]
 
-def search_text_in_file(fullpath_filename,_item_value_):
-   string_value = str(_item_value_)
-   bash_cmd = "cat %(filename)s | grep -i \"%(pattern)s\"" % {"filename":fullpath_filename,"pattern":string_value}
-   response_value = os.popen(bash_cmd).read().strip()
-   return response_value
+#def search_text_in_file(fullpath_filename,_item_value_):
+#   string_value = str(_item_value_)
+#   bash_cmd = "cat %(filename)s | grep -i \"%(pattern)s\"" % {"filename":fullpath_filename,"pattern":string_value}
+#   response_value = os.popen(bash_cmd).read().strip()
+#   return response_value
 
 def active_device_ip(ipaddress):
    ip_address = str(ipaddress)
@@ -122,62 +119,104 @@ def f5_change_monitor(request,format=None):
            _matched_input_values_ = []
            for _inputitem_value_ in input_values:
               _inputitem_value_keyname_ = _inputitem_value_.keys()
-              if (u'poolnames' not in _inputitem_value_keyname_) or (u'withssl' not in _inputitem_value_keyname_):
+
+              if (u'device' not in _inputitem_value_keyname_) or (u'withssl' not in _inputitem_value_keyname_) or (u'withoutssl' not in _inputitem_value_keyname_):
                 message = "you do not have any valid parameters!"
                 return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-              _matched_dictbox_ = {}
-              for _poolname_ in _inputitem_value_[u'poolnames']:
-                 _inputitem_string_ = str(_poolname_)
-                 match_status = False
-                 for _filename_ in listdir_filenames:
-                    if re.search("poollist",_filename_,re.I):
-                      fullpath_filename = USER_DATABASES_DIR+_filename_                   
-                      response_value = search_text_in_file(fullpath_filename,_inputitem_string_)
-                      if len(response_value):
-                        stream = BytesIO(response_value)
-                        response_json = JSONParser().parse(stream)
-                        for _item_in_ in response_json[u'items']:
-                           if re.match(_inputitem_string_,str(_item_in_[u'name']).strip(),re.I):
-                             matched_keyname = _matched_dictbox_.keys()
-                             if _inputitem_string_ not in matched_keyname:
-                               _matched_dictbox_[_inputitem_string_] = {}
-                               _matched_dictbox_[_inputitem_string_]['monitor'] = str(_item_in_[u'monitor'])
-                               _temp_iplist_ = _filename_.strip().split(".")
-                               ipaddress = str(".".join(_temp_iplist_[1:(len(_temp_iplist_)-1)]))
-                               _matched_dictbox_[_inputitem_string_]['activedevice'] = active_device_ip(ipaddress)
-                             match_status = True 
-                 if not match_status:
-                   message = "input value does not has proper format!!"
-                   return Response(message, status=status.HTTP_400_BAD_REQUEST) 
-              _matched_input_values_.append(_matched_dictbox_)
+              curl_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/f5/devicelist/"
+              get_info = os.popen(curl_command).read().strip()
+              stream = BytesIO(get_info)
+              _dictdata_ = JSONParser().parse(stream)
 
-           return_command = []
-           for _DictData_ in _matched_input_values_:
-              _DictData_keyname_ = _DictData_.keys()
-              for _keyname_ in _DictData_keyname_:
+              _input_devicename_ = str(_inputitem_value_[u'device'])
+              
+              matched_ip = None
+              for _devicedict_ in _dictdata_:
+                 if re.search(_input_devicename_,str(_devicedict_[u'devicehostname']),re.I) or re.search(_input_devicename_,str(_devicedict_[u'clustername']),re.I):
+                   if re.search(str(u'active'),str(_devicedict_[u'failover']),re.I):
+                     matched_ip = str(_devicedict_[u'ip'])
+              if not matched_ip:
+                message = "device name is not proper!"
+                return Response(message, status=status.HTTP_400_BAD_REQUEST) 
+              matched_active_ip = active_device_ip(matched_ip)
+          
+              matched_standby_ip = None
+              for _devicedict_ in _dictdata_:
+                 if re.search(matched_active_ip,str(_devicedict_[u'ip']),re.I):
+                   ha_host_name = str(_devicedict_[u'haclustername'])
+                   for _loop2_ in _dictdata_:
+                      if re.search(ha_host_name,str(_loop2_[u'clustername']),re.I):
+                        matched_standby_ip = str(_loop2_[u'ip'])
 
-                 # find out the option
-                 option_value = False
-                 for _inputitem_value_ in input_values:
-                    if not option_value:
-                      for _poolname_ in _inputitem_value_[u'poolnames']:
-                         if re.match(str(_keyname_),str(_poolname_),re.I):
-                           option_value = str(_inputitem_value_[u'withssl'])
 
-                 _activedevice_ = _DictData_[_keyname_]['activedevice']
-                 for _monitor_ in DEFAULT_MONITOR:
-                    if _activedevice_ in _monitor_["device"]:
-                      monitor_change_value = _monitor_['monitor'][option_value]
-                      break
+              curl_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/f5/poolmemberlist/"
+              get_info = os.popen(curl_command).read().strip()
+              stream = BytesIO(get_info)
+              _dictdata_ = JSONParser().parse(stream)
 
-                 # monitor origin
-                 monitor_origin = _DictData_[_keyname_]['monitor']
 
-                 # create command
+              poolmembrlist_key = _dictdata_.keys()
+              matched_key_ipaddress = None
+              for _ipaddress_ in poolmembrlist_key:
+                _ipaddress_string_ = str(_ipaddress_)
+                if _ipaddress_string_ in [matched_active_ip, matched_standby_ip]:
+                  matched_key_ipaddress = _ipaddress_string_
+
+              if not matched_key_ipaddress:
+                message = "no database of the input device host"
+                return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
+              matched_database_poolmemberlist = _dictdata_[unicode(matched_key_ipaddress)]
+              matched_database_poolmemberlist_keyname = matched_database_poolmemberlist.keys()
+                 
+              _input_withssl_poolnamelist_ = _inputitem_value_[u'withssl']
+              _input_withoutssl_poolnamelist_ = _inputitem_value_[u'withoutssl']
+
+              return_command = []
+              for _poolname_ in _input_withssl_poolnamelist_:
+                 change_monitor_value = None
+                 for _dictvalue_ in DEFAULT_MONITOR:
+                    if matched_key_ipaddress in _dictvalue_["device"]:
+                      change_monitor_value = _dictvalue_["monitor"]["withssl"]
+                 if not change_monitor_value:
+                   message = "no defined monitor information to match"
+                   return Response(message, status=status.HTTP_400_BAD_REQUEST)
+                 _poolname_string_ = str(_poolname_)
+                 origin_monitor = None
+                 for _keyname_ in matched_database_poolmemberlist_keyname:
+                    _poolname_indb_ = str(_keyname_)
+                    if re.search(_poolname_string_,_poolname_indb_,re.I):
+                      origin_monitor = matched_database_poolmemberlist[_keyname_][u'monitors']
+                 if not origin_monitor:
+                   message = "no origin monitor defined in the pool %(poolname)s" % {"poolname":_poolname_string_}
+                   return Response(message, status=status.HTTP_400_BAD_REQUEST)
                  templates = {}
-                 templates["exchangecmd"] =  DEFAULT_MONITOR_CURL_STRING % {"USER_NAME":USER_NAME,"USER_PASSWORD":USER_PASSWORD,"_DEVICE_IP_":_activedevice_,"_POOLNAME_":_keyname_,"_MONITOR_":monitor_change_value}
-                 templates["origincmd"] = DEFAULT_MONITOR_CURL_STRING % {"USER_NAME":USER_NAME,"USER_PASSWORD":USER_PASSWORD,"_DEVICE_IP_":_activedevice_,"_POOLNAME_":_keyname_,"_MONITOR_":monitor_origin}
+                 templates["exchangecmd"] =  DEFAULT_MONITOR_CURL_STRING % {"USER_NAME":USER_NAME,"USER_PASSWORD":USER_PASSWORD,"_DEVICE_IP_":matched_active_ip,"_POOLNAME_":_poolname_indb_,"_MONITOR_":change_monitor_value}
+                 templates["origincmd"] = DEFAULT_MONITOR_CURL_STRING % {"USER_NAME":USER_NAME,"USER_PASSWORD":USER_PASSWORD,"_DEVICE_IP_":matched_active_ip,"_POOLNAME_":_poolname_indb_,"_MONITOR_":origin_monitor}
+                 return_command.append(templates)
+
+
+              for _poolname_ in _input_withoutssl_poolnamelist_:
+                 monitor_value = None
+                 for _dictvalue_ in DEFAULT_MONITOR:
+                    if matched_key_ipaddress in _dictvalue_["device"]:
+                      monitor_value = _dictvalue_["monitor"]["withoutssl"]
+                 if not change_monitor_value:
+                   message = "no defined monitor information to match"
+                   return Response(message, status=status.HTTP_400_BAD_REQUEST)
+                 _poolname_string_ = str(_poolname_)
+                 origin_monitor = None
+                 for _keyname_ in matched_database_poolmemberlist_keyname:
+                    _poolname_indb_ = str(_keyname_)
+                    if re.search(_poolname_string_,_poolname_indb_,re.I):
+                      origin_monitor = matched_database_poolmemberlist[_keyname_][u'monitors']
+                 if not origin_monitor:
+                   message = "no origin monitor defined in the pool %(poolname)s" % {"poolname":_poolname_string_}
+                   return Response(message, status=status.HTTP_400_BAD_REQUEST)
+                 templates = {}
+                 templates["exchangecmd"] =  DEFAULT_MONITOR_CURL_STRING % {"USER_NAME":USER_NAME,"USER_PASSWORD":USER_PASSWORD,"_DEVICE_IP_":matched_active_ip,"_POOLNAME_":_poolname_indb_,"_MONITOR_":change_monitor_value}
+                 templates["origincmd"] = DEFAULT_MONITOR_CURL_STRING % {"USER_NAME":USER_NAME,"USER_PASSWORD":USER_PASSWORD,"_DEVICE_IP_":matched_active_ip,"_POOLNAME_":_poolname_indb_,"_MONITOR_":origin_monitor}
                  return_command.append(templates)
 
         return Response(return_command)
