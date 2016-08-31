@@ -117,10 +117,19 @@ def f5_change_monitor(request,format=None):
            listdir_filenames = os.listdir(USER_DATABASES_DIR)
 
            _matched_input_values_ = []
+           return_command = []
            for _inputitem_value_ in input_values:
               _inputitem_value_keyname_ = _inputitem_value_.keys()
 
-              if (u'device' not in _inputitem_value_keyname_) or (u'withssl' not in _inputitem_value_keyname_) or (u'withoutssl' not in _inputitem_value_keyname_):
+              if (u'device' not in _inputitem_value_keyname_):
+                message = "you do not have any valid parameters!"
+                return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
+              going_status = False
+              if (u'withssl' in _inputitem_value_keyname_) or (u'withoutssl' in _inputitem_value_keyname_):
+                going_status = True
+
+              if not going_status:
                 message = "you do not have any valid parameters!"
                 return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
@@ -134,8 +143,8 @@ def f5_change_monitor(request,format=None):
               matched_ip = None
               for _devicedict_ in _dictdata_:
                  if re.search(_input_devicename_,str(_devicedict_[u'devicehostname']),re.I) or re.search(_input_devicename_,str(_devicedict_[u'clustername']),re.I):
-                   if re.search(str(u'active'),str(_devicedict_[u'failover']),re.I):
-                     matched_ip = str(_devicedict_[u'ip'])
+                   #if re.search(str(u'active'),str(_devicedict_[u'failover']),re.I):
+                   matched_ip = str(_devicedict_[u'ip'])
               if not matched_ip:
                 message = "device name is not proper!"
                 return Response(message, status=status.HTTP_400_BAD_REQUEST) 
@@ -170,11 +179,21 @@ def f5_change_monitor(request,format=None):
               matched_database_poolmemberlist = _dictdata_[unicode(matched_key_ipaddress)]
               matched_database_poolmemberlist_keyname = matched_database_poolmemberlist.keys()
                  
-              _input_withssl_poolnamelist_ = _inputitem_value_[u'withssl']
-              _input_withoutssl_poolnamelist_ = _inputitem_value_[u'withoutssl']
 
+              ## input value initialization
+              _inputitem_value_keynames_ = _inputitem_value_.keys()
+              if u'withssl' in _inputitem_value_keynames_:
+                _input_withssl_poolnamelist_ = _inputitem_value_[u'withssl']
+              else:
+                _input_withssl_poolnamelist_ = []
+
+              if u'withoutssl' in _inputitem_value_keynames_:
+                _input_withoutssl_poolnamelist_ = _inputitem_value_[u'withoutssl']
+              else:
+                _input_withoutssl_poolnamelist_ = []
+
+              ## create the curl command
               recursive_value = {"withssl":_input_withssl_poolnamelist_,"withoutssl":_input_withoutssl_poolnamelist_}
-              return_command = []
               for _keyname_ in recursive_value.keys():
                  for _poolname_ in recursive_value[_keyname_]:
 
@@ -183,7 +202,7 @@ def f5_change_monitor(request,format=None):
                        if matched_key_ipaddress in _dictvalue_["device"]:
                          change_monitor_value = _dictvalue_["monitor"][_keyname_]
                     if not change_monitor_value:
-                      message = "no defined monitor information to match"
+                      message = "no defined monitor information to %(_keyname_)s" % {"_keyname_":str(_keyname_)}
                       return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
                     _poolname_string_ = str(_poolname_) 
@@ -193,7 +212,7 @@ def f5_change_monitor(request,format=None):
                        if re.search(_poolname_string_,_poolname_indb_,re.I):
                          origin_monitor = matched_database_poolmemberlist[_keyname_loop2_][u'monitors']                 
                     if not origin_monitor:
-                      message = "no origin monitor defined in the pool"
+                      message = "[ %(poolname)s ] is not on the [ %(ipaddress)s ] device!" % {"poolname":_poolname_string_,"ipaddress":matched_standby_ip}
                       return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
                     templates = {}
