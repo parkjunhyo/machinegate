@@ -173,51 +173,33 @@ def f5_change_monitor(request,format=None):
               _input_withssl_poolnamelist_ = _inputitem_value_[u'withssl']
               _input_withoutssl_poolnamelist_ = _inputitem_value_[u'withoutssl']
 
+              recursive_value = {"withssl":_input_withssl_poolnamelist_,"withoutssl":_input_withoutssl_poolnamelist_}
               return_command = []
-              for _poolname_ in _input_withssl_poolnamelist_:
-                 change_monitor_value = None
-                 for _dictvalue_ in DEFAULT_MONITOR:
-                    if matched_key_ipaddress in _dictvalue_["device"]:
-                      change_monitor_value = _dictvalue_["monitor"]["withssl"]
-                 if not change_monitor_value:
-                   message = "no defined monitor information to match"
-                   return Response(message, status=status.HTTP_400_BAD_REQUEST)
-                 _poolname_string_ = str(_poolname_)
-                 origin_monitor = None
-                 for _keyname_ in matched_database_poolmemberlist_keyname:
-                    _poolname_indb_ = str(_keyname_)
-                    if re.search(_poolname_string_,_poolname_indb_,re.I):
-                      origin_monitor = matched_database_poolmemberlist[_keyname_][u'monitors']
-                 if not origin_monitor:
-                   message = "no origin monitor defined in the pool %(poolname)s" % {"poolname":_poolname_string_}
-                   return Response(message, status=status.HTTP_400_BAD_REQUEST)
-                 templates = {}
-                 templates["exchangecmd"] =  DEFAULT_MONITOR_CURL_STRING % {"USER_NAME":USER_NAME,"USER_PASSWORD":USER_PASSWORD,"_DEVICE_IP_":matched_active_ip,"_POOLNAME_":_poolname_indb_,"_MONITOR_":change_monitor_value}
-                 templates["origincmd"] = DEFAULT_MONITOR_CURL_STRING % {"USER_NAME":USER_NAME,"USER_PASSWORD":USER_PASSWORD,"_DEVICE_IP_":matched_active_ip,"_POOLNAME_":_poolname_indb_,"_MONITOR_":origin_monitor}
-                 return_command.append(templates)
+              for _keyname_ in recursive_value.keys():
+                 for _poolname_ in recursive_value[_keyname_]:
 
+                    change_monitor_value = None
+                    for _dictvalue_ in DEFAULT_MONITOR:
+                       if matched_key_ipaddress in _dictvalue_["device"]:
+                         change_monitor_value = _dictvalue_["monitor"][_keyname_]
+                    if not change_monitor_value:
+                      message = "no defined monitor information to match"
+                      return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-              for _poolname_ in _input_withoutssl_poolnamelist_:
-                 monitor_value = None
-                 for _dictvalue_ in DEFAULT_MONITOR:
-                    if matched_key_ipaddress in _dictvalue_["device"]:
-                      monitor_value = _dictvalue_["monitor"]["withoutssl"]
-                 if not change_monitor_value:
-                   message = "no defined monitor information to match"
-                   return Response(message, status=status.HTTP_400_BAD_REQUEST)
-                 _poolname_string_ = str(_poolname_)
-                 origin_monitor = None
-                 for _keyname_ in matched_database_poolmemberlist_keyname:
-                    _poolname_indb_ = str(_keyname_)
-                    if re.search(_poolname_string_,_poolname_indb_,re.I):
-                      origin_monitor = matched_database_poolmemberlist[_keyname_][u'monitors']
-                 if not origin_monitor:
-                   message = "no origin monitor defined in the pool %(poolname)s" % {"poolname":_poolname_string_}
-                   return Response(message, status=status.HTTP_400_BAD_REQUEST)
-                 templates = {}
-                 templates["exchangecmd"] =  DEFAULT_MONITOR_CURL_STRING % {"USER_NAME":USER_NAME,"USER_PASSWORD":USER_PASSWORD,"_DEVICE_IP_":matched_active_ip,"_POOLNAME_":_poolname_indb_,"_MONITOR_":change_monitor_value}
-                 templates["origincmd"] = DEFAULT_MONITOR_CURL_STRING % {"USER_NAME":USER_NAME,"USER_PASSWORD":USER_PASSWORD,"_DEVICE_IP_":matched_active_ip,"_POOLNAME_":_poolname_indb_,"_MONITOR_":origin_monitor}
-                 return_command.append(templates)
+                    _poolname_string_ = str(_poolname_) 
+                    origin_monitor = None
+                    for _keyname_loop2_ in matched_database_poolmemberlist_keyname:
+                       _poolname_indb_ = str(_keyname_loop2_) 
+                       if re.search(_poolname_string_,_poolname_indb_,re.I):
+                         origin_monitor = matched_database_poolmemberlist[_keyname_loop2_][u'monitors']                 
+                    if not origin_monitor:
+                      message = "no origin monitor defined in the pool"
+                      return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
+                    templates = {}
+                    templates["exchangecmd"] =  DEFAULT_MONITOR_CURL_STRING % {"USER_NAME":USER_NAME,"USER_PASSWORD":USER_PASSWORD,"_DEVICE_IP_":matched_active_ip,"_POOLNAME_":_poolname_indb_,"_MONITOR_":change_monitor_value}
+                    templates["origincmd"] = DEFAULT_MONITOR_CURL_STRING % {"USER_NAME":USER_NAME,"USER_PASSWORD":USER_PASSWORD,"_DEVICE_IP_":matched_active_ip,"_POOLNAME_":_poolname_indb_,"_MONITOR_":origin_monitor}
+                    return_command.append(templates)
 
         return Response(return_command)
 
