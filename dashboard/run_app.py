@@ -24,8 +24,6 @@ from f5.stats_top_chart import stats_top_chart as f5_stats_top_chart
 @app.route('/dashboard/f5/stats/top/<device_name>/')
 @app.route('/dashboard/f5/stats/top/<device_name>/<before_time>/')
 def dashboard_f5_stats_top_chart(device_name=None,before_time=0):
-      if not device_name:
-        return "device host name is required."
       return f5_stats_top_chart(device_name,before_time)
 
 

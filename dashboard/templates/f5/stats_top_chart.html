@@ -1,0 +1,119 @@
+<title>{{ matched_callable_device_active_name|safe }}</title>
+<h2>this is top ranking on host ({{ matched_callable_device_active_name|safe }})</h2>
+
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['corechart']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      function drawChart() {
+        var bps_in_top_chart_data = google.visualization.arrayToDataTable({{ bpsin_top|safe }});
+        var bps_in_top_chart_options = {
+          title: 'bps_in_top_chart',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          fontSize: 10,
+          hAxis: { title: 'time' },
+          vAxis: { 
+                   title: 'bps [bit/s]',
+                   scaleType: 'log'
+                 },
+        };
+        var bps_in_top_chart = new google.visualization.LineChart(document.getElementById('bps_in_top_chart'));
+        bps_in_top_chart.draw(bps_in_top_chart_data, bps_in_top_chart_options);
+
+
+        var bps_out_top_chart_data = google.visualization.arrayToDataTable({{ bpsout_top|safe }});
+        var bps_out_top_chart_options = {
+          title: 'bps_out_top_chart',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          fontSize: 10,
+          hAxis: { title: 'time' },
+          vAxis: { 
+                   title: 'bps [bit/s]',
+                   scaleType: 'log'
+                 },
+        };
+        var bps_out_top_chart = new google.visualization.LineChart(document.getElementById('bps_out_top_chart'));
+        bps_out_top_chart.draw(bps_out_top_chart_data, bps_out_top_chart_options);
+
+
+        var pps_in_top_chart_data = google.visualization.arrayToDataTable({{ ppsin_top|safe }});
+        var pps_in_top_chart_options = {
+          title: 'pps_in_top_chart',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          fontSize: 10,
+          hAxis: { title: 'time' },
+          vAxis: { 
+                   title: 'pps [packet/s]',
+                   scaleType: 'log'
+                 },
+        };
+        var pps_in_top_chart = new google.visualization.LineChart(document.getElementById('pps_in_top_chart'));
+        pps_in_top_chart.draw(pps_in_top_chart_data, pps_in_top_chart_options);
+
+
+        var pps_out_top_chart_data = google.visualization.arrayToDataTable({{ ppsout_top|safe }});
+        var pps_out_top_chart_options = {
+          title: 'pps_out_top_chart',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          fontSize: 10,
+          hAxis: { title: 'time' },
+          vAxis: { 
+                   title: 'pps [packet/s]',
+                   scaleType: 'log'
+                 },
+        };
+        var pps_out_top_chart = new google.visualization.LineChart(document.getElementById('pps_out_top_chart'));
+        pps_out_top_chart.draw(pps_out_top_chart_data, pps_out_top_chart_options);
+
+ 
+        var cps_top_chart_data = google.visualization.arrayToDataTable({{ cps_top|safe }});
+        var cps_top_chart_options = {
+          title: 'cps_top_chart',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          fontSize: 10,
+          hAxis: { title: 'time' },
+          vAxis: { 
+                   title: 'cps [connection/s]',
+                   scaleType: 'log'
+                 },
+        };
+        var cps_top_chart = new google.visualization.LineChart(document.getElementById('cps_top_chart'));
+        cps_top_chart.draw(cps_top_chart_data, cps_top_chart_options);
+
+        
+        var session_top_chart_data = google.visualization.arrayToDataTable({{ session_top|safe }});
+        var session_top_chart_options = {
+          title: 'session_top_chart',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          fontSize: 10,
+          hAxis: { title: 'time' },
+          vAxis: { 
+                   title: 'connection',
+                   scaleType: 'log'
+                 },
+        };
+        var session_top_chart = new google.visualization.LineChart(document.getElementById('session_top_chart'));
+        session_top_chart.draw(session_top_chart_data, session_top_chart_options);
+
+
+      }
+    </script>
+  </head>
+  <body>
+    <div id="bps_in_top_chart" style="width: 1600px; height: 700px"></div>
+    <div id="bps_out_top_chart" style="width: 1600px; height: 700px"></div>
+    <div id="pps_in_top_chart" style="width: 1600px; height: 700px"></div>
+    <div id="pps_out_top_chart" style="width: 1600px; height: 700px"></div>
+    <div id="cps_top_chart" style="width: 1600px; height: 700px"></div>
+    <div id="session_top_chart" style="width: 1600px; height: 700px"></div>
+  </body>
+</html>
