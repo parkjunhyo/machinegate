@@ -36,4 +36,4 @@ def dashboard_f5_stats_top_chart(device_name=None,before_time=0):
 #    #return render_template('hello.html', name=name)
 
 if __name__ == '__main__':
-    app.run(host=RUN_HOST,port=RUN_PORT)
+    app.run(host=RUN_HOST,port=RUN_PORT,threaded=True)
