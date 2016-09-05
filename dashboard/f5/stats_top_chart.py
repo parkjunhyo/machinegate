@@ -110,7 +110,7 @@ def obtain_draw_data(_this_Dict_,matched_callable_device_active_name,backtotime_
          # time string added
          ctime_string = time.ctime(float(_utime_))
          parsed_date = ctime_string.strip().split()
-         express_time = str("/".join([parsed_date[1],parsed_date[2],str(":".join(parsed_date[3].strip().split()[:2]))]))
+         express_time = str("/".join([parsed_date[1],parsed_date[2],str(":".join(parsed_date[3].strip().split(':')[:2]))]))
          each_list_item.append(express_time)
          # value according to string 
          for _vname_ in this_virtualserver_list:
