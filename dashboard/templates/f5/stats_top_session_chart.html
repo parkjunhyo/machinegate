@@ -1,0 +1,35 @@
+<title>{{ matched_callable_device_active_name|safe }}</title>
+<h2>this is top ranking on host ({{ matched_callable_device_active_name|safe }})</h2>
+
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['corechart']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      function drawChart() {
+        
+        var session_top_chart_data = google.visualization.arrayToDataTable({{ session_top|safe }});
+        var session_top_chart_options = {
+          title: 'session_top_chart',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          fontSize: 10,
+          hAxis: { title: 'time' },
+          vAxis: { 
+                   title: 'connection',
+                   scaleType: 'log'
+                 },
+        };
+        var session_top_chart = new google.visualization.LineChart(document.getElementById('session_top_chart'));
+        session_top_chart.draw(session_top_chart_data, session_top_chart_options);
+
+
+      }
+    </script>
+  </head>
+  <body>
+    <div id="session_top_chart" style="width: 1600px; height: 700px"></div>
+  </body>
+</html>

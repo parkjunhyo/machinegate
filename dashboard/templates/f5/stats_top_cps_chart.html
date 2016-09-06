@@ -1,0 +1,34 @@
+<title>{{ matched_callable_device_active_name|safe }}</title>
+<h2>this is top ranking on host ({{ matched_callable_device_active_name|safe }})</h2>
+
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['corechart']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      function drawChart() {
+ 
+        var cps_top_chart_data = google.visualization.arrayToDataTable({{ cps_top|safe }});
+        var cps_top_chart_options = {
+          title: 'cps_top_chart',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          fontSize: 10,
+          hAxis: { title: 'time' },
+          vAxis: { 
+                   title: 'cps [connection/s]',
+                   scaleType: 'log'
+                 },
+        };
+        var cps_top_chart = new google.visualization.LineChart(document.getElementById('cps_top_chart'));
+        cps_top_chart.draw(cps_top_chart_data, cps_top_chart_options);
+
+      }
+    </script>
+  </head>
+  <body>
+    <div id="cps_top_chart" style="width: 1600px; height: 700px"></div>
+  </body>
+</html>

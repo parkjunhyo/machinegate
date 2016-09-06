@@ -1,0 +1,51 @@
+<title>{{ matched_callable_device_active_name|safe }}</title>
+<h2>this is top ranking on host ({{ matched_callable_device_active_name|safe }})</h2>
+
+<html>
+  <head>
+    <meta http-equiv="refresh" content="600" />
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['corechart']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      function drawChart() {
+        var bps_in_top_chart_data = google.visualization.arrayToDataTable({{ bpsin_top|safe }});
+        var bps_in_top_chart_options = {
+          title: 'bps_in_top_chart',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          fontSize: 10,
+          hAxis: { title: 'time' },
+          vAxis: { 
+                   title: 'bps [bit/s]',
+                   scaleType: 'log'
+                 },
+        };
+        var bps_in_top_chart = new google.visualization.LineChart(document.getElementById('bps_in_top_chart'));
+        bps_in_top_chart.draw(bps_in_top_chart_data, bps_in_top_chart_options);
+
+
+        var bps_out_top_chart_data = google.visualization.arrayToDataTable({{ bpsout_top|safe }});
+        var bps_out_top_chart_options = {
+          title: 'bps_out_top_chart',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          fontSize: 10,
+          hAxis: { title: 'time' },
+          vAxis: { 
+                   title: 'bps [bit/s]',
+                   scaleType: 'log'
+                 },
+        };
+        var bps_out_top_chart = new google.visualization.LineChart(document.getElementById('bps_out_top_chart'));
+        bps_out_top_chart.draw(bps_out_top_chart_data, bps_out_top_chart_options);
+
+      }
+    </script>
+  </head>
+  <body>
+    <div id="bps_in_top_chart" style="width: 1600px; height: 700px"></div>
+    <div id="bps_out_top_chart" style="width: 1600px; height: 700px"></div>
+  </body>
+</html>

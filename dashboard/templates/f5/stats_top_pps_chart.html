@@ -1,0 +1,52 @@
+<title>{{ matched_callable_device_active_name|safe }}</title>
+<h2>this is top ranking on host ({{ matched_callable_device_active_name|safe }})</h2>
+
+<html>
+  <head>
+    <meta http-equiv="refresh" content="600" />
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['corechart']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      function drawChart() {
+
+        var pps_in_top_chart_data = google.visualization.arrayToDataTable({{ ppsin_top|safe }});
+        var pps_in_top_chart_options = {
+          title: 'pps_in_top_chart',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          fontSize: 10,
+          hAxis: { title: 'time' },
+          vAxis: { 
+                   title: 'pps [packet/s]',
+                   scaleType: 'log'
+                 },
+        };
+        var pps_in_top_chart = new google.visualization.LineChart(document.getElementById('pps_in_top_chart'));
+        pps_in_top_chart.draw(pps_in_top_chart_data, pps_in_top_chart_options);
+
+
+        var pps_out_top_chart_data = google.visualization.arrayToDataTable({{ ppsout_top|safe }});
+        var pps_out_top_chart_options = {
+          title: 'pps_out_top_chart',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          fontSize: 10,
+          hAxis: { title: 'time' },
+          vAxis: { 
+                   title: 'pps [packet/s]',
+                   scaleType: 'log'
+                 },
+        };
+        var pps_out_top_chart = new google.visualization.LineChart(document.getElementById('pps_out_top_chart'));
+        pps_out_top_chart.draw(pps_out_top_chart_data, pps_out_top_chart_options);
+
+      }
+    </script>
+  </head>
+  <body>
+    <div id="pps_in_top_chart" style="width: 1600px; height: 700px"></div>
+    <div id="pps_out_top_chart" style="width: 1600px; height: 700px"></div>
+  </body>
+</html>

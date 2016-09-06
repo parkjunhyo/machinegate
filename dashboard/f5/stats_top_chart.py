@@ -136,8 +136,16 @@ def obtain_draw_data(_this_Dict_,matched_callable_device_active_name,backtotime_
       return_list[_keyname_] = each_list_item_sum
    return return_list
       
+def category_confirm(category,unicode_key_list):
+   return_value = False
+   category_string = str(category)
+   for _ukey_ in unicode_key_list:
+      _ukey_string_ = str(_ukey_)
+      if re.search(category_string,_ukey_string_,re.I):
+        return_value = True
+   return return_value
 
-def stats_top_chart(target,before_time):
+def stats_top_chart(category,target,before_time):
 
     _devicename_ = str(target)
     backtotime_interval = int(int(ROLLBAK_INTERVAL)*int(before_time))
@@ -162,48 +170,57 @@ def stats_top_chart(target,before_time):
       return "active device name is not proper!"
 
     ## toprank : bps
-    bash_command = "curl http://%(GW_HOST)s:%(GW_PORT)s/f5/stats/virtual/top/bps/" % {"GW_HOST":GW_HOST,"GW_PORT":GW_PORT}
-    bash_return = os.popen(bash_command).read().strip()
-    json_loads_value = json.loads(bash_return)   
     unicode_key_list = [u'bpsOut',u'bpsIn']
-    bps_toprank_virtualserver = toprank_extract(matched_callable_device_active_name,unicode_key_list,json_loads_value,{})
+    if category_confirm(category,unicode_key_list):
+      bash_command = "curl http://%(GW_HOST)s:%(GW_PORT)s/f5/stats/virtual/top/bps/" % {"GW_HOST":GW_HOST,"GW_PORT":GW_PORT}
+      bash_return = os.popen(bash_command).read().strip()
+      json_loads_value = json.loads(bash_return)   
+      bps_toprank_virtualserver = toprank_extract(matched_callable_device_active_name,unicode_key_list,json_loads_value,{})
+      # value ordering
+      bpstop = obtain_draw_data(bps_toprank_virtualserver,matched_callable_device_active_name,backtotime_interval)
+      bpsout_top = bpstop[u'bpsOut']
+      bpsin_top = bpstop[u'bpsIn']
+      return render_template('f5/stats_top_bps_chart.html', matched_callable_device_active_name=matched_callable_device_active_name,bpsout_top=bpsout_top, bpsin_top=bpsin_top)
 
 
     ## toprank : pps
-    bash_command = "curl http://%(GW_HOST)s:%(GW_PORT)s/f5/stats/virtual/top/pps/" % {"GW_HOST":GW_HOST,"GW_PORT":GW_PORT}
-    bash_return = os.popen(bash_command).read().strip()
-    json_loads_value = json.loads(bash_return)
     unicode_key_list = [u'ppsOut',u'ppsIn']
-    pps_toprank_virtualserver = toprank_extract(matched_callable_device_active_name,unicode_key_list,json_loads_value,{})
+    if category_confirm(category,unicode_key_list):
+      bash_command = "curl http://%(GW_HOST)s:%(GW_PORT)s/f5/stats/virtual/top/pps/" % {"GW_HOST":GW_HOST,"GW_PORT":GW_PORT}
+      bash_return = os.popen(bash_command).read().strip()
+      json_loads_value = json.loads(bash_return)
+      pps_toprank_virtualserver = toprank_extract(matched_callable_device_active_name,unicode_key_list,json_loads_value,{})
+      # value ordering
+      ppstop = obtain_draw_data(pps_toprank_virtualserver,matched_callable_device_active_name,backtotime_interval)
+      ppsout_top = ppstop[u'ppsOut']
+      ppsin_top = ppstop[u'ppsIn']
+      return render_template('f5/stats_top_pps_chart.html', matched_callable_device_active_name=matched_callable_device_active_name,ppsout_top=ppsout_top, ppsin_top=ppsin_top)
 
     ## toprank : cps
-    bash_command = "curl http://%(GW_HOST)s:%(GW_PORT)s/f5/stats/virtual/top/cps/" % {"GW_HOST":GW_HOST,"GW_PORT":GW_PORT}
-    bash_return = os.popen(bash_command).read().strip()
-    json_loads_value = json.loads(bash_return)
     unicode_key_list = [u'cps']
-    cps_toprank_virtualserver = toprank_extract(matched_callable_device_active_name,unicode_key_list,json_loads_value,{})
+    if category_confirm(category,unicode_key_list):
+      bash_command = "curl http://%(GW_HOST)s:%(GW_PORT)s/f5/stats/virtual/top/cps/" % {"GW_HOST":GW_HOST,"GW_PORT":GW_PORT}
+      bash_return = os.popen(bash_command).read().strip()
+      json_loads_value = json.loads(bash_return)
+      cps_toprank_virtualserver = toprank_extract(matched_callable_device_active_name,unicode_key_list,json_loads_value,{})
+      # value ordering
+      cpstop = obtain_draw_data(cps_toprank_virtualserver,matched_callable_device_active_name,backtotime_interval)
+      cps_top = cpstop[u'cps']
+      return render_template('f5/stats_top_cps_chart.html', matched_callable_device_active_name=matched_callable_device_active_name,cps_top=cps_top)
  
     ## toprank : session
-    bash_command = "curl http://%(GW_HOST)s:%(GW_PORT)s/f5/stats/virtual/top/session/" % {"GW_HOST":GW_HOST,"GW_PORT":GW_PORT}
-    bash_return = os.popen(bash_command).read().strip()
-    json_loads_value = json.loads(bash_return)
     unicode_key_list = [u'session']
-    session_toprank_virtualserver = toprank_extract(matched_callable_device_active_name,unicode_key_list,json_loads_value,{}) 
-
-    bpstop = obtain_draw_data(bps_toprank_virtualserver,matched_callable_device_active_name,backtotime_interval)
-    bpsout_top = bpstop[u'bpsOut']
-    bpsin_top = bpstop[u'bpsIn']
-
-    ppstop = obtain_draw_data(pps_toprank_virtualserver,matched_callable_device_active_name,backtotime_interval)
-    ppsout_top = ppstop[u'ppsOut']
-    ppsin_top = ppstop[u'ppsIn']
-
-    cpstop = obtain_draw_data(cps_toprank_virtualserver,matched_callable_device_active_name,backtotime_interval)
-    cps_top = cpstop[u'cps']
-
-    sessiontop = obtain_draw_data(session_toprank_virtualserver,matched_callable_device_active_name,backtotime_interval)
-    session_top = sessiontop[u'session']
+    if category_confirm(category,unicode_key_list):
+      bash_command = "curl http://%(GW_HOST)s:%(GW_PORT)s/f5/stats/virtual/top/session/" % {"GW_HOST":GW_HOST,"GW_PORT":GW_PORT}
+      bash_return = os.popen(bash_command).read().strip()
+      json_loads_value = json.loads(bash_return)
+      session_toprank_virtualserver = toprank_extract(matched_callable_device_active_name,unicode_key_list,json_loads_value,{}) 
+      # value ordering
+      sessiontop = obtain_draw_data(session_toprank_virtualserver,matched_callable_device_active_name,backtotime_interval)
+      session_top = sessiontop[u'session']
+      return render_template('f5/stats_top_session_chart.html', matched_callable_device_active_name=matched_callable_device_active_name,session_top=session_top)
 
     #
-    return render_template('f5/stats_top_chart.html', matched_callable_device_active_name=matched_callable_device_active_name,bpsout_top=bpsout_top, bpsin_top=bpsin_top, ppsout_top=ppsout_top, ppsin_top=ppsin_top, cps_top=cps_top, session_top=session_top)
+    return "category [ bps, pps, cps, session ] is not proper!"
+    #return render_template('f5/stats_top_chart.html', matched_callable_device_active_name=matched_callable_device_active_name,bpsout_top=bpsout_top, bpsin_top=bpsin_top, ppsout_top=ppsout_top, ppsin_top=ppsin_top, cps_top=cps_top, session_top=session_top)
 
