@@ -18,6 +18,7 @@ from f5restapi.setting import ENCAP_PASSWORD
 from f5restapi.setting import THREAD_TIMEOUT
 from f5restapi.setting import USER_VAR_STATS
 from f5restapi.setting import STATS_VIEWER_COUNT
+from f5restapi.setting import STATS_SAVEDDATA_MULTI
 
 class JSONResponse(HttpResponse):
     """
@@ -52,10 +53,10 @@ def f5_virtualserverstats(request,virtualservername,format=None):
             _contents_ = f.readlines()
             f.close()
 
-            if len(_contents_) <= int(STATS_VIEWER_COUNT):
+            if len(_contents_) <= (int(STATS_VIEWER_COUNT)*int(STATS_SAVEDDATA_MULTI)):
               possible_contents = _contents_
-            else:
-              possible_numbering = int(len(_contents_) - int(STATS_VIEWER_COUNT))
+            else:        
+              possible_numbering = int(len(_contents_) - (int(STATS_VIEWER_COUNT)*int(STATS_SAVEDDATA_MULTI)))
               possible_contents = _contents_[possible_numbering:]
 
             for _read_content_ in possible_contents:
