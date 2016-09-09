@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 
-from setting import GW_HOST,GW_PORT,CHART_DATA_NUMBER,ROLLBAK_INTERVAL
+from setting import GW_HOST,GW_PORT,CHART_DATA_NUMBER
 
 from flask import render_template
 import os,json,re,time,copy,sys
@@ -148,7 +148,8 @@ def category_confirm(category,unicode_key_list):
 def stats_top_chart(category,target,before_time):
 
     _devicename_ = str(target)
-    backtotime_interval = int(int(ROLLBAK_INTERVAL)*int(before_time))
+    backtotime_interval = int(before_time)
+    #backtotime_interval = int(int(ROLLBAK_INTERVAL)*int(before_time))
 
     bash_command = "curl http://%(GW_HOST)s:%(GW_PORT)s/f5/devicelist/" % {"GW_HOST":GW_HOST,"GW_PORT":GW_PORT}
     bash_return = os.popen(bash_command).read().strip()

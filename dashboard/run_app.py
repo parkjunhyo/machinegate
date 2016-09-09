@@ -20,11 +20,11 @@ def dashboard_f5_stats_chart(target=None,before_time=int(0)):
     #else:
       return f5_stats_chart(target,before_time)
 
-from f5.stats_top_chart import stats_top_chart as f5_stats_top_chart
-@app.route('/dashboard/f5/stats/virtual/top/<category>/<device_name>/')
-@app.route('/dashboard/f5/stats/virtual/top/<category>/<device_name>/<before_time>/')
-def dashboard_f5_stats_top_chart(category=None,device_name=None,before_time=0):
-      return f5_stats_top_chart(category,device_name,before_time)
+#from f5.stats_top_chart import stats_top_chart as f5_stats_top_chart
+#@app.route('/dashboard/f5/stats/virtual/top/<category>/<device_name>/')
+#@app.route('/dashboard/f5/stats/virtual/top/<category>/<device_name>/<before_time>/')
+#def dashboard_f5_stats_top_chart(category=None,device_name=None,before_time=0):
+#      return f5_stats_top_chart(category,device_name,before_time)
 
 
 

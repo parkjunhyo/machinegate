@@ -33,11 +33,12 @@ class JSONResponse(HttpResponse):
 
 @api_view(['GET'])
 @csrf_exempt
-def f5_virtualserverstats(request,virtualservername,format=None):
+def f5_virtualserverstats_by_rollback(request,virtualservername,rollback_interval,format=None):
 
    # get method
    if request.method == 'GET':
       try:
+
          matched_filename = str(virtualservername)
          matched_fullpath = USER_VAR_STATS+matched_filename+"*.virtual.stats"
          matched_filelist = glob.glob(matched_fullpath)
@@ -72,7 +73,7 @@ def f5_virtualserverstats(request,virtualservername,format=None):
             last_time = unicode_timevalue_list[-1]
 
             # start end time value calculation
-            before_time = int(0)
+            before_time = int(rollback_interval)
             backtotime_interval = float(int(ROLLBAK_INTERVAL)*int(before_time))
             if float(last_time) < float(backtotime_interval):
               predicted_past_time = float(last_time)
