@@ -55,50 +55,50 @@ def parsing_from_items_with_keyname(_keyname_,_origin_items_,_updated_items_,tim
   
    # bps in
    if _keyname_ not in _origin_items_.keys():
-      start_value = float(0)
+      start_value = unicode(float(0))
    else:
-      start_value = float(_origin_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.bitsIn'][u'value'])
-   end_value = float(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.bitsIn'][u'value'])
-   output_values[unicode(str(virservername_keyname))][u'bpsIn'] = calculation_gap(start_value,end_value)/time_gab
+      start_value = unicode(float(_origin_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.bitsIn'][u'value']))
+   end_value = unicode(float(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.bitsIn'][u'value']))
+   output_values[unicode(str(virservername_keyname))][u'bpsIn'] = unicode(float(calculation_gap(start_value,end_value)/time_gab))
 
    # bps out
    if _keyname_ not in _origin_items_.keys():
-      start_value = float(0)
+      start_value = unicode(float(0))
    else:
-      start_value = float(_origin_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.bitsOut'][u'value'])
-   end_value = float(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.bitsOut'][u'value'])
-   output_values[unicode(str(virservername_keyname))][unicode('bpsOut')] = calculation_gap(start_value,end_value)/time_gab
+      start_value = unicode(float(_origin_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.bitsOut'][u'value']))
+   end_value = unicode(float(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.bitsOut'][u'value']))
+   output_values[unicode(str(virservername_keyname))][unicode('bpsOut')] = unicode(float(calculation_gap(start_value,end_value)/time_gab))
 
    # pps in
    if _keyname_ not in _origin_items_.keys():
-      start_value = float(0)
+      start_value = unicode(float(0))
    else:
-      start_value = float(_origin_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.pktsIn'][u'value'])
-   end_value = float(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.pktsIn'][u'value'])
-   output_values[unicode(str(virservername_keyname))][unicode('ppsIn')] = calculation_gap(start_value,end_value)/time_gab
+      start_value = unicode(float(_origin_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.pktsIn'][u'value']))
+   end_value = unicode(float(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.pktsIn'][u'value']))
+   output_values[unicode(str(virservername_keyname))][unicode('ppsIn')] = unicode(float(calculation_gap(start_value,end_value)/time_gab))
 
    # pps out
    if _keyname_ not in _origin_items_.keys():
-      start_value = float(0)
+      start_value = unicode(float(0))
    else:
-      start_value = float(_origin_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.pktsOut'][u'value'])
-   end_value = float(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.pktsOut'][u'value'])
-   output_values[unicode(str(virservername_keyname))][unicode('ppsOut')] = calculation_gap(start_value,end_value)/time_gab
+      start_value = unicode(float(_origin_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.pktsOut'][u'value']))
+   end_value = unicode(float(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.pktsOut'][u'value']))
+   output_values[unicode(str(virservername_keyname))][unicode('ppsOut')] = unicode(float(calculation_gap(start_value,end_value)/time_gab))
 
    # cps
    if _keyname_ not in _origin_items_.keys():
-      start_value = float(0)
+      start_value = unicode(float(0))
    else:
-      start_value = float(_origin_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.totConns'][u'value'])
-   end_value = float(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.totConns'][u'value'])
-   output_values[unicode(str(virservername_keyname))][unicode('cps')] = calculation_gap(start_value,end_value)/time_gab
+      start_value = unicode(float(_origin_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.totConns'][u'value']))
+   end_value = unicode(float(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.totConns'][u'value']))
+   output_values[unicode(str(virservername_keyname))][unicode('cps')] = unicode(float(calculation_gap(start_value,end_value)/time_gab))
 
    # current session
-   output_values[unicode(str(virservername_keyname))][unicode('session')] = float(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.curConns'][u'value'])
+   output_values[unicode(str(virservername_keyname))][unicode('session')] = unicode(float(_updated_items_[_keyname_][u'nestedStats'][u'entries'][u'clientside.curConns'][u'value']))
 
    # interval
    output_values[unicode(str(virservername_keyname))][unicode('interval')] = interval_string
-   output_values[unicode(str(virservername_keyname))][unicode('updated_time')] = end_time_time 
+   output_values[unicode(str(virservername_keyname))][unicode('updated_time')] = unicode(end_time_time)
 
    return output_values
 
