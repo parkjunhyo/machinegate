@@ -67,7 +67,11 @@ def obtain_draw_data(_this_Dict_,matched_callable_device_active_name,backtotime_
       for _vname_ in this_virtualserver_list:
          _vname_string_ = str(_vname_)
          _vname_stats_filename_ = "%(_vname_string_)s@%(matched_callable_device_active_name)s" % {"_vname_string_":_vname_string_,"matched_callable_device_active_name":matched_callable_device_active_name}
-         bash_command = "curl http://%(GW_HOST)s:%(GW_PORT)s/f5/stats/virtual/%(virtualhostname)s/" % {"GW_HOST":GW_HOST,"GW_PORT":GW_PORT,"virtualhostname":_vname_string_}
+         if int(backtotime_interval) == int(0):
+           bash_command = "curl http://%(GW_HOST)s:%(GW_PORT)s/f5/stats/virtual/%(virtualhostname)s/" % {"GW_HOST":GW_HOST,"GW_PORT":GW_PORT,"virtualhostname":_vname_string_}
+         else:
+           bash_command = "curl http://%(GW_HOST)s:%(GW_PORT)s/f5/stats/virtual/%(virtualhostname)s/%(backtotime_interval)s/" % {"GW_HOST":GW_HOST,"GW_PORT":GW_PORT,"virtualhostname":_vname_string_,"backtotime_interval":backtotime_interval}
+
          bash_return = os.popen(bash_command).read().strip()
          json_loads_value = json.loads(bash_return)
          for _dictData_ in json_loads_value:
@@ -79,28 +83,37 @@ def obtain_draw_data(_this_Dict_,matched_callable_device_active_name,backtotime_
       # find out basic time line
       _basic_standard_ = str(this_virtualserver_list[-1])
       unicode_timevalue_list = memory_this_db[_basic_standard_].keys()
-      unicode_timevalue_list.sort()
 
-      # start end time value calculation
-      last_time = unicode_timevalue_list[-1]
-      predicted_past_time = float(last_time)-float(backtotime_interval)
-      findabs_box = {}
-      for _univalue_ in unicode_timevalue_list:
-         abs_interval_value = abs(float(_univalue_)-float(predicted_past_time))
-         findabs_box[abs_interval_value] = _univalue_
-      findabs_box_keys = findabs_box.keys()
-      findabs_box_keys.sort()
-      matched_final_time = findabs_box[findabs_box_keys[0]]
+      container = {}
+      for _item_ in unicode_timevalue_list:
+         container[float(_item_)] = _item_
 
-      matched_index = unicode_timevalue_list.index(matched_final_time)
-      included_matched_index = matched_index + int(1)
+      container_keyname = container.keys()
+      container_keyname.sort()
+      #unicode_timevalue_list.sort()
 
-      valid_timevalue = []
-      if matched_index <= CHART_DATA_NUMBER:
-        valid_timevalue = unicode_timevalue_list[:included_matched_index]
-      else:
-        start_index = int(matched_index - CHART_DATA_NUMBER)
-        valid_timevalue = unicode_timevalue_list[start_index:included_matched_index]
+      valid_timevalue = copy.copy(container_keyname)
+
+      ## start end time value calculation
+      #last_time = unicode_timevalue_list[-1]
+      #predicted_past_time = float(last_time)-float(backtotime_interval)
+      #findabs_box = {}
+      #for _univalue_ in unicode_timevalue_list:
+      #   abs_interval_value = abs(float(_univalue_)-float(predicted_past_time))
+      #   findabs_box[abs_interval_value] = _univalue_
+      #findabs_box_keys = findabs_box.keys()
+      #findabs_box_keys.sort()
+      #matched_final_time = findabs_box[findabs_box_keys[0]]
+
+      #matched_index = unicode_timevalue_list.index(matched_final_time)
+      #included_matched_index = matched_index + int(1)
+
+      #valid_timevalue = []
+      #if matched_index <= CHART_DATA_NUMBER:
+      #  valid_timevalue = unicode_timevalue_list[:included_matched_index]
+      #else:
+      #  start_index = int(matched_index - CHART_DATA_NUMBER)
+      #  valid_timevalue = unicode_timevalue_list[start_index:included_matched_index]
 
       # find out the data match
       each_list_item_sum = []
@@ -108,7 +121,7 @@ def obtain_draw_data(_this_Dict_,matched_callable_device_active_name,backtotime_
       for _utime_ in valid_timevalue:
          each_list_item = []
          # time string added
-         ctime_string = time.ctime(float(_utime_))
+         ctime_string = time.ctime(float(container[float(_item_)]))
          parsed_date = ctime_string.strip().split()
          express_time = str("/".join([parsed_date[1],parsed_date[2],str(":".join(parsed_date[3].strip().split(':')[:2]))]))
          each_list_item.append(express_time)
@@ -181,7 +194,7 @@ def stats_top_chart(category,target,before_time):
       bpstop = obtain_draw_data(bps_toprank_virtualserver,matched_callable_device_active_name,backtotime_interval)
       bpsout_top = bpstop[u'bpsOut']
       bpsin_top = bpstop[u'bpsIn']
-      return render_template('f5/stats_top_bps_chart.html', matched_callable_device_active_name=matched_callable_device_active_name,bpsout_top=bpsout_top, bpsin_top=bpsin_top)
+      return render_template('f5/stats_top_bps_chart.html', GW_HOST=GW_HOST,matched_callable_device_active_name=matched_callable_device_active_name,bpsout_top=bpsout_top, bpsin_top=bpsin_top)
 
 
     ## toprank : pps
@@ -195,7 +208,7 @@ def stats_top_chart(category,target,before_time):
       ppstop = obtain_draw_data(pps_toprank_virtualserver,matched_callable_device_active_name,backtotime_interval)
       ppsout_top = ppstop[u'ppsOut']
       ppsin_top = ppstop[u'ppsIn']
-      return render_template('f5/stats_top_pps_chart.html', matched_callable_device_active_name=matched_callable_device_active_name,ppsout_top=ppsout_top, ppsin_top=ppsin_top)
+      return render_template('f5/stats_top_pps_chart.html', GW_HOST=GW_HOST,matched_callable_device_active_name=matched_callable_device_active_name,ppsout_top=ppsout_top, ppsin_top=ppsin_top)
 
     ## toprank : cps
     unicode_key_list = [u'cps']
@@ -207,7 +220,7 @@ def stats_top_chart(category,target,before_time):
       # value ordering
       cpstop = obtain_draw_data(cps_toprank_virtualserver,matched_callable_device_active_name,backtotime_interval)
       cps_top = cpstop[u'cps']
-      return render_template('f5/stats_top_cps_chart.html', matched_callable_device_active_name=matched_callable_device_active_name,cps_top=cps_top)
+      return render_template('f5/stats_top_cps_chart.html', GW_HOST=GW_HOST,matched_callable_device_active_name=matched_callable_device_active_name,cps_top=cps_top)
  
     ## toprank : session
     unicode_key_list = [u'session']
@@ -219,7 +232,7 @@ def stats_top_chart(category,target,before_time):
       # value ordering
       sessiontop = obtain_draw_data(session_toprank_virtualserver,matched_callable_device_active_name,backtotime_interval)
       session_top = sessiontop[u'session']
-      return render_template('f5/stats_top_session_chart.html', matched_callable_device_active_name=matched_callable_device_active_name,session_top=session_top)
+      return render_template('f5/stats_top_session_chart.html', GW_HOST=GW_HOST,matched_callable_device_active_name=matched_callable_device_active_name,session_top=session_top)
 
     #
     return "category [ bps, pps, cps, session ] is not proper!"
