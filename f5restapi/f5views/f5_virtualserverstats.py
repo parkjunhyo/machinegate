@@ -39,7 +39,7 @@ def f5_virtualserverstats(request,virtualservername,format=None):
    if request.method == 'GET':
       try:
          matched_filename = str(virtualservername)
-         matched_fullpath = USER_VAR_STATS+matched_filename+"*.virtual.stats"
+         matched_fullpath = USER_VAR_STATS+matched_filename+"@*.virtual.stats"
          matched_filelist = glob.glob(matched_fullpath)
 
          all_stats_list = []
