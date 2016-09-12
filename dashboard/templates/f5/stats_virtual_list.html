@@ -7,6 +7,10 @@
    <h4> Device Host : 
    {% for name in deviceip_devicehostname_dict[key] %}
    {{ name }} ({{ key }})
+   <a href="http://{{ RUN_HOST }}:{{ RUN_PORT }}/dashboard/f5/stats/virtual/top/bps/{{ name }}/">TOP_BPS</a>
+   <a href="http://{{ RUN_HOST }}:{{ RUN_PORT }}/dashboard/f5/stats/virtual/top/pps/{{ name }}/">TOP_PPS</a>
+   <a href="http://{{ RUN_HOST }}:{{ RUN_PORT }}/dashboard/f5/stats/virtual/top/cps/{{ name }}/">TOP_CPS</a>
+   <a href="http://{{ RUN_HOST }}:{{ RUN_PORT }}/dashboard/f5/stats/virtual/top/session/{{ name }}/">TOP_SESSION</a>
    {% endfor %}
    </h4>
 
