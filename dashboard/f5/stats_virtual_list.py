@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 
-from setting import GW_HOST,GW_PORT
+from setting import GW_HOST,GW_PORT,RUN_PORT,RUN_HOST
 
 from flask import render_template
 import os,json,re
@@ -38,4 +38,4 @@ def stats_virtual_list():
        if ipaddress_string not in deviceip_devicehostname_dict.keys():
          deviceip_devicehostname_dict[ipaddress_string] = hostnames_list 
        
-    return render_template('f5/stats_virtual_list.html', devicehost_virtuallist_dict=devicehost_virtuallist_dict, deviceip_devicehostname_dict=deviceip_devicehostname_dict)
+    return render_template('f5/stats_virtual_list.html', RUN_PORT=RUN_PORT,RUN_HOST=RUN_HOST,devicehost_virtuallist_dict=devicehost_virtuallist_dict, deviceip_devicehostname_dict=deviceip_devicehostname_dict)
