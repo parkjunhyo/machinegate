@@ -23,7 +23,7 @@
    <td><font size='2'> {{ item }}</font></td>
    <td>
        {% for name in deviceip_devicehostname_dict[key] %}
-       <font size='2', color='red'>{{ item }}@{{ name }} </font><br>
+       <font size='2'><a href="http://{{ RUN_HOST }}:{{ RUN_PORT }}/dashboard/f5/stats/virtual/{{ item }}@{{ name }/">{{ item }}@{{ name }}</a></font><br>
        {% endfor %}
    </td>
    </tr>
