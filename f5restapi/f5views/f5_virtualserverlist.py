@@ -16,6 +16,7 @@ from f5restapi.setting import USER_NAME,USER_PASSWORD
 from f5restapi.setting import ENCAP_PASSWORD
 from f5restapi.setting import THREAD_TIMEOUT
 
+
 class JSONResponse(HttpResponse):
     """
     An HttpResponse that renders its content into JSON.
@@ -39,6 +40,39 @@ def transfer_crul_to_get_virtualserver_info(_DEVICE_IP_):
     f.write(get_info)
     f.close()
     
+    # threading must have
+    time.sleep(0)
+
+def transfer_crul_to_get_ssl_info(_DEVICE_IP_):
+
+    database_filename = USER_DATABASES_DIR+"file.ssl_cert."+_DEVICE_IP_+".txt"
+    f = open(database_filename,"w")
+    f.close()
+    CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/sys/file/ssl-cert/ -H 'Content-Type: application/json'"
+    get_info = os.popen(CURL_command).read().strip()
+    f = open(database_filename,"w")
+    f.write(get_info)
+    f.close()
+    
+
+    database_filename = USER_DATABASES_DIR+"file.ssl_key."+_DEVICE_IP_+".txt"
+    f = open(database_filename,"w")
+    f.close()
+    CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/sys/file/ssl-key/ -H 'Content-Type: application/json'"
+    get_info = os.popen(CURL_command).read().strip()
+    f = open(database_filename,"w")
+    f.write(get_info)
+    f.close()
+
+    database_filename = USER_DATABASES_DIR+"profile.client_ssl."+_DEVICE_IP_+".txt"
+    f = open(database_filename,"w")
+    f.close()
+    CURL_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_DEVICE_IP_+"/mgmt/tm/ltm/profile/client-ssl/ -H 'Content-Type: application/json'"
+    get_info = os.popen(CURL_command).read().strip()
+    f = open(database_filename,"w")
+    f.write(get_info)
+    f.close()
+
     # threading must have
     time.sleep(0)
 
@@ -134,10 +168,27 @@ def f5_virtualserverlist(request,format=None):
                     standby_device_list.append(str(_dict_information_[u'ip']))
 
            # delete all virtualserver databasefile
+           deleting_file_pattern = [
+                                     "virtualserverlist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",
+                                     "file.ssl_cert.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",
+                                     "file.ssl_key.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",
+                                     "profile.client_ssl.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt" 
+                                   ]
            fileindatabasedir = os.listdir(USER_DATABASES_DIR)
            for _filename_ in fileindatabasedir:
-               if re.search("virtualserverlist.[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_):
-                  os.popen("rm -rf "+USER_DATABASES_DIR+_filename_)
+               for _search_pattern_ in deleting_file_pattern:
+                  if re.search(_search_pattern_,_filename_):
+                     os.popen("rm -rf "+USER_DATABASES_DIR+_filename_)
+
+
+           ## 2016.09.30 updated for ssl certification 
+           _threads_ = []
+           for _ip_address_ in standby_device_list:
+              th = threading.Thread(target=transfer_crul_to_get_ssl_info, args=(_ip_address_,))
+              th.start()
+              _threads_.append(th)
+           for th in _threads_:
+              th.join()
 
            # send curl command to device
            _threads_ = []
