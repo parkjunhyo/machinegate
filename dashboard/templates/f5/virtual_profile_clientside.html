@@ -1,0 +1,34 @@
+<html>
+  <head>
+    <title>dashboard f5 virtual profile clientside </title>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['table']});
+      google.charts.setOnLoadCallback(drawTable);
+
+      function drawTable() {
+        var data = new google.visualization.DataTable();
+        data.addColumn('string', 'Host name');
+        data.addColumn('string', 'Certification name');
+        data.addColumn('string', 'Assigned virtualservers');
+        data.addColumn('string', 'Cert group name');
+        data.addColumn('string', 'Cert name');
+        data.addColumn('string', 'Cert expire date');
+        data.addColumn('string', 'Time');
+        data.addColumn('string', 'Key name');
+        data.addColumn('string', 'Chain name');
+        data.addColumn('string', 'Chain expire date');
+        data.addColumn('string', 'Time');
+        data.addRows({{ allData_list|safe }});
+
+        var table = new google.visualization.Table(document.getElementById('table_div'));
+
+        table.draw(data, {showRowNumber: true, width: '100%', height: '100%'});
+      }
+    </script>
+  </head>
+  <body>
+    <h2>dashboard f5 virtual profile clientside</h2>
+    <div id="table_div"></div>
+  </body>
+</html>

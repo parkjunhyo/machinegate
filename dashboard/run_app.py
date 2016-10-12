@@ -23,6 +23,10 @@ from f5.stats_top_chart import stats_top_chart as f5_stats_top_chart
 def dashboard_f5_stats_top_chart(category=None,device_name=None,before_time=0):
       return f5_stats_top_chart(category,device_name,before_time)
 
+from f5.virtual_profile_clientside import virtual_profile_clientside as f5_virtual_profile_clientside
+@app.route('/dashboard/f5/virtual/profile/clientside/')
+def dashboard_f5_virtual_profile_clientside():
+      return f5_virtual_profile_clientside()
 
 
 
