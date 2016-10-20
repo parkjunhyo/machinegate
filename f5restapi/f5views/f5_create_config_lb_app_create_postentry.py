@@ -124,7 +124,18 @@ def f5_create_config_lb_app_create_postentry(request,format=None):
                  thishost_use_port_list = []
                  thishost_use_realserver_list = []
                  thishost_use_virtualserver_list = []
-                 thishost_use_sticky = []
+                    
+                 # thishost_use_sticky = []
+                
+                 thishost_using_sticky = {}
+                 for _listvalue_ in thisitems_list:
+                    org_port_string = str(_listvalue_[3])
+                    org_virtualserverip_string = str(_listvalue_[2])
+                    sticky_key_name = "%(vip)s:%(port)s" % {"port":org_port_string ,"vip":org_virtualserverip_string}
+                    if str(sticky_key_name) not in thishost_using_sticky.keys():
+                      thishost_using_sticky[str(sticky_key_name)] = []
+                
+                
                  for _listvalue_ in thisitems_list:
                     org_servername_string = str(_listvalue_[0])
                     org_devicename_string = str(_listvalue_[4])
@@ -146,9 +157,14 @@ def f5_create_config_lb_app_create_postentry(request,format=None):
                         thishost_use_virtualserver_list.append(org_virtualserverip_string)
                       # sticky
                       org_sticky_string = str(_listvalue_[5])
-                      if org_sticky_string not in thishost_use_sticky:
+                      sticky_key_name = "%(vip)s:%(port)s" % {"port":org_port_string ,"vip":org_virtualserverip_string}
+                      if org_sticky_string not in thishost_using_sticky[str(sticky_key_name)]:
                         if re.match('o',org_sticky_string,re.I):
-                          thishost_use_sticky.append(org_sticky_string) 
+                          thishost_using_sticky[str(sticky_key_name)].append(org_sticky_string)
+                        
+                      # if org_sticky_string not in thishost_use_sticky:
+                      #  if re.match('o',org_sticky_string,re.I):
+                      #    thishost_use_sticky.append(org_sticky_string) 
 
                  for _port_ in thishost_use_port_list:
                     _ripport_list_ = []
@@ -163,8 +179,10 @@ def f5_create_config_lb_app_create_postentry(request,format=None):
                          inform_container[unicode(_keyname_)][unicode(present_hostname)][unicode(vipport_string)] = {}
                          inform_container[unicode(_keyname_)][unicode(present_hostname)][unicode(vipport_string)][unicode("items")] = _ripport_list_
                          sticky_status = "disable"
-                         if len(thishost_use_sticky) != 0:
+                         if len(thishost_using_sticky[str(vipport_string)]) != 0:
                            sticky_status = "enable"
+                         #if len(thishost_use_sticky) != 0:
+                         #  sticky_status = "enable"
                          inform_container[unicode(_keyname_)][unicode(present_hostname)][unicode(vipport_string)][unicode("sticky")] = sticky_status
 
 
