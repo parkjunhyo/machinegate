@@ -140,6 +140,11 @@ def get_viewer():
           stream = BytesIO(_string_contents_[0])
           _data_from_file_= JSONParser().parse(stream)
 
+          if (u'origin_ctime' not in _data_from_file_.keys()) or (u'origin_time' not in _data_from_file_.keys()):
+            continue
+          if (u'updated_ctime' not in _data_from_file_.keys()) or (u'updated_time' not in _data_from_file_.keys()):
+            continue
+            
           # get the time data to display
           start_current_time = str(_data_from_file_[u'origin_ctime'])
           end_current_time = str(_data_from_file_[u'updated_ctime'])
