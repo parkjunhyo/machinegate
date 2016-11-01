@@ -388,7 +388,7 @@ def f5_create_config_lb(request,format=None):
 
 
               for _loop2_ in data_from_file[u'items']:
-                 if re.search(compvipport,str(_loop2_[u'destination']),re.I):
+                 if re.match(compvipport,str(_loop2_[u'destination']),re.I):
                    message = "input virtual ip and port [%(compvipport)s] has already used on [%(pairdevicename)s]" % {"compvipport":compvipport,"pairdevicename":pairdevicename}
                    return Response(message, status=status.HTTP_400_BAD_REQUEST)   
                  
