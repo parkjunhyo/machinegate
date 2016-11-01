@@ -300,22 +300,25 @@ def transfer_restapi(active_device_ip):
        f = open(_stats_db_,'r')
        _string_contents_ = f.readlines()
        f.close()
-       stream = BytesIO(_string_contents_[0])
-       _data_from_file_= JSONParser().parse(stream)
+       
+       # 2016 11 01 update : if len
+       if len(_string_contents_):
+          stream = BytesIO(_string_contents_[0])
+          _data_from_file_= JSONParser().parse(stream)
 
-       if (u'updated_items' not in _data_from_file_.keys()) or (u'updated_ctime' not in _data_from_file_.keys()) or (u'updated_time' not in _data_from_file_.keys()):
-          os.popen("rm -rf "+_stats_db_)
-          default_items_dict = virtual_stats 
-          default_ctime = Param_container.time_parsed_ctime
-          default_time_time = Param_container.time_time
-       else:
-          default_items_dict = _data_from_file_[u'updated_items']
-          default_ctime = _data_from_file_[u'updated_ctime']
-          default_time_time = _data_from_file_[u'updated_time']
-       # final origin values
-       _result_data_[u'origin_items'] = default_items_dict
-       _result_data_[u'origin_ctime'] = default_ctime
-       _result_data_[u'origin_time'] = default_time_time
+          if (u'updated_items' not in _data_from_file_.keys()) or (u'updated_ctime' not in _data_from_file_.keys()) or (u'updated_time' not in _data_from_file_.keys()):
+             os.popen("rm -rf "+_stats_db_)
+             default_items_dict = virtual_stats 
+             default_ctime = Param_container.time_parsed_ctime
+             default_time_time = Param_container.time_time
+          else:
+             default_items_dict = _data_from_file_[u'updated_items']
+             default_ctime = _data_from_file_[u'updated_ctime']
+             default_time_time = _data_from_file_[u'updated_time']
+          # final origin values
+          _result_data_[u'origin_items'] = default_items_dict
+          _result_data_[u'origin_ctime'] = default_ctime
+          _result_data_[u'origin_time'] = default_time_time
 
     # final updates values
     _result_data_[u'updated_items'] = virtual_stats
