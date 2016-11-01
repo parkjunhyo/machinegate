@@ -426,7 +426,8 @@ def f5_create_config_lb(request,format=None):
                  
                  for _loop3_ in data_from_file[u'items']:
                     for _loop4_ in _loop3_[u'poolmembers_status_list']:
-                       if re.search(str(_loop2_),str(_loop4_)):
+                       temp_parse_ipport_info = str(str(_loop4_).split("/")[-1])
+                       if re.search(str(_loop2_),temp_parse_ipport_info) and (len(str(_loop2_))==len(temp_parse_ipport_info)):
                           _temp_traybox_[str(_loop1_[u'device'])][str(_loop2_)].append(str(_loop3_[u'name']))
 
            for _loop1_ in _user_input_data_nodes_confirm_:
