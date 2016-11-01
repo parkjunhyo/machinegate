@@ -133,6 +133,10 @@ def get_viewer():
           f = open(_stats_db_,'r')
           _string_contents_ = f.readlines()
           f.close()
+         
+          if not len(_string_contents_):
+            continue
+         
           stream = BytesIO(_string_contents_[0])
           _data_from_file_= JSONParser().parse(stream)
 
