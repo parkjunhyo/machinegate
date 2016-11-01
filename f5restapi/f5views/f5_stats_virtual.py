@@ -199,7 +199,16 @@ def get_virtual_status_info():
           _string_contents_ = f.readlines()
           f.close()
           stream = BytesIO(_string_contents_[0])
+            
+          if not len(_string_contents_):
+            continue
+            
           _data_from_file_= JSONParser().parse(stream)
+         
+          if (u'origin_ctime' not in _data_from_file_.keys()) or (u'origin_time' not in _data_from_file_.keys()):
+            continue
+          if (u'updated_ctime' not in _data_from_file_.keys()) or (u'updated_time' not in _data_from_file_.keys()):
+            continue   
 
           # hostname define
           _host_defined_name_ = Param_container.active_devices_dict[uncode_active_device_ip]
