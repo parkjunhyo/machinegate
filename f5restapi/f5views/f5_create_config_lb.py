@@ -43,6 +43,12 @@ DEFAULT_SETTING = [
                       "sticky":"",
                       "profiles":"\"fastL4\"",
                       "portforward":None
+                    },
+                    {
+                      "device":["172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
+                      "sticky":"{\"name\":\"my_src_persist\"}",
+                      "profiles":"\"fastL4\"",
+                      "portforward":None
                     }
                   ]
 
@@ -75,6 +81,10 @@ VIRTUALSERVER_CREATE_CMD_FORMAT = [
                                     {
                                       "device":["10.10.30.101","10.10.30.102"],
                                       "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"disabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'"
+                                    },
+                                    {
+                                      "device":["172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
+                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'"
                                     }
                                   ]
 
@@ -82,6 +92,10 @@ POOL_CREATE_CMD_FORMAT = [
                            {
                              "device":["10.10.77.29","10.10.77.30","10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34","10.10.77.45","10.10.77.46","10.10.30.101","10.10.30.102"],
                              "created_command":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'"
+                           },
+                           {
+                             "device":["172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
+                             "created_command":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/my_tcp\""+"}'"
                            }
                          ]
 
@@ -199,6 +213,7 @@ def f5_create_config_lb(request,format=None):
                  if ess_keyname_string not in element_keynames_list_string:
                    message = "%(ess_keyname_string)s is not existed from input datas" % {"ess_keyname_string":ess_keyname_string} 
                    return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
                    
  
            #for _loop1_ in _input_[0][u'items']:
@@ -230,6 +245,7 @@ def f5_create_config_lb(request,format=None):
 
            _user_input_data_device_ip_changed_ = []
            copy_loop_param = copy.copy(_user_input_data_)
+
 
            for _loop1_ in copy_loop_param:
               _device_input_ = str(_loop1_[u'device'])
