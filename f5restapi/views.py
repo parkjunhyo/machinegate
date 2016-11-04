@@ -12,4 +12,5 @@ from f5restapi.f5views.f5_stats_virtual import f5_stats_virtual
 from f5restapi.f5views.f5_virtualserverstats import f5_virtualserverstats
 from f5restapi.f5views.f5_virtualserverstats_by_rollback import f5_virtualserverstats_by_rollback 
 from f5restapi.f5views.f5_virtualstats_top import f5_virtualstats_top 
+from f5restapi.f5views.f5_snatranslation import f5_snatranslation
 from f5restapi.f5views.f5_change_monitor import f5_change_monitor
