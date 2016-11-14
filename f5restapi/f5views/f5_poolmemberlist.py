@@ -72,7 +72,8 @@ def transfer_crul_to_get_poolmember_info(_DEVICE_IP_):
             virtual_servername_list = []
             for _loop1_ in data_from_file[u'items']:
                 if u'pool' in _loop1_.keys() or str(u'pool') in _loop1_.keys():
-                  if re.search(_poolname_,_loop1_[u'pool']):
+                  _parsed_pname_ = str(_loop1_[u'pool'].strip().split("/")[-1])
+                  if re.search(_poolname_,_loop1_[u'pool']) and (len(_poolname_)==len(_parsed_pname_)):
                     if str(_loop1_[u'name']) not in virtual_servername_list:
                       virtual_servername_list.append(str(_loop1_[u'name']))
             continue      
