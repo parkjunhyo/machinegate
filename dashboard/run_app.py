@@ -28,6 +28,11 @@ from f5.virtual_profile_clientside import virtual_profile_clientside as f5_virtu
 def dashboard_f5_virtual_profile_clientside():
       return f5_virtual_profile_clientside()
 
+from f5.showl4list import showl4list as f5_showl4list
+@app.route('/dashboard/f5/showl4list/')
+def dashboard_f5_showl4list():
+      return f5_showl4list()
+
 
 
 #@app.route('/hello/')
@@ -37,4 +42,5 @@ def dashboard_f5_virtual_profile_clientside():
 #    #return render_template('hello.html', name=name)
 
 if __name__ == '__main__':
-    app.run(host=RUN_HOST,port=RUN_PORT,threaded=True)
+    from os import environ
+    app.run(host=RUN_HOST,port=environ.get("PORT", RUN_PORT),threaded=True)

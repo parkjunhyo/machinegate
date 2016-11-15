@@ -1,0 +1,30 @@
+<html>
+  <head>
+    <title>dashboard f5 show L4 list </title>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['table']});
+      google.charts.setOnLoadCallback(drawTable);
+
+      function drawTable() {
+        var data = new google.visualization.DataTable();
+        data.addColumn('string', 'PoolName');
+        data.addColumn('string', 'Device');
+        data.addColumn('string', 'VIP(IP/Persist)');
+        data.addColumn('string', 'Member');
+        data.addColumn('string', 'DistMode');
+        data.addColumn('string', 'Monitor');
+        data.addRows({{ allData_list|safe }});
+
+        var table = new google.visualization.Table(document.getElementById('table_div'));
+
+        table.draw(data, {showRowNumber: true, width: '100%', height: '100%'});
+      }
+    </script>
+  </head>
+  <body>
+    <h2>dashboard f5 show L4 list</h2>
+    <h2>Every 1 hour, Updated!</h2>
+    <div id="table_div"></div>
+  </body>
+</html>
