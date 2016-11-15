@@ -23,7 +23,6 @@ from f5restapi.setting import RUNSERVER_PORT
 ## 
 
 ## this value is used to create the virtual server name
-VIRTUALIP_SPLITE_COUNT = 2
 
 DEFAULT_SETTING = [
                     { 
@@ -52,6 +51,30 @@ DEFAULT_SETTING = [
                     }
                   ]
 
+#### naming rule
+VIP_NAME_OPTION = [
+                    {
+                      "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46","10.10.30.101","10.10.30.102","10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
+                      "name_string": "v_%(ipport)s_%(servername)s_%(portname)s",
+                      "VIRTUALIP_SPLITE_COUNT":int(2)
+                    },
+                    {
+                      "device":["172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
+                      "name_string": "vs_%(ipport)s_%(portname)s",
+                      "VIRTUALIP_SPLITE_COUNT":int(0)
+                    } 
+                  ]
+
+PORT_NAME_OPTION = [
+                    {
+                      "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46","10.10.30.101","10.10.30.102","10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
+                      "name_string": "p_%(servername)s_%(portname)s"
+                    },
+                    {
+                      "device":["172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
+                      "name_string": "p_%(ipport)s_%(portname)s"
+                    }
+                   ]
 
 #### command formatting
 # virtual
@@ -145,29 +168,6 @@ def f5_create_config_lb(request,format=None):
 
    # get method
    if request.method == 'GET':
-
-      # get the result data and return
-##[
-##    {
-##        "items": [
-##            {
-##                "device": "KRIS10-PUBS01-5000L4 or 10.10.77.29",
-##                "poolmembers": [
-##                    "172.22.192.251:8080",
-##                    "172.22.192.252:8080",
-##                    "172.22.192.253:8080"
-##                ],
-##                "servername": "OCBPASS_WEB",
-##                "virtual_ip_port": "172.22.198.254:8080",
-##                "options": [
-##                    "sticky"
-##                ]
-##            },
-##            {}
-##        ],
-##        "auth_key": "Adfakladjfqern@sdfjlaf1!"
-##    }
-##]
 
       message = getview_message 
       return Response(message)
@@ -295,28 +295,6 @@ def f5_create_config_lb(request,format=None):
                    message = "the device name [%(_device_input_)s] is not in the device list!" % {"_device_input_":str(_device_input_)}
                    return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-                   #else:
-                   #   
-                   #
-                   #   secondary_name = str(_loop2_[u'haclustername']) 
-                   #   for _loop3_ in _data_from_devicelist_db_:
-                   #       search_re_devicehostname = re.search(_device_input_,str(_loop3_[u'devicehostname']),re.I)
-                   #       search_re_clustername = re.search(_device_input_,str(_loop3_[u'clustername']),re.I)
-                   #       if search_re_devicehostname or search_re_clustername:
-                   #          _target_device_ip_ = str(_loop3_[u'ip'])
-                   #          break
-                   #       else:
-                   #          message = "the device name [%(_device_input_)s] is not in the device list!" % {"_device_input_":str(_device_input_)}
-                   #          return Response(message, status=status.HTTP_400_BAD_REQUEST)
-                   #elif search_re_haclustername:
-                   #   _object_ = str(_loop2_[u'haclustername'])
-                   #   for _loop3_ in _data_from_devicelist_db_:
-                   #      if re.search(_object_,str(_loop3_[u'clustername']),re.I):
-                   #        _target_device_ip_ = str(_loop3_[u'ip'])
-                   #        break
-                   #else:
-                   #   message = "the device name [%(_device_input_)s] is not in the device list!" % {"_device_input_":str(_device_input_)}
-                   #   return Response(message, status=status.HTTP_400_BAD_REQUEST) 
 
               if _target_device_ip_:
                 _loop1_[u'device'] = _target_device_ip_
@@ -563,18 +541,40 @@ def f5_create_config_lb(request,format=None):
                       _temp_string_box_.append(str(_string_value_))
                  _name_with_ports_ = str("_".join(_temp_box_)) 
                  _poolmember_string_ = str(" ".join(_temp_string_box_))
-                 _poolname_created_ = "p_%(servername)s_%(portname)s" % {"servername":SERVERHOST_name,"portname":_name_with_ports_}
 
+
+                 # 2016.11.17 poolname creation
+                 #_poolname_created_ = "p_%(servername)s_%(portname)s" % {"servername":SERVERHOST_name,"portname":_name_with_ports_}
+                 #for _pname_ in info_in_poolnames_list:
+                 #   if re.search(_poolname_created_,_pname_,re.I) or re.search(_pname_,_poolname_created_,re.I):
+                 #      message = "pool name [%(_poolname_created_)s] has been already used over [%(info_in_device)s] device!" % {"_poolname_created_":_poolname_created_,"info_in_device":info_in_device}
+                 #      return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
+                 # create virtual server
+                 _splited_ip_ = str(_loop1_[u'virtual_ip_port']).strip().split(':')[0]
+                 _splited_port_ = str(_loop1_[u'virtual_ip_port']).strip().split(':')[-1]
+                 for optlist in VIP_NAME_OPTION:
+                    if info_in_device in optlist["device"]:
+                      VIRTUALIP_SPLITE_COUNT = int(optlist["VIRTUALIP_SPLITE_COUNT"])
+                 _rename_ip_value_ = str('.'.join(str(_splited_ip_).split('.')[int(VIRTUALIP_SPLITE_COUNT):]))
+
+
+                 # 2016.11.17 poolname creation
+                 for optlist in PORT_NAME_OPTION:
+                    if info_in_device in optlist["device"]:
+                      _poolname_created_ = optlist["name_string"] % {"servername":SERVERHOST_name,"portname":_name_with_ports_,"ipport":_rename_ip_value_} 
+                      break
                  for _pname_ in info_in_poolnames_list:
                     if re.search(_poolname_created_,_pname_,re.I) or re.search(_pname_,_poolname_created_,re.I):
                        message = "pool name [%(_poolname_created_)s] has been already used over [%(info_in_device)s] device!" % {"_poolname_created_":_poolname_created_,"info_in_device":info_in_device}
                        return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-                 # create virtual server
-                 _splited_ip_ = str(_loop1_[u'virtual_ip_port']).strip().split(':')[0]
-                 _splited_port_ = str(_loop1_[u'virtual_ip_port']).strip().split(':')[-1]
-                 _rename_ip_value_ = str('.'.join(str(_splited_ip_).split('.')[int(VIRTUALIP_SPLITE_COUNT):]))
-                 _virtualservername_created_ = "v_%(ipport)s_%(servername)s_%(portname)s" % {"ipport":_rename_ip_value_,"servername":SERVERHOST_name,"portname":_splited_port_}
+
+                 #_virtualservername_created_ = "v_%(ipport)s_%(servername)s_%(portname)s" % {"ipport":_rename_ip_value_,"servername":SERVERHOST_name,"portname":_splited_port_}
+                 for optlist in VIP_NAME_OPTION:
+                    if info_in_device in optlist["device"]:
+                      _virtualservername_created_ = optlist["name_string"] % {"ipport":_rename_ip_value_,"servername":SERVERHOST_name,"portname":_splited_port_}
+                      break
 
 
                  # create the diction value for input
