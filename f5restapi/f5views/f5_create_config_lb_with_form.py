@@ -30,9 +30,9 @@ class JSONResponse(HttpResponse):
 
 getview_message = [{
 "items":[
-["<service/server name>","<real servers ip address>","<virual ip address>","<service port>","<target device>","<sticky>"],
-["GFTCc-11stprapiweb01","172.22.227.194;172.22.227.195;172.22.227.196","172.22.216.65","80;443","KRIS10-PUBS01-5000L4.skplanet.com","o"],
-["GFTCc-11stpaapiweb01","172.22.227.200;172.22.227.201;172.22.227.202","172.22.216.66","80;443","KRIS10-PUBS01-5000L4.skplanet.com","o"]
+["<service/server name>","<real servers ip address>","<virual ip address>","<service port>","<target device>","<sticky port>"],
+["GFTCc-11stprapiweb01","172.22.227.194;172.22.227.195;172.22.227.196","172.22.216.65","80;443","KRIS10-PUBS01-5000L4.skplanet.com","80;443"],
+["GFTCc-11stpaapiweb01","172.22.227.200;172.22.227.201;172.22.227.202","172.22.216.66","80;443","KRIS10-PUBS01-5000L4.skplanet.com","x"]
 ]
 }]
 
