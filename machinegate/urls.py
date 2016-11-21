@@ -19,4 +19,5 @@ from django.contrib import admin
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^', include('f5restapi.urls')),
+    url(r'^', include('juniperapi.urls')),
 ]

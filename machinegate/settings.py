@@ -25,7 +25,7 @@ SECRET_KEY = '+xc(5*_rq8cc^5x$vsn))dr(-r&k32*ktzfj(@el7_f1=!ls&x'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [u'192.168.56.101',u'0.0.0.0',u'localhost']
 
 
 # Application definition
@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'juniperapi.apps.JuniperapiConfig',
     'f5restapi.apps.F5RestapiConfig',
 ]
 

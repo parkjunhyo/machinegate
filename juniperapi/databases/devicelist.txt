@@ -1,0 +1,1 @@
+[{"devicename": "KRIS10-DBF02-3400FW", "apiaccessip": "10.10.77.54", "failover": "secondary", "mgmtip": "10.10.77.54", "nodename": "node1"}]
