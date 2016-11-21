@@ -89,9 +89,10 @@ def juniper_devicelist(request,format=None):
               remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
               remote_conn_pre.connect(dictBox[u'apiaccessip'], username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
               remote_conn = remote_conn_pre.invoke_shell()
+              remote_conn.send("show configuration groups | display set | match fxp\n")
               remote_conn.send("exit\n")
               time.sleep(PARAMIKO_DEFAULT_TIMEWAIT)
-              output = remote_conn.recv(1000)
+              output = remote_conn.recv(10000)
               remote_conn_pre.close()
 
               # active standby
@@ -112,6 +113,21 @@ def juniper_devicelist(request,format=None):
                    dictBox[u'devicename'] = searched_element.group(1)
                    break
 
+              # find cluster device
+              pattern_devicename = "interfaces fxp"
+              hadevicesip = []
+              for _line_string_ in return_lines_string:
+                 if re.search(pattern_devicename,_line_string_,re.I):
+                   match_nodename_group = re.search("(node[0-9]+)",str(_line_string_),re.I)
+                   match_nodename = match_nodename_group.group(1)
+                   if not re.match(match_nodename,dictBox[u'nodename'],re.I):
+                     match_ip_group = re.search("([0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+)",_line_string_,re.I)
+                     match_ip = match_ip_group.group(1)
+                     if str(match_ip) not in hadevicesip:
+                       hadevicesip.append(str(match_ip))
+              dictBox[u'hadevicesip'] = hadevicesip
+                 
+              #print return_lines_string
               return_all_infolist.append(dictBox) 
 
            f = open(JUNIPER_DEVICELIST_DBFILE,"w")
