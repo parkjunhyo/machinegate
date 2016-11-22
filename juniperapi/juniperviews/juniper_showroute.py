@@ -93,7 +93,8 @@ def obtain_showroute(apiaccessip,device_information_values):
    
       pattern_route = "via ([a-zA-Z0-9\.]+)$"
       nexthop_int = re.search(pattern_route,_string_,re.I).group(1)      
-
+ 
+      zone_name = "none"
       for _keyname_ in interface_zone_dict.keys():
          if re.search(str(_keyname_),str(nexthop_int),re.I):
            zone_name = interface_zone_dict[_keyname_]
