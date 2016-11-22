@@ -129,9 +129,7 @@ def viewer_information():
           valid_filename.append(str(_filename_))
 
    if len(valid_filename) == int(0):
-     CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'[{\"auth_key\":\""+ENCAP_PASSWORD+"\"}]\' http://0.0.0.0:"+RUNSERVER_PORT+"/juniper/showroute/"
-     get_info = os.popen(CURL_command).read().strip()
-     return viewer_information()
+     return ["error, no routing table database, try updated!"]
    else:
      for _filename_ in valid_filename:
         JUNIPER_DEVICELIST_DBFILE = USER_DATABASES_DIR + str(_filename_)
@@ -186,6 +184,7 @@ def juniper_showroute(request,format=None):
            device_information_values = copy.copy(data_from_CURL_command)
 
            # find 'primary/secondary' device list
+           post_algorithm_status = False
            primarysecondary_devicelist = []
            for _dataDict_ in data_from_CURL_command:
               _keyname_ = _dataDict_.keys()
@@ -195,6 +194,11 @@ def juniper_showroute(request,format=None):
                   _apiaccessip_ = _dataDict_[u'apiaccessip']
                   if _apiaccessip_ not in primarysecondary_devicelist:
                     primarysecondary_devicelist.append(_apiaccessip_)
+                    post_algorithm_status = True
+           
+           if not post_algorithm_status:
+             message = ["error, device list should be updated!"]
+             return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
            # get route table and interface information
            _threads_ = []
