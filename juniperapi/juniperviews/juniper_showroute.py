@@ -27,38 +27,7 @@ class JSONResponse(HttpResponse):
         kwargs['content_type'] = 'application/json'
         super(JSONResponse, self).__init__(content, **kwargs)
 
-
-def obtain_showroute(apiaccessip):
-  
-   remote_conn_pre = paramiko.SSHClient()
-   remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-   remote_conn_pre.connect(str(apiaccessip), username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
-   remote_conn = remote_conn_pre.invoke_shell()
-   #remote_conn.send("show configuration routing-options | no-more\n")
-   remote_conn.send("show route | no-more\n")
-   remote_conn.send("show configuration interfaces | no-more\n")
-   remote_conn.send("exit\n")
-   time.sleep(PARAMIKO_DEFAULT_TIMEWAIT)
-   output = remote_conn.recv(20000)
-   remote_conn_pre.close()
-
-   # 
-   #return_lines_string = sample_msg
-   return_lines_string = output.split("\r\n")
-
-   # find route table : remote_conn.send("show configuration routing-options | no-more\n")
-   #pattern_string = 'route '
-   #route_table_list = []
-   #for _line_string_ in return_lines_string:
-   #   comp_string = _line_string_.strip()
-   #   searched_element = re.search(pattern_string,comp_string,re.I)
-   #   if searched_element:
-   #     if comp_string not in route_table_list:
-   #       route_msg = comp_string.strip().split(";")[0]
-   #       route_table_list.append(route_msg)
-
-   pattern_start = "^[0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+"
-   pattern_end = "via [a-zA-Z0-9\.]+$"
+def start_end_parse_from_string(return_lines_string,pattern_start,pattern_end):
    start_end_linenumber_list = []
    line_index_count = 0
    temp_list_box = []
@@ -68,100 +37,125 @@ def obtain_showroute(apiaccessip):
       if re.search(pattern_end,_line_string_,re.I):
         temp_list_box.append(line_index_count)
         start_end_linenumber_list.append(temp_list_box)
-        temp_list_box = []      
-      line_index_count = line_index_count + 1
-
-   for index_list in start_end_linenumber_list:
-      selective_list = return_lines_string[index_list[0]:index_list[1]]
-      
-   
-   
-   # interface information (string parsing should be)
-   pattern_start = "^[a-zA-Z0-9-/]+ {"
-   pattern_end = "^}"
-   start_end_linenumber_list = []
-   line_index_count = 0
-   temp_list_box = [] 
-   for _line_string_ in return_lines_string:
-      if re.match(pattern_start,_line_string_,re.I):
-        temp_list_box.append(line_index_count)
-
-      if re.match(pattern_end,_line_string_,re.I):
-        temp_list_box.append(line_index_count)
-        start_end_linenumber_list.append(temp_list_box)
         temp_list_box = []
       line_index_count = line_index_count + 1
+   return start_end_linenumber_list
 
-   start_end_string_list = []
+
+def obtain_showroute(apiaccessip,device_information_values):
+
+   # find matched mgmt
+   for _dataDict_ in device_information_values:
+      if re.match(str(_dataDict_[u"apiaccessip"]),str(apiaccessip)):
+        devicemgmtip = str(_dataDict_[u"mgmtip"]).strip()
+
+   # interface : zone, category
+   interface_zone_dict = {}
+   for _dataDict_ in device_information_values:
+      if re.match(str(_dataDict_[u"apiaccessip"]),str(apiaccessip)):
+        for _keyname_ in _dataDict_[u"interfaces"].keys():
+           interface_zone_dict[str(_keyname_)] = str(_dataDict_[u"interfaces"][_keyname_][u"zonename"])
+
+   # ssh access 
+   remote_conn_pre = paramiko.SSHClient()
+   remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+   remote_conn_pre.connect(str(apiaccessip), username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
+   remote_conn = remote_conn_pre.invoke_shell()
+   remote_conn.send("show route | no-more\n")
+   remote_conn.send("exit\n")
+   time.sleep(PARAMIKO_DEFAULT_TIMEWAIT)
+   output = remote_conn.recv(40000)
+   remote_conn_pre.close()
+
+   # 
+   return_lines_string = output.split("\r\n")
+   pattern_start= "^[0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+"
+   pattern_end = "via [a-zA-Z0-9\.]+$"
+   start_end_linenumber_list = start_end_parse_from_string(return_lines_string,pattern_start,pattern_end)
+
+   return_all = []
    for index_list in start_end_linenumber_list:
-      selective_list = return_lines_string[index_list[0]:index_list[1]]
-      for _msg_string_ in selective_list:
-         if re.search("redundant-parent",str(_msg_string_),re.I) or re.search("address",str(_msg_string_),re.I):
-           start_end_string_list.append(selective_list)
 
-   interface_group_by_redundant = {}
-   for index_list in start_end_string_list:
-      _interfacename_ = str(index_list[0].strip().split()[0]).strip()
-      for _line_string_ in index_list:
-         if re.search("redundant-parent",_line_string_,re.I):
-           _rp_name_ = str(str(_line_string_.strip().split()[-1]).strip().split(";")[0])
-           if _rp_name_ not in interface_group_by_redundant.keys():
-             interface_group_by_redundant[_rp_name_] = []
-             interface_group_by_redundant[_rp_name_].append(_interfacename_)
-             break
-           else:
-             interface_group_by_redundant[_rp_name_].append(_interfacename_)
-             break
+      _string_ = str(return_lines_string[index_list[0]]).strip()
+      routing_table = str(_string_.split()[0]).strip()
 
-   redundant_group_with_ip = {}
-   for index_list in start_end_string_list:
-      _interfacename_ = str(index_list[0].strip().split()[0]).strip()
+      pattern_route = "\[([a-zA-Z0-9]+)/[a-zA-Z0-9]+\]"
+      route_status = re.search(pattern_route,_string_,re.I).group(1)
 
-      match_count = 0
-      for _line_string_ in index_list:
-         if re.search("redundant-ether-options",_line_string_,re.I) or re.search("address",_line_string_,re.I):
-           match_count = match_count + 1      
-      if match_count == 2: 
-        for _line_string_ in index_list:
-           if re.search("address",_line_string_,re.I):
-             _if_address_ = str(str(_line_string_.strip().split()[-1]).strip().split(";")[0])
-             if _interfacename_ not in redundant_group_with_ip.keys():
-               redundant_group_with_ip[_interfacename_] = []
-               redundant_group_with_ip[_interfacename_].append(_if_address_)
-               break
-             else:
-               redundant_group_with_ip[_interfacename_].append(_if_address_)
-               break             
- 
-   print route_table_list
-   print redundant_group_with_ip
-   print interface_group_by_redundant
+      _string_ = str(return_lines_string[index_list[-1]]).strip()
+      pattern_route = "> to ([0-9]+.[0-9]+.[0-9]+.[0-9]+)"
+      
+      searched_element = re.search(pattern_route,_string_,re.I)
+      if searched_element:
+        nexthop_ip = str(searched_element.group(1)).strip()
+      else:
+        nexthop_ip = "none"
+   
+      pattern_route = "via ([a-zA-Z0-9\.]+)$"
+      nexthop_int = re.search(pattern_route,_string_,re.I).group(1)      
 
-           
-
+      for _keyname_ in interface_zone_dict.keys():
+         if re.search(str(_keyname_),str(nexthop_int),re.I):
+           zone_name = interface_zone_dict[_keyname_]
+           break
+      #
+      dictBox = {}
+      if routing_table not in dictBox.keys():
+        dictBox[routing_table] = {}
+        dictBox[routing_table]["routeproperty"] = route_status
+        dictBox[routing_table]["nexthopip"] = nexthop_ip
+        dictBox[routing_table]["nexthopinterface"] = nexthop_int
+        dictBox[routing_table]["zonename"] = zone_name
+        return_all.append(dictBox)
+         
+   # file write
+   filename_string = "routingtable_%(_ipaddr_)s.txt" % {"_ipaddr_":devicemgmtip} 
+   JUNIPER_DEVICELIST_DBFILE = USER_DATABASES_DIR + filename_string
+   f = open(JUNIPER_DEVICELIST_DBFILE,"w")
+   f.write(json.dumps(return_all))
+   f.close()
+    
    # thread timeout 
-   time.sleep(0)
- 
+   time.sleep(1)
+
+def viewer_information():
+   filenames_list = os.listdir(USER_DATABASES_DIR)
+   valid_filename = []
+   return_values = []
+   for _filename_ in filenames_list:
+      searched_element = re.search("routingtable_[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_,re.I)
+      if searched_element:
+        if str(_filename_) not in valid_filename:
+          valid_filename.append(str(_filename_))
+
+   if len(valid_filename) == int(0):
+     CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'[{\"auth_key\":\""+ENCAP_PASSWORD+"\"}]\' http://0.0.0.0:"+RUNSERVER_PORT+"/juniper/showroute/"
+     get_info = os.popen(CURL_command).read().strip()
+     return viewer_information()
+   else:
+     for _filename_ in valid_filename:
+        JUNIPER_DEVICELIST_DBFILE = USER_DATABASES_DIR + str(_filename_)
+        f = open(JUNIPER_DEVICELIST_DBFILE,"r")
+        string_content = f.readlines()
+        f.close()
+        stream = BytesIO(string_content[0])
+        data_from_databasefile = JSONParser().parse(stream)
+        dictbox_temp = {}
+        dictbox_temp[str(re.search("([0-9]+.[0-9]+.[0-9]+.[0-9]+)",str(_filename_),re.I).group(1)).strip()] = data_from_databasefile
+        return_values.append(dictbox_temp)
+
+   return return_values
+   
 
 @api_view(['GET','POST'])
 @csrf_exempt
 def juniper_showroute(request,format=None):
 
-   # file
-   JUNIPER_DEVICELIST_DBFILE = USER_DATABASES_DIR + "devicelist.txt"
-
    # get method
    if request.method == 'GET':
       try:
 
-         f = open(JUNIPER_DEVICELIST_DBFILE,"r")
-         string_content = f.readlines()
-         f.close()
-
-         stream = BytesIO(string_content[0])
-         data_from_databasefile = JSONParser().parse(stream)
-
-         return Response(data_from_databasefile)  
+         return Response(viewer_information())  
 
       except:
          message = ["device list database is not existed!"]
@@ -188,6 +182,9 @@ def juniper_showroute(request,format=None):
            stream = BytesIO(get_info)
            data_from_CURL_command = JSONParser().parse(stream)
 
+           # device information
+           device_information_values = copy.copy(data_from_CURL_command)
+
            # find 'primary/secondary' device list
            primarysecondary_devicelist = []
            for _dataDict_ in data_from_CURL_command:
@@ -202,67 +199,13 @@ def juniper_showroute(request,format=None):
            # get route table and interface information
            _threads_ = []
            for _ip_address_ in primarysecondary_devicelist:
-              th = threading.Thread(target=obtain_showroute, args=(_ip_address_,))
+              th = threading.Thread(target=obtain_showroute, args=(_ip_address_,device_information_values))
               th.start()
               _threads_.append(th)
            for th in _threads_:
               th.join()
 
-           # [{u'devicename': u'KRIS10-DBF02-3400FW', u'apiaccessip': u'10.10.77.54', u'failover': u'secondary', u'mgmtip': u'10.10.77.54', u'nodename': u'node1'}]
-           
-
-           #f = open(JUNIPER_DEVICELIST_DBFILE,"r")
-           #string_content = f.readlines()
-           #f.close()
-
-           #stream = BytesIO(string_content[0])
-           #data_from_databasefile = JSONParser().parse(stream)
-
-
-           #return_all_infolist = []
-           #for dataDict_value in data_from_databasefile:
-
-           #   dictBox = {}
-           #   dictBox[u'apiaccessip'] = dataDict_value[u'apiaccessip']
-           #   dictBox[u'mgmtip'] = dataDict_value[u'mgmtip']
-
-           #   # connect              
-           #   remote_conn_pre = paramiko.SSHClient()
- 
-           #   #
-           #   remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-           #   remote_conn_pre.connect(dictBox[u'apiaccessip'], username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
-           #   remote_conn = remote_conn_pre.invoke_shell()
-           #   remote_conn.send("exit\n")
-           #   time.sleep(PARAMIKO_DEFAULT_TIMEWAIT)
-           #   output = remote_conn.recv(1000)
-           #   remote_conn_pre.close()
-
-           #   # active standby
-           #   return_lines_string = output.split("\r\n")
-           #   pattern_active_node = "{(\w+):(\w+)}"
-           #   for _line_string_ in return_lines_string:
-           #      searched_element = re.search(pattern_active_node,_line_string_)
-           #      if searched_element:
-           #        dictBox[u'failover'] = searched_element.group(1)
-           #        dictBox[u'nodename'] = searched_element.group(2)
-           #        break
-
-           #   # '******@KRIS10-DBF02-3400FW>
-           #   pattern_devicename = "\w+\@([a-zA-Z0-9-_]+)\>"
-           #   for _line_string_ in return_lines_string:
-           #      searched_element = re.search(pattern_devicename,_line_string_)
-           #      if searched_element:
-           #        dictBox[u'devicename'] = searched_element.group(1)
-           #        break
-
-           #   return_all_infolist.append(dictBox) 
-
-           #f = open(JUNIPER_DEVICELIST_DBFILE,"w")
-           #f.write(json.dumps(return_all_infolist))
-           #f.close()
-           #return Response(return_all_infolist)
-           return Response("")
+           return Response(viewer_information())
 
       except:
         message = "Post Algorithm has some problem!"
