@@ -15,6 +15,7 @@ from juniperapi.setting import ENCAP_PASSWORD
 from juniperapi.setting import RUNSERVER_PORT
 from juniperapi.setting import PARAMIKO_DEFAULT_TIMEWAIT
 from juniperapi.setting import USER_VAR_POLICIES
+from juniperapi.setting import POLICY_FILE_MAX
 
 import os,re,copy,json,time,threading,sys
 import paramiko
@@ -28,28 +29,121 @@ class JSONResponse(HttpResponse):
         kwargs['content_type'] = 'application/json'
         super(JSONResponse, self).__init__(content, **kwargs)
 
-def export_policy(_ipaddress_,_hostname_):
+def start_end_parse_from_string(return_lines_string,pattern_start,pattern_end):
+   start_end_linenumber_list = []
+   line_index_count = 0
+   temp_list_box = []
+   for _line_string_ in return_lines_string:
+      if re.search(pattern_start,_line_string_,re.I):
+        temp_list_box.append(line_index_count)
+      if re.search(pattern_end,_line_string_,re.I):
+        temp_list_box.append(line_index_count)
+        start_end_linenumber_list.append(temp_list_box)
+        temp_list_box = []
+      line_index_count = line_index_count + 1
+   return start_end_linenumber_list
 
-   # Time and size , 60s * 8 minute , 1024k * 1024m * 8 byte * 50 m
-   hold_timeout = int(60 * 8)
-   recv_buffersize = 1024 * 1024 * 1024
+
+def run_command(_command_,fromtozone_pair,_ipaddress_,_hostname_):
+
+   # find the all counter
+   pattern_string = "show security policies from-zone ([a-zA-Z0-9\-\_\.]+) to-zone ([a-zA-Z0-9\-\_\.]+) count ([a-zA-Z0-9\-\_\.]+) start ([a-zA-Z0-9\-\_\.]+) detail | no-more\n"
+   searched_value = re.search(pattern_string,_command_,re.I)
+   _from_zone_ = searched_value.group(1)
+   _to_zone_ = searched_value.group(2)
+   _start_count_ = searched_value.group(4)
+   
+   max_count = POLICY_FILE_MAX
+   for _dictvalue_ in fromtozone_pair:
+      if re.match(str(_from_zone_),str(_dictvalue_['from']),re.I) and re.match(str(_to_zone_),str(_dictvalue_['to']),re.I):
+        max_count = _dictvalue_['count']
+        break
+
+   # time parameter 60s * 4 min
+   hold_timeout = 60 * 5
    # connect              
    remote_conn_pre = paramiko.SSHClient()
    remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
    remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
    remote_conn = remote_conn_pre.invoke_shell()
-   remote_conn.send("show security policies detail | no-more\n")
+   remote_conn.send(_command_)
    remote_conn.send("exit\n")
    time.sleep(hold_timeout)
-   output = remote_conn.recv(recv_buffersize)
+   output = remote_conn.recv(2097152)
    remote_conn_pre.close()
 
    # file write
-   filename_string = "%(_hostname_)s@%(_ipaddress_)s.policy" % {"_ipaddress_":str(_ipaddress_),"_hostname_":str(_hostname_)} 
+   filename_string = "%(_hostname_)s@%(_ipaddress_)s_from_%(_from_zone_)s_to_%(_to_zone_)s_start_%(_start_count_)s.policy" % {"_ipaddress_":str(_ipaddress_),"_hostname_":str(_hostname_),"_start_count_":str(_start_count_),"_from_zone_":str(_from_zone_),"_to_zone_":str(_to_zone_)} 
    JUNIPER_DEVICELIST_DBFILE = USER_VAR_POLICIES + filename_string
    f = open(JUNIPER_DEVICELIST_DBFILE,"w")
    f.write(output)
    f.close()
+   # thread timeout 
+   time.sleep(1) 
+
+ 
+
+def export_policy(_ipaddress_,_hostname_):
+
+   # connect 
+   remote_conn_pre = paramiko.SSHClient()
+   remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+   remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
+   remote_conn = remote_conn_pre.invoke_shell()
+   remote_conn.send("show security policies zone-context | no-more\n")
+   remote_conn.send("exit\n")
+   time.sleep(PARAMIKO_DEFAULT_TIMEWAIT)
+   output = remote_conn.recv(20000)
+   remote_conn_pre.close() 
+
+   return_lines_string = output.split("\r\n")
+   pattern_start = "From zone[ \t\n\r\f\v]+To zone[ \t\n\r\f\v]+Policy count+"
+   pattern_end = "%(_hostname_)s> exit" % {"_hostname_":_hostname_}
+   start_end_linenumber_list = start_end_parse_from_string(return_lines_string,pattern_start,pattern_end)
+ 
+   fromtozone_pair = []
+   for _indexlist_ in start_end_linenumber_list:
+      string_line = return_lines_string[_indexlist_[0]+1:_indexlist_[-1]-1]
+      for _line_ in string_line:
+         list_line = _line_.strip().split()
+         dictBox = {}
+         if len(list_line) == 3:
+           dictBox["from"] = list_line[0]
+           dictBox["to"] = list_line[1]
+           dictBox["count"] = list_line[2]
+           fromtozone_pair.append(dictBox)
+
+   # create command : POLICY_FILE_MAX, show security policies from-zone PRI to-zone COM count 100 start 100 | no-more
+   export_command_list = [] 
+   for _dictvalue_ in fromtozone_pair:
+      # parameter
+      _policy_count_ = int(_dictvalue_["count"])
+      div_count = int(_policy_count_/POLICY_FILE_MAX)
+      _from_zone_ = str(_dictvalue_["from"])
+      _to_zone_ = str(_dictvalue_["to"])
+      # create command
+      if div_count <= int(0):
+        _command_ = "show security policies from-zone %(_from_)s to-zone %(_to_)s count %(_maxcount_)s start %(_start_)s detail | no-more\n" % {"_from_":_from_zone_,"_to_":_to_zone_,"_maxcount_":str(_policy_count_),"_start_":str(1)}
+        export_command_list.append(_command_)
+      else:
+        _mod_value_ = int(_policy_count_ % POLICY_FILE_MAX)
+        if _mod_value_ == int(0):
+          list_range = range(div_count)
+        else:
+          list_range = range(div_count+1)
+        for _i_ in list_range:
+           start_value = int((POLICY_FILE_MAX * _i_) + 1)
+           _command_ = "show security policies from-zone %(_from_)s to-zone %(_to_)s count %(_maxcount_)s start %(_start_)s detail | no-more\n" % {"_from_":_from_zone_,"_to_":_to_zone_,"_maxcount_":str(POLICY_FILE_MAX),"_start_":str(start_value)}
+           export_command_list.append(_command_)
+
+   _threads_ = []
+   for _command_ in export_command_list:      
+      th = threading.Thread(target=run_command, args=(_command_,fromtozone_pair,_ipaddress_,_hostname_,))
+      th.start()
+      _threads_.append(th)
+   for th in _threads_:
+      th.join()   
+
    # thread timeout 
    time.sleep(1)
 
@@ -125,7 +219,7 @@ def juniper_exportpolicy(request,format=None):
 
            _threads_ = []
            for _ipaddress_ in valid_access_ip:
-              th = threading.Thread(target=export_policy, args=(_ipaddress_,ip_device_dict[_ipaddress_]))
+              th = threading.Thread(target=export_policy, args=(_ipaddress_,ip_device_dict[_ipaddress_],))
               th.start()
               _threads_.append(th)
            for th in _threads_:
