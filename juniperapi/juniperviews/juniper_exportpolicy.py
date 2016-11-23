@@ -148,13 +148,11 @@ def export_policy(_ipaddress_,_hostname_):
    time.sleep(1)
 
 def viewer_information():
- 
    filenames_list = os.listdir(USER_VAR_POLICIES)
- 
    updated_filestatus = {}
    filestatus = False
    for _filename_ in filenames_list:
-      searched_element = re.search("([a-zA-Z0-9\_\-]+)@([0-9]+.[0-9]+.[0-9]+.[0-9]+).policy",_filename_,re.I)
+      searched_element = re.search("([a-zA-Z0-9\_\-]+)@([0-9]+.[0-9]+.[0-9]+.[0-9]+)_[a-zA-Z0-9\_\-\. \t\n\r\f\v]+.policy",_filename_,re.I)
       if searched_element:
         filepath = USER_VAR_POLICIES + _filename_
         updated_filestatus[str(_filename_)] = str(time.ctime(os.path.getmtime(filepath)))
