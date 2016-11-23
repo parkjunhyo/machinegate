@@ -1,13 +1,15 @@
 
-USER_F5_DIR = "/root/machinegate/juniperapi/"
+USER_JUNIPER_DIR = "/root/machinegate/juniperapi/"
 
-USER_DATABASES_DIR = USER_F5_DIR + "databases/"
+USER_VAR_POLICIES = USER_JUNIPER_DIR + "var/policies/"
 
-USER_NAME = ""
+USER_DATABASES_DIR = USER_JUNIPER_DIR + "databases/"
 
-USER_PASSWORD = ""
+USER_NAME = "j1002391"
 
-ENCAP_PASSWORD = ""
+USER_PASSWORD = "Start@1jhyo"
+
+ENCAP_PASSWORD = "Adfakladjfqern@sdfjlaf1!"
 
 PARAMIKO_DEFAULT_TIMEWAIT = 5
 
