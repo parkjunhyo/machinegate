@@ -44,7 +44,7 @@ DEFAULT_SETTING = [
                       "portforward":None
                     },
                     {
-                      "device":["172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
+                      "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
                       "sticky":"{\"name\":\"my_src_persist\"}",
                       "profiles":"\"fastL4\"",
                       "portforward":None
@@ -59,7 +59,7 @@ VIP_NAME_OPTION = [
                       "VIRTUALIP_SPLITE_COUNT":int(2)
                     },
                     {
-                      "device":["172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
+                      "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
                       "name_string": "vs_%(ipport)s_%(portname)s",
                       "VIRTUALIP_SPLITE_COUNT":int(0)
                     } 
@@ -71,7 +71,7 @@ PORT_NAME_OPTION = [
                       "name_string": "p_%(servername)s_%(portname)s"
                     },
                     {
-                      "device":["172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
+                      "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
                       "name_string": "p_%(ipport)s_%(portname)s"
                     }
                    ]
@@ -106,7 +106,7 @@ VIRTUALSERVER_CREATE_CMD_FORMAT = [
                                       "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"disabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'"
                                     },
                                     {
-                                      "device":["172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
+                                      "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
                                       "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'"
                                     }
                                   ]
@@ -117,7 +117,7 @@ POOL_CREATE_CMD_FORMAT = [
                              "created_command":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'"
                            },
                            {
-                             "device":["172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
+                             "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
                              "created_command":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/my_tcp\""+"}'"
                            }
                          ]
