@@ -4,3 +4,4 @@ from django.shortcuts import render
 from juniperapi.juniperviews.juniper_devicelist import juniper_devicelist
 from juniperapi.juniperviews.juniper_showroute import juniper_showroute
 from juniperapi.juniperviews.juniper_exportpolicy import juniper_exportpolicy
+from juniperapi.juniperviews.juniper_cachingpolicy import juniper_cachingpolicy

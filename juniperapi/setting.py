@@ -3,6 +3,8 @@ USER_JUNIPER_DIR = "/root/machinegate/juniperapi/"
 
 USER_VAR_POLICIES = USER_JUNIPER_DIR + "var/policies/"
 
+USER_VAR_CHCHES = USER_JUNIPER_DIR + "var/caches/"
+
 USER_DATABASES_DIR = USER_JUNIPER_DIR + "databases/"
 
 USER_NAME = ""
