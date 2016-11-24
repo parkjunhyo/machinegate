@@ -17,6 +17,7 @@ from juniperapi.setting import PARAMIKO_DEFAULT_TIMEWAIT
 from juniperapi.setting import USER_VAR_POLICIES
 from juniperapi.setting import USER_VAR_CHCHES
 
+
 import os,re,copy,json,time,threading,sys
 import paramiko
 
@@ -28,6 +29,7 @@ class JSONResponse(HttpResponse):
         content = JSONRenderer().render(data)
         kwargs['content_type'] = 'application/json'
         super(JSONResponse, self).__init__(content, **kwargs)
+
 
 def start_end_parse_from_string(return_lines_string,pattern_start,pattern_end):
    start_end_linenumber_list = []
@@ -136,13 +138,12 @@ def run_caching(_filename_pattern_):
    cache_dictbox["destination"] = destination_cache_dict
    cache_dictbox["application"] = service_cache_dict
 
-   print _filename_pattern_
    # file write
-   filename_string = "routingtable_%(_ipaddr_)s.txt" % {"_ipaddr_":devicemgmtip} 
-   #JUNIPER_DEVICELIST_DBFILE = USER_VAR_CHCHES + filename_string
-   #f = open(JUNIPER_DEVICELIST_DBFILE,"w")
-   #f.write(json.dumps(return_all))
-   #f.close()
+   filename_string = "cachepolicy_%(_filename_pattern_)s.txt" % {"_filename_pattern_":str(_filename_pattern_).strip()} 
+   JUNIPER_DEVICELIST_DBFILE = USER_VAR_CHCHES + filename_string
+   f = open(JUNIPER_DEVICELIST_DBFILE,"w")
+   f.write(json.dumps(cache_dictbox))
+   f.close()
     
    # timeout 
    time.sleep(1)
@@ -171,25 +172,23 @@ def caching_policy(_ipaddress_,_hostname_):
    for th in _threads_:
       th.join()   
 
-        
-
-
    # thread timeout 
    time.sleep(1)
 
 def viewer_information():
-   filenames_list = os.listdir(USER_VAR_POLICIES)
+
+   filenames_list = os.listdir(USER_VAR_CHCHES)
    updated_filestatus = {}
    filestatus = False
    for _filename_ in filenames_list:
-      searched_element = re.search("([a-zA-Z0-9\_\-]+)@([0-9]+.[0-9]+.[0-9]+.[0-9]+)_[a-zA-Z0-9\_\-\. \t\n\r\f\v]+.policy",_filename_,re.I)
+      searched_element = re.search("cachepolicy_",_filename_,re.I)
       if searched_element:
-        filepath = USER_VAR_POLICIES + _filename_
+        filepath = USER_VAR_CHCHES + _filename_
         updated_filestatus[str(_filename_)] = str(time.ctime(os.path.getmtime(filepath)))
         filestatus = True
 
    if not filestatus:
-     return ["error, export the policy!"] 
+     return ["error, caching the policy!, but before caching need export policy from devices"] 
 
    return updated_filestatus 
 
@@ -207,7 +206,7 @@ def juniper_cachingpolicy(request,format=None):
          return Response(viewer_information())
 
       except:
-         message = ["device list database is not existed!"]
+         message = ["error, viewer has some issue!"]
          return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
 
