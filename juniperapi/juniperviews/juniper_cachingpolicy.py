@@ -45,6 +45,22 @@ def start_end_parse_from_string(return_lines_string,pattern_start,pattern_end):
       line_index_count = line_index_count + 1
    return start_end_linenumber_list
 
+def start_end_parse_from_string_endlist(return_lines_string,pattern_start,pattern_end_list):
+   start_end_linenumber_list = []
+   line_index_count = 0
+   temp_list_box = []
+   for _line_string_ in return_lines_string:
+      if re.search(pattern_start,_line_string_,re.I):
+        temp_list_box.append(line_index_count)
+      for pattern_end in pattern_end_list:
+         if re.search(str(pattern_end),str(_line_string_),re.I):
+           temp_list_box.append(line_index_count)
+           start_end_linenumber_list.append(temp_list_box)
+           temp_list_box = []
+           break
+      line_index_count = line_index_count + 1
+   return start_end_linenumber_list
+
 def run_caching(_filename_pattern_):
    matched_filenames_list = []
    filenames_list_indirectory = os.listdir(USER_VAR_POLICIES)
@@ -61,7 +77,6 @@ def run_caching(_filename_pattern_):
       f.close()
       string_sum_content = string_sum_content + string_content
       
-
    network_pattern = r"[0-9:]+/[0-9]+"
    pattern_start = r"^Policy: "
    pattern_end = r"Session log:"
@@ -112,27 +127,38 @@ def run_caching(_filename_pattern_):
 
       # application service_cache_dict = {}
       _start_pattern_ = "Application:"
-      _end_pattern_ = "Destination port range:"
-      _searched_startend_ = start_end_parse_from_string(_policy_info_list_,_start_pattern_,_end_pattern_)
+      _end_pattern_ = ["Destination port range:","code="]
+      _searched_startend_ = start_end_parse_from_string_endlist(_policy_info_list_,_start_pattern_,_end_pattern_)
       for _start_end_ in _searched_startend_:
          _searched_linelist_ = _policy_info_list_[_start_end_[0]:_start_end_[-1]+int(1)]
- 
+         # protocol infomation
+         _ipprotocol_ = "0"
          for _eachline_ in _searched_linelist_:
-            _dest_service_pattern_ = "Destination port range: "
-            if re.search(_dest_service_pattern_,str(_eachline_),re.I):
+            if re.search(r"IP protocol:",str(_eachline_),re.I):
+              _ipprotocol_ = str(str(str(_eachline_).strip().split(",")[0]).strip().split()[-1]).strip()
+              break
 
+         for _eachline_ in _searched_linelist_:
+            # process by pattern 
+            if re.search(str("Destination port range: "),str(_eachline_),re.I):
               _expected_search_ = re.search("([0-9]+)\-([0-9]+)",str(_eachline_))
               _start_number_ = int(_expected_search_.group(1))
               _end_number_ = int(_expected_search_.group(2))
-
               for _range_number_ in range(_end_number_-_start_number_+1):
                  _srv_number_ = _range_number_ + _start_number_
-                 if str(_srv_number_) not in service_cache_dict.keys():
-                   service_cache_dict[str(_srv_number_)] = []
-                 service_cache_dict[str(_srv_number_)].append(_mylocation_)
-      
-      
+                 _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str(_srv_number_)}
+                 if str(_application_string_) not in service_cache_dict.keys():
+                   service_cache_dict[str(_application_string_)] = []
+                 service_cache_dict[str(_application_string_)].append(_mylocation_)
+              break
 
+            elif re.search(str("code="),str(_eachline_),re.I):
+              _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str("none")} 
+              if str(_application_string_) not in service_cache_dict.keys():
+                service_cache_dict[str(_application_string_)] = []
+              service_cache_dict[str(_application_string_)].append(_mylocation_)
+              break
+      
    cache_dictbox = {}
    cache_dictbox["source"] = source_cache_dict
    cache_dictbox["destination"] = destination_cache_dict

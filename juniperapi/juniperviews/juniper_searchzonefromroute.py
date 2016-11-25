@@ -17,6 +17,7 @@ from juniperapi.setting import PARAMIKO_DEFAULT_TIMEWAIT
 
 import os,re,copy,json,time,threading,sys
 import paramiko
+from netaddr import *
 
 class JSONResponse(HttpResponse):
     """
@@ -27,124 +28,158 @@ class JSONResponse(HttpResponse):
         kwargs['content_type'] = 'application/json'
         super(JSONResponse, self).__init__(content, **kwargs)
 
-def start_end_parse_from_string(return_lines_string,pattern_start,pattern_end):
-   start_end_linenumber_list = []
-   line_index_count = 0
-   temp_list_box = []
-   for _line_string_ in return_lines_string:
-      if re.search(pattern_start,_line_string_,re.I):
-        temp_list_box.append(line_index_count)
-      if re.search(pattern_end,_line_string_,re.I):
-        temp_list_box.append(line_index_count)
-        start_end_linenumber_list.append(temp_list_box)
-        temp_list_box = []
-      line_index_count = line_index_count + 1
-   return start_end_linenumber_list
-
-
-def obtain_showroute(apiaccessip,device_information_values):
-
-   # find matched mgmt
-   for _dataDict_ in device_information_values:
-      if re.match(str(_dataDict_[u"apiaccessip"]),str(apiaccessip)):
-        devicemgmtip = str(_dataDict_[u"mgmtip"]).strip()
-
-   # interface : zone, category
-   interface_zone_dict = {}
-   for _dataDict_ in device_information_values:
-      if re.match(str(_dataDict_[u"apiaccessip"]),str(apiaccessip)):
-        for _keyname_ in _dataDict_[u"interfaces"].keys():
-           interface_zone_dict[str(_keyname_)] = str(_dataDict_[u"interfaces"][_keyname_][u"zonename"])
-
-   # ssh access 
-   remote_conn_pre = paramiko.SSHClient()
-   remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-   remote_conn_pre.connect(str(apiaccessip), username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
-   remote_conn = remote_conn_pre.invoke_shell()
-   remote_conn.send("show route | no-more\n")
-   remote_conn.send("exit\n")
-   time.sleep(PARAMIKO_DEFAULT_TIMEWAIT)
-   output = remote_conn.recv(40000)
-   remote_conn_pre.close()
-
+def proper_routingtable(routingtable_matched):
+   routingtable_netvalues = {}
+   for _routing_element_ in routingtable_matched:
+      _keyname_in_element_ = _routing_element_.keys()
+      for _expected_values_ in _keyname_in_element_:
+         if re.search("/[0-9]+",str(_expected_values_),re.I):
+           if _expected_values_ not in routingtable_netvalues.keys():
+             routingtable_netvalues[_expected_values_] = _routing_element_[_expected_values_]
+   return routingtable_netvalues
+   
+def logest_matching(possible_sourceip_list):
+   # device name findout
+   valid_devicelist = []
+   for _ippattern_ in possible_sourceip_list:
+      _devicename_ = str(str(str(_ippattern_).strip().split("@")[1]).strip().split(":")[0])
+      if _devicename_ not in valid_devicelist:
+        valid_devicelist.append(_devicename_)
    # 
-   return_lines_string = output.split("\r\n")
-   pattern_start= "^[0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+"
-   pattern_end = "via [a-zA-Z0-9\.]+$"
-   start_end_linenumber_list = start_end_parse_from_string(return_lines_string,pattern_start,pattern_end)
+   return_list = []
+   for _devicename_ in valid_devicelist:
+      _network_values_list_ = []
+      for _ippattern_ in possible_sourceip_list:
+         if re.search(str(_devicename_),str(_ippattern_),re.I):
+           network_routingtable = str(str(_ippattern_).strip().split("@")[0])
+           network_value = network_routingtable.strip().split(":")[0]
+           if str(network_value) not in _network_values_list_:
+             _network_values_list_.append(str(network_value))
+      for _valid_network_ in _network_values_list_:
+         dictbox_temp = {}
+         for _ippattern_ in possible_sourceip_list:
+            if re.search(str(_devicename_),str(_ippattern_),re.I) and re.search("%(_network_)s:" % {"_network_":str(_valid_network_)},str(_ippattern_),re.I):
+              network_routingtable = str(str(_ippattern_).strip().split("@")[0])
+              network_value = network_routingtable.strip().split(":")[1]
+              network_subnet = int(network_value.strip().split("/")[-1])
+              if network_subnet not in dictbox_temp.keys():
+                dictbox_temp[network_subnet] = []
+              dictbox_temp[network_subnet].append(_ippattern_)
+         # max find
+         _keyname_ = dictbox_temp.keys()
+         _keyname_.sort()
+         max_value = _keyname_[-1]
+         return_list = return_list + dictbox_temp[max_value]
+   return return_list
 
-   return_all = []
-   for index_list in start_end_linenumber_list:
 
-      _string_ = str(return_lines_string[index_list[0]]).strip()
-      routing_table = str(_string_.split()[0]).strip()
+def source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,primarysecondary_devicename,routingtable_inmemory):
+   # source processing
+   possible_sourceip_list = []
+   for _sourceip_ in source_ip_list:
+      _source_net_ = IPNetwork(unicode(_sourceip_))
+      _source_subnet_ = str(str(_source_net_).strip().split("/")[-1])
+      for _deviceip_ in primarysecondary_devicelist:
+         #
+         _devicename_ = primarysecondary_devicename[_deviceip_]
+         #
+         routingtable_matched = routingtable_inmemory[_deviceip_]
+         routingtable_netvalues = proper_routingtable(routingtable_matched)
+         routingtable_network_values = routingtable_netvalues.keys()
+         for _network_value_ in routingtable_network_values:
+            #if re.search("0.0.0.0/0",str(_network_value_),re.I) or re.search(":/0",str(_network_value_),re.I):
+            #  continue
+            _route_net_ = IPNetwork(unicode(_network_value_))
+            _route_subnet_ = str(str(_route_net_).strip().split("/")[-1])
+            #
+            _zonename_ = routingtable_netvalues[_network_value_][u'zonename']
+            if int(_route_subnet_) <= int(_source_subnet_):
+              if _source_net_ in _route_net_:
+                _instring_ = "%(_network_)s:%(_route_)s@%(_devicename_)s:%(_deviceip_)s:%(_zone_)s" % {"_network_":str(_source_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_),"_route_":str(_route_net_)}
+                if str(_instring_) not in possible_sourceip_list:
+                  possible_sourceip_list.append(str(_instring_))
+            else:
+              if _route_net_ in _source_net_:
+                _instring_ = "%(_network_)s:%(_route_)s@%(_devicename_)s:%(_deviceip_)s:%(_zone_)s" % {"_network_":str(_route_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_),"_route_":str(_source_net_)}
+                if str(_instring_) not in possible_sourceip_list:
+                  possible_sourceip_list.append(str(_instring_))
+   return possible_sourceip_list 
 
-      pattern_route = "\[([a-zA-Z0-9]+)/[a-zA-Z0-9]+\]"
-      route_status = re.search(pattern_route,_string_,re.I).group(1)
+def devicename_from_ipaddress(_datalist_):
+   src_list = []
+   for _sourceip_ in _datalist_:
+      source_device = str(str(str(_sourceip_).strip().split("@")[-1]).strip().split(":")[0])
+      if source_device not in src_list:
+        src_list.append(source_device)
+   return src_list
 
-      _string_ = str(return_lines_string[index_list[-1]]).strip()
-      pattern_route = "> to ([0-9]+.[0-9]+.[0-9]+.[0-9]+)"
+def matchvalue_by_devicename(_datalist_,_devicename_):
+   matched_src_values = []
+   for _info_ in _datalist_:
+      if re.search(str(_devicename_),str(_info_),re.I):
+        if str(_info_) not in matched_src_values:
+          matched_src_values.append(str(_info_))
+   return matched_src_values
       
-      searched_element = re.search(pattern_route,_string_,re.I)
-      if searched_element:
-        nexthop_ip = str(searched_element.group(1)).strip()
+
+def category_bydevice(full_searched_devicelist):
+   #set(a).intersection(b)
+   combine_list = []
+   for _dictData_ in full_searched_devicelist:
+      src_list = devicename_from_ipaddress(_dictData_[u"sourceip"])
+      dst_list = devicename_from_ipaddress(_dictData_[u"destinationip"])
+
+      setvalue_src_dst = set(src_list).intersection(dst_list)
+      setvalue_dst_src = set(src_list).intersection(dst_list)
+      if setvalue_src_dst == setvalue_dst_src:
+        for _devicename_ in list(setvalue_src_dst):
+           tempdict_box = {}
+           tempdict_box[u"sourceip"] = matchvalue_by_devicename(_dictData_[u"sourceip"],_devicename_)
+           tempdict_box[u"destinationip"] = matchvalue_by_devicename(_dictData_[u"destinationip"],_devicename_)
+           tempdict_box[u"application"] = _dictData_[u"application"]
+           combine_list.append(tempdict_box)
       else:
-        nexthop_ip = "none"
-   
-      pattern_route = "via ([a-zA-Z0-9\.]+)$"
-      nexthop_int = re.search(pattern_route,_string_,re.I).group(1)      
- 
-      zone_name = "none"
-      for _keyname_ in interface_zone_dict.keys():
-         if re.search(str(_keyname_),str(nexthop_int),re.I):
-           zone_name = interface_zone_dict[_keyname_]
-           break
-      #
-      dictBox = {}
-      if routing_table not in dictBox.keys():
-        dictBox[routing_table] = {}
-        dictBox[routing_table]["routeproperty"] = route_status
-        dictBox[routing_table]["nexthopip"] = nexthop_ip
-        dictBox[routing_table]["nexthopinterface"] = nexthop_int
-        dictBox[routing_table]["zonename"] = zone_name
-        return_all.append(dictBox)
-         
-   # file write
-   filename_string = "routingtable_%(_ipaddr_)s.txt" % {"_ipaddr_":devicemgmtip} 
-   JUNIPER_DEVICELIST_DBFILE = USER_DATABASES_DIR + filename_string
-   f = open(JUNIPER_DEVICELIST_DBFILE,"w")
-   f.write(json.dumps(return_all))
-   f.close()
-    
-   # thread timeout 
-   time.sleep(1)
+        return Response(["error, list intersection has issued!"], status=status.HTTP_400_BAD_REQUEST)    
+   return combine_list
 
-def viewer_information():
-   filenames_list = os.listdir(USER_DATABASES_DIR)
-   valid_filename = []
-   return_values = []
-   for _filename_ in filenames_list:
-      searched_element = re.search("routingtable_[0-9]+.[0-9]+.[0-9]+.[0-9]+.txt",_filename_,re.I)
-      if searched_element:
-        if str(_filename_) not in valid_filename:
-          valid_filename.append(str(_filename_))
+def findoutzonename(_listvalues_):
+   zonelist = []
+   for _string_ in _listvalues_:
+      _zonename_ = str(str(_string_).strip().split(":")[-1])
+      if _zonename_ not in zonelist:
+        zonelist.append(_zonename_)
+   return zonelist
 
-   if len(valid_filename) == int(0):
-     return ["error, no routing table database, try updated!"]
-   else:
-     for _filename_ in valid_filename:
-        JUNIPER_DEVICELIST_DBFILE = USER_DATABASES_DIR + str(_filename_)
-        f = open(JUNIPER_DEVICELIST_DBFILE,"r")
-        string_content = f.readlines()
-        f.close()
-        stream = BytesIO(string_content[0])
-        data_from_databasefile = JSONParser().parse(stream)
-        dictbox_temp = {}
-        dictbox_temp[str(re.search("([0-9]+.[0-9]+.[0-9]+.[0-9]+)",str(_filename_),re.I).group(1)).strip()] = data_from_databasefile
-        return_values.append(dictbox_temp)
+def match_lastparse_string(_listdata_,_split_mark_,_location_,_pattern_string_):
+   dictlist_box = []
+   for _string_ in _listdata_:
+      parsed_value = str(str(_string_).strip().split(str(_split_mark_))[int(_location_)])
+      if re.search(_pattern_string_,parsed_value,re.I):
+        if str(_string_) not in dictlist_box:
+          dictlist_box.append(str(_string_))
+   return dictlist_box
 
-   return return_values
-   
+def remove_same_zonetozone_values(_rewriting_by_device_):
+   uniqued_list = []
+   for _dictData_values_ in _rewriting_by_device_:
+      # findout zone
+      _zonename_insrc_ = findoutzonename(_dictData_values_[u"sourceip"])
+      _zonename_indst_ = findoutzonename(_dictData_values_[u"destinationip"])
+      # 
+      for _srczone_ in _zonename_insrc_:
+         for _dstzone_ in _zonename_indst_:
+            if not re.match(str(_srczone_),str(_dstzone_),re.I):
+              tempdict_box = {}
+              tempdict_box[u"sourceip"] = []
+              tempdict_box[u"destinationip"] = []
+              #
+              tempdict_box[u"sourceip"] = match_lastparse_string(_dictData_values_[u"sourceip"],":","-1",_srczone_) 
+              tempdict_box[u"destinationip"] = match_lastparse_string(_dictData_values_[u"destinationip"],":","-1",_dstzone_)
+              tempdict_box[u"application"] = _dictData_values_[u"application"]
+              #
+              uniqued_list.append(tempdict_box)
+   return uniqued_list
+
 
 @api_view(['GET','POST'])
 @csrf_exempt
@@ -153,9 +188,24 @@ def juniper_searchzonefromroute(request,format=None):
    # get method
    if request.method == 'GET':
       try:
-
-         return Response(viewer_information())  
-
+         get_message = [
+           {
+             "sourceip" : "172.22.113.10/32;172.22.113.11/32",
+             "destinationip" : "172.22.208.15/32",
+             "application" : "tcp/1700;tcp/443"
+           },
+           {
+             "sourceip" : "172.22.0.0/16",
+             "destinationip" : "172.22.209.0/24",
+             "application" : "icmp/0"
+           },
+           {
+             "sourceip" : "172.22.112.0/23",
+             "destinationip" : "172.22.208.10/28",
+             "application" : "any/0"
+           }
+         ]
+         return Response(get_message)
       except:
          message = ["device list database is not existed!"]
          return Response(message, status=status.HTTP_400_BAD_REQUEST)
@@ -165,52 +215,99 @@ def juniper_searchzonefromroute(request,format=None):
 
       try:
         _input_ = JSONParser().parse(request)
+        # 
+        for _dictData_ in _input_:
+           _keyname_ = _dictData_.keys()
+           if (u'destinationip' not in _keyname_) or (u'sourceip' not in _keyname_) or (u'application' not in _keyname_):
+             return Response(["error, input data has missing information!"], status=status.HTTP_400_BAD_REQUEST)
+ 
+        # validation check
+        ipaddr_pattern = "[0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+"
+        _confirmed_input_list_ = []
+        for _dictData_ in _input_:
+           dictBox_temp = {} 
+           dictBox_temp[u'sourceip'] = []
+           for _expected_ipvalue_ in str(_dictData_[u'sourceip']).strip().split(";"):
+              if re.search(ipaddr_pattern,str(_expected_ipvalue_),re.I):
+                if str(_expected_ipvalue_) not in dictBox_temp[u'sourceip']:
+                  dictBox_temp[u'sourceip'].append(str(_expected_ipvalue_))
+              else:
+                return Response(["error, source ip address format has problem!"], status=status.HTTP_400_BAD_REQUEST)
+           dictBox_temp[u'destinationip'] = []
+           for _expected_ipvalue_ in str(_dictData_[u'destinationip']).strip().split(";"):
+              if re.search(ipaddr_pattern,str(_expected_ipvalue_),re.I):
+                if str(_expected_ipvalue_) not in dictBox_temp[u'destinationip']:
+                  dictBox_temp[u'destinationip'].append(str(_expected_ipvalue_))
+              else:
+                return Response(["error, desination ip address format has problem!"], status=status.HTTP_400_BAD_REQUEST)
+           dictBox_temp[u'application'] = []
+           for _expected_ipvalue_ in str(_dictData_[u'application']).strip().split(";"):
+              search_element = re.search("([a-zA-Z]+)/([0-9]+)",str(_expected_ipvalue_),re.I)
+              if search_element:
+                if str(_expected_ipvalue_) not in dictBox_temp[u'application']:
+                  dictBox_temp[u'application'].append(str(_expected_ipvalue_))
+              else:
+                return Response(["error, application format has problem!"], status=status.HTTP_400_BAD_REQUEST)
+           _confirmed_input_list_.append(dictBox_temp)
 
-        if re.match(ENCAP_PASSWORD,str(_input_[0]['auth_key'])):
+        # get active devicelist
+        CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/juniper/devicelist/"
+        get_info = os.popen(CURL_command).read().strip()
+        stream = BytesIO(get_info)
+        data_from_CURL_command = JSONParser().parse(stream)
+        #
+        primarysecondary_devicelist = []
+        primarysecondary_devicename = {}
+        for _dataDict_ in data_from_CURL_command:
+           _keyname_ = _dataDict_.keys()
+           if (u'apiaccessip' in _keyname_) and (u'failover' in _keyname_):
+             pattern_string = str(_dataDict_[u'failover']).strip()
+             if re.match(pattern_string,'primary',re.I):
+               _apiaccessip_ = _dataDict_[u'apiaccessip']
+               if _apiaccessip_ not in primarysecondary_devicelist:
+                 primarysecondary_devicelist.append(_apiaccessip_)
+                 primarysecondary_devicename[_apiaccessip_] = _dataDict_[u"devicehostname"]
 
-           # log message
-           #f = open(LOG_FILE,"a")
-           #_date_ = os.popen("date").read().strip()
-           #log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" , method POST request to run f5_devicelist function!\n"
-           #f.write(log_msg)
-           #f.close()
+        # get route table information : routingtable_inmemory
+        CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/juniper/showroute/"
+        get_info = os.popen(CURL_command).read().strip()
+        stream = BytesIO(get_info)
+        data_from_CURL_command = JSONParser().parse(stream)
+        routingtable_inmemory = {}
+        for _dataDict_ in data_from_CURL_command:
+           _keyname_ = _dataDict_.keys()
+           for _key_value_ in _keyname_:
+              if _key_value_ in primarysecondary_devicelist:
+                routingtable_inmemory[_key_value_] = _dataDict_[_key_value_]
 
-           # device file read
-           CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/juniper/devicelist/"
-           get_info = os.popen(CURL_command).read().strip()
-           stream = BytesIO(get_info)
-           data_from_CURL_command = JSONParser().parse(stream)
+        # IPNetwork('192.0.2.0/25') in IPNetwork('192.0.2.0/23')
 
-           # device information
-           device_information_values = copy.copy(data_from_CURL_command)
+        full_searched_devicelist = []
+        for _dictData_ in _confirmed_input_list_:
+           source_ip_list = _dictData_[u'sourceip']
+           destination_ip_list = _dictData_[u'destinationip']
+           # dictbox
+           traybox_dict = {}
+           traybox_dict[u'sourceip'] = []
+           traybox_dict[u'destinationip'] = []
+           traybox_dict[u'application'] = []
+           # source process and after logest match
+           possible_sourceip_list = source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,primarysecondary_devicename,routingtable_inmemory)
+           traybox_dict[u'sourceip'] = logest_matching(possible_sourceip_list)
+           # destination processing
+           possible_destination_list = source_destination_routinglookup(destination_ip_list,primarysecondary_devicelist,primarysecondary_devicename,routingtable_inmemory)
+           traybox_dict[u'destinationip'] = logest_matching(possible_destination_list)
+           # application processing
+           traybox_dict[u'application'] = _dictData_[u'application']
+           # 
+           full_searched_devicelist.append(traybox_dict)
 
-           # find 'primary/secondary' device list
-           post_algorithm_status = False
-           primarysecondary_devicelist = []
-           for _dataDict_ in data_from_CURL_command:
-              _keyname_ = _dataDict_.keys()
-              if (u'apiaccessip' in _keyname_) and (u'failover' in _keyname_):
-                pattern_string = str(_dataDict_[u'failover']).strip()
-                if re.match(pattern_string,'primary',re.I):
-                  _apiaccessip_ = _dataDict_[u'apiaccessip']
-                  if _apiaccessip_ not in primarysecondary_devicelist:
-                    primarysecondary_devicelist.append(_apiaccessip_)
-                    post_algorithm_status = True
-           
-           if not post_algorithm_status:
-             message = ["error, device list should be updated!"]
-             return Response(message, status=status.HTTP_400_BAD_REQUEST)
-
-           # get route table and interface information
-           _threads_ = []
-           for _ip_address_ in primarysecondary_devicelist:
-              th = threading.Thread(target=obtain_showroute, args=(_ip_address_,device_information_values))
-              th.start()
-              _threads_.append(th)
-           for th in _threads_:
-              th.join()
-
-           return Response(viewer_information())
+        # re-arrange the data by the device
+        _rewriting_by_device_ = category_bydevice(full_searched_devicelist)
+        # re-write by the zone each device
+        final_policy = remove_same_zonetozone_values(_rewriting_by_device_)
+        # return
+        return Response(final_policy)
 
       except:
         message = "Post Algorithm has some problem!"
