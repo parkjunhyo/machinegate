@@ -7,6 +7,7 @@ urlpatterns = [
     url(r'^juniper/showroute/$', views.juniper_showroute),
     url(r'^juniper/exportpolicy/$', views.juniper_exportpolicy),
     url(r'^juniper/cachingpolicy/$', views.juniper_cachingpolicy),
+    url(r'^juniper/searchzonefromroute/$', views.juniper_searchzonefromroute),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
