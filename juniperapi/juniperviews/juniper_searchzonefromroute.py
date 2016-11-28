@@ -242,7 +242,7 @@ def juniper_searchzonefromroute(request,format=None):
                 return Response(["error, desination ip address format has problem!"], status=status.HTTP_400_BAD_REQUEST)
            dictBox_temp[u'application'] = []
            for _expected_ipvalue_ in str(_dictData_[u'application']).strip().split(";"):
-              search_element = re.search("([a-zA-Z]+)/([0-9]+)",str(_expected_ipvalue_),re.I)
+              search_element = re.search("([a-zA-Z0-9]+)/([0-9]+)",str(_expected_ipvalue_),re.I)
               if search_element:
                 if str(_expected_ipvalue_) not in dictBox_temp[u'application']:
                   dictBox_temp[u'application'].append(str(_expected_ipvalue_))
