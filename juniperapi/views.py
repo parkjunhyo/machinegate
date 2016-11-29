@@ -6,3 +6,4 @@ from juniperapi.juniperviews.juniper_showroute import juniper_showroute
 from juniperapi.juniperviews.juniper_exportpolicy import juniper_exportpolicy
 from juniperapi.juniperviews.juniper_cachingpolicy import juniper_cachingpolicy
 from juniperapi.juniperviews.juniper_searchzonefromroute import juniper_searchzonefromroute
+from juniperapi.juniperviews.juniper_searchpolicy import juniper_searchpolicy
