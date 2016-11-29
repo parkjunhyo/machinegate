@@ -197,7 +197,7 @@ def juniper_searchzonefromroute(request,format=None):
            {
              "sourceip" : "172.22.0.0/16",
              "destinationip" : "172.22.209.0/24",
-             "application" : "icmp/0"
+             "application" : "icmp-all/0"
            },
            {
              "sourceip" : "172.22.112.0/23",
