@@ -153,7 +153,7 @@ def run_caching(_filename_pattern_):
               break
 
             elif re.search(str("code="),str(_eachline_),re.I):
-              _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str("none")} 
+              _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str("0")} 
               if str(_application_string_) not in service_cache_dict.keys():
                 service_cache_dict[str(_application_string_)] = []
               service_cache_dict[str(_application_string_)].append(_mylocation_)
