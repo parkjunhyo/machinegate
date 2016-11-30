@@ -191,14 +191,27 @@ def juniper_searchpolicy(request,format=None):
                     if len(appvalue_string) != int(2):
                       return Response("error, application : any is wrong format!", status=status.HTTP_400_BAD_REQUEST)
                     [ _app_proto_, _app_number_ ] = appvalue_string
+                    src_dst_portrange = _app_number_.strip().split(":")
+                    if len(src_dst_portrange) != int(2):
+                      return Response("error, application : any is wrong format!", status=status.HTTP_400_BAD_REQUEST)
+                    [ _src_portrange_, _dst_portrange_ ] = src_dst_portrange
+                    if re.search("0-65535",_src_portrange_,re.I) or re.search("0-65535",_dst_portrange_,re.I):
+                      _src_portrange_ = "0-0"   
+                      _dst_portrange_ = "0-0"
+                    
                     if re.search("any",_app_proto_.lower(),re.I):
-                      _app_value_ = "0/0"
+                      _app_proto_ = 0
+                      _src_portrange_ = "0-0"
+                      _dst_portrange_ = "0-0"  
+                        
                     policy_cache_filename = "cachepolicy_%(_devicestring_)s_from_%(_fromzone_)s_to_%(_tozone_)s.txt" % {"_devicestring_":str(inputsrc_device),"_fromzone_":str(inputsrc_zone),"_tozone_":str(inputdst_zone)}
 
                     # fill default container
                     tempdict_box[u'sourceip'] = str(inputsrc_netip)
                     tempdict_box[u'destinationip'] = str(inputdst_netip)
-                    tempdict_box[u'application'] = str(_app_value_)
+                    tempdict_box[u'proto_application'] = str(_app_proto_)
+                    tempdict_box[u'src_application'] = str(_src_portrange_)
+                    tempdict_box[u'dst_application'] = str(_dst_portrange_)
                     tempdict_box[u'devicename'] = str(inputsrc_device)
                     tempdict_box[u'fromzone'] = str(inputsrc_zone)
                     tempdict_box[u'tozone'] = str(inputdst_zone)
@@ -222,7 +235,8 @@ def juniper_searchpolicy(request,format=None):
                       application_in_filedb_list = []
                       source_in_filedb_list  = get_listvalue_matchedby_keyname(file_database[u'source'],inputsrc_netip)
                       destination_in_filedb_list  = get_listvalue_matchedby_keyname(file_database[u'destination'],inputdst_netip)
-                      application_in_filedb_list = get_listvalue_matchedby_keyname(file_database[u'application'],_app_value_)
+                      application_proto_port_string = "%(_proto_)s/%(_srcrange_)s:%(_dstrange_)s" % {"_proto_":str(_app_proto_),"_srcrange_":str(_src_portrange_),"_dstrange_":str(_dst_portrange_)}
+                      application_in_filedb_list = get_listvalue_matchedby_keyname(file_database[u'application'],application_proto_port_string)
                       if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(application_in_filedb_list):
                         # there is something matched in the cache
                         matched_policylist = []
