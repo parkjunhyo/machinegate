@@ -84,8 +84,11 @@ def run_caching(_filename_pattern_):
    #
    source_cache_dict = {}
    destination_cache_dict = {}
-   service_cache_dict = {}
+   service_src_cache_dict = {}
+   service_dst_cache_dict = {}
    #
+   policy_counter = 1
+   policy_total_count = len(policy_group_start_end_list)
    for _policy_start_end_ in policy_group_start_end_list:
       # policy name
       _policyname_ = str(str(str(string_sum_content[_policy_start_end_[0]]).strip().split("Policy: ")[1]).strip().split(",")[0])
@@ -135,34 +138,54 @@ def run_caching(_filename_pattern_):
          _ipprotocol_ = "0"
          for _eachline_ in _searched_linelist_:
             if re.search(r"IP protocol:",str(_eachline_),re.I):
-              _ipprotocol_ = str(str(str(_eachline_).strip().split(",")[0]).strip().split()[-1]).strip()
+              _ipprotocol_string_ = str(str(str(_eachline_).strip().split(",")[0]).strip().split()[-1]).strip()
+              _ipprotocol_ = _ipprotocol_string_.lower()
               break
 
+         # source application
+         for _eachline_ in _searched_linelist_:
+            if re.search(str("Source port range: "),str(_eachline_),re.I):
+              _expected_search_ = re.search("([0-9]+\-[0-9]+)",str(_eachline_))
+              _port_range_value_ = _expected_search_.group(1)
+              if re.search("0-65535",_port_range_value_,re.I):
+                # any port range define
+                _port_range_value_ = "0-0"                
+              _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str(_port_range_value_)}
+              if str(_application_string_) not in service_src_cache_dict.keys():      
+                service_src_cache_dict[str(_application_string_)] = []
+              service_src_cache_dict[str(_application_string_)].append(_mylocation_)
+              break
+            
+         # destination application
          for _eachline_ in _searched_linelist_:
             # process by pattern 
             if re.search(str("Destination port range: "),str(_eachline_),re.I):
-              _expected_search_ = re.search("([0-9]+)\-([0-9]+)",str(_eachline_))
-              _start_number_ = int(_expected_search_.group(1))
-              _end_number_ = int(_expected_search_.group(2))
-              for _range_number_ in range(_end_number_-_start_number_+1):
-                 _srv_number_ = _range_number_ + _start_number_
-                 _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str(_srv_number_)}
-                 if str(_application_string_) not in service_cache_dict.keys():
-                   service_cache_dict[str(_application_string_)] = []
-                 service_cache_dict[str(_application_string_)].append(_mylocation_)
+              _expected_search_ = re.search("([0-9]+\-[0-9]+)",str(_eachline_))
+              _port_range_value_ = _expected_search_.group(1)
+              if re.search("0-65535",_port_range_value_,re.I):
+                # any port range define
+                _port_range_value_ = "0-0"
+              _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str(_port_range_value_)}
+              if str(_application_string_) not in service_dst_cache_dict.keys():
+                service_dst_cache_dict[str(_application_string_)] = []
+              service_dst_cache_dict[str(_application_string_)].append(_mylocation_)
               break
-
+            
             elif re.search(str("code="),str(_eachline_),re.I):
-              _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str("0")} 
-              if str(_application_string_) not in service_cache_dict.keys():
-                service_cache_dict[str(_application_string_)] = []
-              service_cache_dict[str(_application_string_)].append(_mylocation_)
+              _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str("0-0")} 
+              if str(_application_string_) not in service_dst_cache_dict.keys():
+                service_dst_cache_dict[str(_application_string_)] = []
+              service_dst_cache_dict[str(_application_string_)].append(_mylocation_)
               break
-      
+      # processing counter
+      print "processing %(_counter_)s/%(_total_)... completed!" % {"_counter_":str(int(policy_counter)),"_total_":str(int(policy_total_count))}
+      policy_counter = policy_counter + 1
+
    cache_dictbox = {}
    cache_dictbox["source"] = source_cache_dict
    cache_dictbox["destination"] = destination_cache_dict
-   cache_dictbox["application"] = service_cache_dict
+   cache_dictbox["source_application"] = service_src_cache_dict
+   cache_dictbox["destination_application"] = service_dst_cache_dict 
 
    # file write
    filename_string = "cachepolicy_%(_filename_pattern_)s.txt" % {"_filename_pattern_":str(_filename_pattern_).strip()} 
@@ -170,7 +193,7 @@ def run_caching(_filename_pattern_):
    f = open(JUNIPER_DEVICELIST_DBFILE,"w")
    f.write(json.dumps(cache_dictbox))
    f.close()
-    
+   print "processing %(_counter_)s ... completed!" % {"_counter_":str(filename_string)}  
    # timeout 
    time.sleep(1)
       
