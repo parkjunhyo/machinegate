@@ -235,9 +235,11 @@ def juniper_searchpolicy(request,format=None):
                       application_in_filedb_list = []
                       source_in_filedb_list  = get_listvalue_matchedby_keyname(file_database[u'source'],inputsrc_netip)
                       destination_in_filedb_list  = get_listvalue_matchedby_keyname(file_database[u'destination'],inputdst_netip)
-                      application_proto_port_string = "%(_proto_)s/%(_srcrange_)s:%(_dstrange_)s" % {"_proto_":str(_app_proto_),"_srcrange_":str(_src_portrange_),"_dstrange_":str(_dst_portrange_)}
-                      application_in_filedb_list = get_listvalue_matchedby_keyname(file_database[u'application'],application_proto_port_string)
-                      if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(application_in_filedb_list):
+                      src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_src_portrange_)}
+                      dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)}  
+                      src_application_in_filedb_list = get_listvalue_matchedby_keyname(file_database[u'source_application'],src_proto_port_string)
+                      dst_application_in_filedb_list = get_listvalue_matchedby_keyname(file_database[u'destination_application'],dst_proto_port_string)
+                      if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
                         # there is something matched in the cache
                         matched_policylist = []
                         matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,application_in_filedb_list)
