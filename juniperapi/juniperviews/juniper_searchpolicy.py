@@ -73,7 +73,6 @@ def get_listvalue_matchedby_keyname(file_database,input_netip):
      return_values = file_database[str(input_netip)]
    return return_values
 
-(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
 
 def compare_srcdstapplist(srclist,dstlist,srcapplist,dstapplist):
    set_srclist = set(srclist)
