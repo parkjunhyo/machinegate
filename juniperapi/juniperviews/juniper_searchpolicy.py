@@ -62,7 +62,6 @@ def parsing_filename_to_data(_routing_dict_,_src_string_):
      return Response("error, device part of input info is not proper format!", status=status.HTTP_400_BAD_REQUEST)
    [ device_name, device_ip, zonename ] = parsed_device_string
    deviceandip_string = search_hadevice_string(_routing_dict_, device_ip) 
-
    return [ str(input_policy_info), deviceandip_string, zonename ] 
 
 def get_listvalue_matchedby_keyname(file_database,input_netip):
@@ -107,6 +106,23 @@ def compare_including_netip(file_database,inputsrc_netip):
           return_matched_list = return_matched_list + file_database[_netip_]
    return return_matched_list
 
+def partial_includ_match_netip(file_database,inputsrc_netip):
+   return_matched_list = []
+   inputsrc_netip_ipnetwork = IPNetwork(unicode(inputsrc_netip))
+   inputsrc_netip_subnet = str(str(inputsrc_netip).strip().split("/")[-1])
+   keyname_netip = file_database.keys()
+   for _netip_ in keyname_netip:
+      _netip_ipnetwork_ = IPNetwork(unicode(_netip_))
+      _netip_subnet_ =  str(str(_netip_).strip().split("/")[-1])
+      if int(_netip_subnet_) <= int(inputsrc_netip_subnet):
+        if inputsrc_netip_ipnetwork in _netip_ipnetwork_:
+          return_matched_list = return_matched_list + file_database[_netip_]
+      else:
+        if _netip_ipnetwork_ in inputsrc_netip_ipnetwork:
+          return_matched_list = return_matched_list + file_database[_netip_] 
+   return return_matched_list
+
+
 def compare_including_application(file_database,input_application):
    application_split = input_application.strip().split("/")
    if (len(application_split) != 2):
@@ -135,21 +151,35 @@ def compare_including_application(file_database,input_application):
             return_matched_list = return_matched_list + file_database[_keyname_]
    return return_matched_list            
     
-
-def partial_includ_match_netip(file_database,inputsrc_netip):
+def partial_including_application(file_database,input_application):
+   application_split = input_application.strip().split("/")
+   if (len(application_split) != 2):
+     Response("error, including application function has error!", status=status.HTTP_400_BAD_REQUEST)
+   [ _proto_, _port_range_ ] = application_split   
+   portrange_split = _port_range_.strip().split("-") 
+   if (len(portrange_split) != 2):
+     Response("error, including application function has error!", status=status.HTTP_400_BAD_REQUEST)
+   [ _start_port_, _end_port_ ] = portrange_split
    return_matched_list = []
-   inputsrc_netip_ipnetwork = IPNetwork(unicode(inputsrc_netip))
-   inputsrc_netip_subnet = str(str(inputsrc_netip).strip().split("/")[-1])
-   keyname_netip = file_database.keys()
-   for _netip_ in keyname_netip:
-      _netip_ipnetwork_ = IPNetwork(unicode(_netip_))
-      _netip_subnet_ =  str(str(_netip_).strip().split("/")[-1])
-      if int(_netip_subnet_) <= int(inputsrc_netip_subnet):
-        if inputsrc_netip_ipnetwork in _netip_ipnetwork_:
-          return_matched_list = return_matched_list + file_database[_netip_]
-      else:
-        if _netip_ipnetwork_ in inputsrc_netip_ipnetwork:
-          return_matched_list = return_matched_list + file_database[_netip_] 
+   _keyname_database_ = file_database.keys()
+   for _keyname_ in _keyname_database_:    
+      key_split = _keyname_.strip().split("/")
+      if (len(key_split) != 2):
+        Response("error, caching data has wrong format!", status=status.HTTP_400_BAD_REQUEST)
+      [ _key_proto_, _key_port_range_ ] = key_split    
+      keyport_split = _key_port_range_.strip().split("-")
+      if (len(keyport_split) != 2):
+        Response("error, caching data has wrong format!", status=status.HTTP_400_BAD_REQUEST)
+      [ _key_start_port_, _key_end_port_ ] = keyport_split
+      if re.match(str(_proto_).lower(),str(_key_proto_).lower(),re.I):
+        keyportragne_list = range(int(_key_start_port_),int(_key_end_port_)+int(1))
+        portragne_list = range(int(_start_port_),int(_end_port_)+int(1))
+        if len(portragne_list) <= len(keyportragne_list):
+          if set(portragne_list).intersection(keyportragne_list) == set(portragne_list):
+            return_matched_list = return_matched_list + file_database[_keyname_]
+        else:
+          if set(portragne_list).intersection(keyportragne_list) == set(keyportragne_list):
+            return_matched_list = return_matched_list + file_database[_keyname_]
    return return_matched_list
      
 
@@ -304,10 +334,14 @@ def juniper_searchpolicy(request,format=None):
                       application_in_filedb_list = []
                       source_in_filedb_list = partial_includ_match_netip(file_database[u'source'],inputsrc_netip)
                       destination_in_filedb_list = partial_includ_match_netip(file_database[u'destination'],inputdst_netip)
-                      application_in_filedb_list = get_listvalue_matchedby_keyname(file_database[u'application'],_app_value_)
-                      if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(application_in_filedb_list):
+                      src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_src_portrange_)}
+                      dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)}
+                      src_application_in_filedb_list = partial_including_application(file_database[u'source_application'],src_proto_port_string)
+                      dst_application_in_filedb_list = partial_including_application(file_database[u'destination_application'],dst_proto_port_string)
+                      if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
+                        # there is something matched in the cache
                         matched_policylist = []
-                        matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,application_in_filedb_list)
+                        matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
                         if len(matched_policylist) != 0:
                           tempdict_box[u'matchedpolicy'] = matched_policylist
                           tempdict_box[u'matchproperity'] = str("partialmatch")
