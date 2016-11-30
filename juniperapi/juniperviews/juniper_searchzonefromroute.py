@@ -87,8 +87,6 @@ def source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,
          routingtable_netvalues = proper_routingtable(routingtable_matched)
          routingtable_network_values = routingtable_netvalues.keys()
          for _network_value_ in routingtable_network_values:
-            #if re.search("0.0.0.0/0",str(_network_value_),re.I) or re.search(":/0",str(_network_value_),re.I):
-            #  continue
             _route_net_ = IPNetwork(unicode(_network_value_))
             _route_subnet_ = str(str(_route_net_).strip().split("/")[-1])
             #
@@ -242,7 +240,7 @@ def juniper_searchzonefromroute(request,format=None):
                 return Response(["error, desination ip address format has problem!"], status=status.HTTP_400_BAD_REQUEST)
            dictBox_temp[u'application'] = []
            for _expected_ipvalue_ in str(_dictData_[u'application']).strip().split(";"):
-              search_element = re.search("([a-zA-Z0-9]+)/([0-9]+)",str(_expected_ipvalue_),re.I)
+              search_element = re.search("[a-zA-Z0-9]+/[0-9]+-[0-9]+:[0-9]+-[0-9]+",str(_expected_ipvalue_),re.I)
               if search_element:
                 if str(_expected_ipvalue_) not in dictBox_temp[u'application']:
                   dictBox_temp[u'application'].append(str(_expected_ipvalue_))
@@ -277,7 +275,7 @@ def juniper_searchzonefromroute(request,format=None):
         for _dataDict_ in data_from_CURL_command:
            _keyname_ = _dataDict_.keys()
            for _key_value_ in _keyname_:
-              if _key_value_ in primarysecondary_devicelist:
+              if (unicode(_key_value_) in primarysecondary_devicelist) or (str(_key_value_) in primarysecondary_devicelist):
                 routingtable_inmemory[_key_value_] = _dataDict_[_key_value_]
 
         # IPNetwork('192.0.2.0/25') in IPNetwork('192.0.2.0/23')
