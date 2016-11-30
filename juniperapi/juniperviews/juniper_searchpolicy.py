@@ -135,17 +135,17 @@ def juniper_searchpolicy(request,format=None):
            {
              "sourceip" : "172.22.113.10/32;172.22.113.11/32",
              "destinationip" : "172.22.208.15/32",
-             "application" : "tcp/1700;tcp/443"
+             "application" : "tcp/0-0:1700-1700;<protocol>/<souce port range>:<destination port range>"
            },
            {
              "sourceip" : "172.22.0.0/16",
              "destinationip" : "172.22.209.0/24",
-             "application" : "icmp/0"
+             "application" : "icmp/0-0:0-65535"
            },
            {
              "sourceip" : "172.22.112.0/23",
              "destinationip" : "172.22.208.10/28",
-             "application" : "any/0"
+             "application" : "any/0-0:0-0"
            }
          ]
          return Response(get_message)
