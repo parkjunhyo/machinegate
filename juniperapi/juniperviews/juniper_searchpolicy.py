@@ -73,24 +73,25 @@ def get_listvalue_matchedby_keyname(file_database,input_netip):
      return_values = file_database[str(input_netip)]
    return return_values
 
-def compare_srcdstapplist(srclist,dstlist,applist):
+(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
+
+def compare_srcdstapplist(srclist,dstlist,srcapplist,dstapplist):
    set_srclist = set(srclist)
    set_dstlist = set(dstlist)
-   set_applist = set(applist)
    compare_srcdst = set_srclist.intersection(dstlist)
-   compare_dstsrc = set_dstlist.intersection(srclist)
-   if compare_srcdst == compare_dstsrc:
-     compare_srcdstapp = compare_srcdst.intersection(applist)
-     compare_appsrcdst = set_applist.intersection(list(compare_srcdst))
-     if compare_srcdstapp == compare_appsrcdst:
-       templist_box = []
-       for _common_ in list(compare_srcdstapp):
-          if str(_common_) not in templist_box:
-            templist_box.append(str(_common_)) 
-     else:
-       return Response("error, application compare has issue!", status=status.HTTP_400_BAD_REQUEST)
-   else:
-     return Response("error, source and destination compare has issue!", status=status.HTTP_400_BAD_REQUEST)
+   compare_dstsrc = set_dstlist.intersection(srclist)   
+   set_srcapplist = set(srcapplist)
+   set_dstapplist = set(dstapplist)
+   compare_srcdstapp = set_srcapplist.intersection(dstapplist)
+   compare_dstsrcapp = set_dstapplist.intersection(srcapplist)
+   compare_final_srcdst = compare_srcdst.intersection(compare_srcdstapp)
+   compare_final_dstsrc = compare_dstsrc.intersection(compare_dstsrcapp)   
+   if (compare_srcdst != compare_dstsrc) or (compare_srcdstapp != compare_dstsrcapp) or (compare_final_srcdst != compare_final_dstsrc):
+     return Response("error, application compare has issue!", status=status.HTTP_400_BAD_REQUEST)    
+   templist_box = []
+   for _common_ in list(compare_final_srcdst):  
+      if str(_common_) not in templist_box:
+        templist_box.append(str(_common_))
    return templist_box
 
 
@@ -242,7 +243,7 @@ def juniper_searchpolicy(request,format=None):
                       if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
                         # there is something matched in the cache
                         matched_policylist = []
-                        matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,application_in_filedb_list)
+                        matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
                         if len(matched_policylist) != 0:
                           tempdict_box[u'matchedpolicy'] = matched_policylist
                           tempdict_box[u'matchproperity'] = str("perfectmatch")
