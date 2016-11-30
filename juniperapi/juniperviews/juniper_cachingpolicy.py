@@ -183,7 +183,7 @@ def run_caching(_filename_pattern_):
               service_dst_cache_dict[str(_application_string_)].append(_mylocation_)
               break
       # processing counter
-      print "processing %(_counter_)s/%(_total_)... completed!" % {"_counter_":str(int(policy_counter)),"_total_":str(int(policy_total_count))}
+      print "processing %(_counter_)s/%(_total_) completed!" % {"_counter_":str(int(policy_counter)),"_total_":str(int(policy_total_count))}
       policy_counter = policy_counter + 1
 
    cache_dictbox = {}
@@ -198,7 +198,7 @@ def run_caching(_filename_pattern_):
    f = open(JUNIPER_DEVICELIST_DBFILE,"w")
    f.write(json.dumps(cache_dictbox))
    f.close()
-   print "processing %(_counter_)s ... completed!" % {"_counter_":str(filename_string)}  
+   print "processing %(_counter_)s completed!" % {"_counter_":str(filename_string)}  
    # timeout 
    time.sleep(1)
       
