@@ -339,7 +339,7 @@ def juniper_searchpolicy(request,format=None):
                       src_application_in_filedb_list = partial_including_application(file_database[u'source_application'],src_proto_port_string)
                       dst_application_in_filedb_list = partial_including_application(file_database[u'destination_application'],dst_proto_port_string)
                       if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
-                        # there is something matched in the cache
+                        # there is something matched in the cache 
                         matched_policylist = []
                         matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
                         if len(matched_policylist) != 0:
