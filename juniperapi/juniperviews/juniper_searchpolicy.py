@@ -305,8 +305,13 @@ def juniper_searchpolicy(request,format=None):
                         if len(matched_policylist) != 0:
                           tempdict_box[u'matchedpolicy'] = matched_policylist
                           tempdict_box[u'matchproperity'] = str("perfectmatch")
-                          maching_policy_status = True
-
+                          maching_policy_status = True  
+                    elif :
+                      # this part mean "there is none definition in routing table in the device"
+                      # management interface is included in this category
+                      maching_policy_status = False  
+                      continue
+                        
                     # second find policy from database include match!
                     if not maching_policy_status:
                       source_in_filedb_list = []
