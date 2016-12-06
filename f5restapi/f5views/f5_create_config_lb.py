@@ -322,7 +322,7 @@ def f5_create_config_lb(request,format=None):
            for _item_dict_ in _user_input_data_device_ip_changed_:
               active_device_ipaddr = str(_item_dict_[u'device'])
               for _dict_value_ in CONFIG_OPTION_SETTING_VALUE:
-                 if (str(_dict_value_) in _dict_value_["device"]) or (unicode(_dict_value_) in _dict_value_["device"]):
+                 if (str(active_device_ipaddr) in _dict_value_["device"]) or (unicode(active_device_ipaddr) in _dict_value_["device"]):
                    port_forward_status = _dict_value_["portforward"] 
                    break
               if not port_forward_status:
