@@ -381,7 +381,6 @@ def f5_create_config_lb(request,format=None):
            # this step will be find out the virtual server usage according to the virtual server ip and port information
            # _user_input_data_virtualipport_unique_ will be updated.
 
-
            CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/f5/virtualserverlist/"
            get_info = os.popen(CURL_command).read().strip()
            stream = BytesIO(get_info)
@@ -405,26 +404,41 @@ def f5_create_config_lb(request,format=None):
                     if re.search(compvipport,_searched_vipinfo_,re.I) or re.search(compvipport,parsed_searched_vipinfo,re.I):
                       message = "input virtual ip and port [%(compvipport)s] has already used on [%(pairdevicename)s]" % {"compvipport":compvipport,"pairdevicename":pairdevicename}
                       return Response(message, status=status.HTTP_400_BAD_REQUEST)
-                    
-
 
             
            # node usage confirmation
            # pool information will be necessary according to node information
            # _user_input_data_virtualipport_unique_ : virtual ip port is checked
+           CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/f5/poolmemberlist/"
+           get_info = os.popen(CURL_command).read().strip()
+           stream = BytesIO(get_info)
+           _data_from_poolmemberlist_api_ = JSONParser().parse(stream)
+
 
            _user_input_data_nodes_confirm_ = copy.copy(_user_input_data_virtualipport_unique_) 
            _temp_traybox_ = {}
+
            for _loop1_ in _user_input_data_nodes_confirm_:
               if str(_loop1_[u'device']) not in _temp_traybox_.keys():
                 _temp_traybox_[str(_loop1_[u'device'])] = {}
 
            for _loop1_ in _user_input_data_nodes_confirm_:
-              for _loop2_ in _loop1_[u'poolmembers']:
-                 _temp_traybox_[str(_loop1_[u'device'])][str(_loop2_)] = []
+              _thisdevice_ = str(_loop1_[u'device'])
+              _mypoolmemberslist_ = _loop1_[u'poolmembers'] 
+              for _loop2_ in _mypoolmemberslist_:
+                 _mypoolmemberinfo_ = str(_loop2_)
+                 _temp_traybox_[_thisdevice_][_mypoolmemberinfo_] = []
 
+
+           print _user_input_data_nodes_confirm_
            for _loop1_ in _user_input_data_nodes_confirm_:
-              for _loop2_ in _loop1_[u'poolmembers']:
+
+
+              _thisdevice_ = str(_loop1_[u'device'])
+              _mypoolmemberslist_ = _loop1_[u'poolmembers']
+
+              for _loop2_ in _mypoolmemberslist_:
+
                  database_filename = USER_DATABASES_DIR+"poollist."+str(_loop1_[u'pairdevice'])+".txt"
                  f = open(database_filename,"r")
                  _contents_ = f.readlines()
