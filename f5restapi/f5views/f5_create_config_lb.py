@@ -128,7 +128,7 @@ CONFIG_OPTION_SETTING_VALUE = [
   "sticky":"{\"name\":\"my_src_persist\"}",
   "profiles":"\"fastL4\"",
   "portforward":False,
-  F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/my_tcp\""+"}'"
+  "format_to_create_pool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/my_tcp\""+"}'"
  }
 ]
 
