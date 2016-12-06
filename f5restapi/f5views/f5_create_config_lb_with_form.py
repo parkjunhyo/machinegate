@@ -133,18 +133,18 @@ def f5_create_config_lb_with_form(request,format=None):
                  if (_port_number_ in re_arranged_parsed_sticky_option) or (unicode(_port_number_) in re_arranged_parsed_sticky_option):
                    box_dict["options"] = ["sticky"]
 
-              # run curl command to get the create command
-              sending_curlmsg = [{}]
-              sending_curlmsg[0]["auth_key"] = ENCAP_PASSWORD
-              sending_curlmsg[0]["items"] = [box_dict]
+                 # run curl command to get the create command
+                 sending_curlmsg = [{}]
+                 sending_curlmsg[0]["auth_key"] = ENCAP_PASSWORD
+                 sending_curlmsg[0]["items"] = [box_dict]
 
-              CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'"+json.dumps(sending_curlmsg)+"\' http://0.0.0.0:"+RUNSERVER_PORT+"/f5/create/config/lb/"
-              get_info = os.popen(CURL_command).read().strip()
-              stream = BytesIO(get_info)
-              data_from_CURL_command = JSONParser().parse(stream)
+                 CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'"+json.dumps(sending_curlmsg)+"\' http://0.0.0.0:"+RUNSERVER_PORT+"/f5/create/config/lb/"
+                 get_info = os.popen(CURL_command).read().strip()
+                 stream = BytesIO(get_info)
+                 data_from_CURL_command = JSONParser().parse(stream)
 
-              # make list to command cli
-              created_items_list.append(data_from_CURL_command[0])
+                 # make list to command cli
+                 created_items_list.append(data_from_CURL_command[0])
 
            return Response(created_items_list)
 
