@@ -443,14 +443,16 @@ def f5_create_config_lb(request,format=None):
                  #data_from_file = JSONParser().parse(stream)
 
                  _inputipport_info_ = str(_loop2_)
-                 for _dictbydevice_ in _data_from_poolmemberlist_api_[unicode(_thispairdevice_)]:
-                    _dictbydevice_keyname_ = _dictbydevice_.keys()
-                    for _keyname_ in _dictbydevice_keyname_:
-                       _keyname_string_ = str(_keyname_)
-                       for _memberitem_ in _dictbydevice_[_keyname_][u'poolmembers_status']:
-                          temp_parse_ipport_info = str(str(_memberitem_).strip().split("/")[-1])
-                          if re.match(_inputipport_info_,temp_parse_ipport_info,re.I) and (len(_inputipport_info_)==len(temp_parse_ipport_info)):
-                            _temp_traybox_[_thisdevice_][_inputipport_info_].append(_keyname_string_)
+                 _data_from_poolmemberlist_api_keyname_ = _data_from_poolmemberlist_api_[unicode(_thispairdevice_)].keys()
+                 for _keyname_ in _data_from_poolmemberlist_api_keyname_:
+                    _keyname_string_ = str(_keyname_)
+                    _memberitem_list_ = _data_from_poolmemberlist_api_[unicode(_thispairdevice_)][_keyname_string_][u'poolmembers_status']
+                    for _memberitem_ in _memberitem_list_:
+                       temp_parse_ipport_info = str(str(_memberitem_).strip().split("/")[-1])
+                       if re.match(_inputipport_info_,temp_parse_ipport_info,re.I) and (len(_inputipport_info_)==len(temp_parse_ipport_info)):
+                         _temp_traybox_[_thisdevice_][_inputipport_info_].append(_keyname_string_)
+                    
+
                  
                  #for _loop3_ in data_from_file[u'items']:
                  #   for _loop4_ in _loop3_[u'poolmembers_status_list']:
