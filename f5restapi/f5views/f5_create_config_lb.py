@@ -21,63 +21,6 @@ from f5restapi.setting import RUNSERVER_PORT
 ## Curl Command Format
 ## This is the Global Setting Configuration
 ## 
-## CONFGURATION SETTING
-CONFIG_OPTION_SETTING_VALUE = [
- {
-  "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46"],
-  "sticky":"{\"name\":\"source_addr_300\"}",
-  "profiles":"\"fastL4\"",
-  "portforward":False
- },
- {
-  "device":["10.10.30.101","10.10.30.102"],
-  "sticky":"{\"name\":\"source_addr_300\"}",
-  "profiles":"\"fastL4_loose\"",
-  "portforward":False
- },
- {
-  "device":["10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
-  "sticky":"",
-  "profiles":"\"fastL4\"",
-  "portforward":False
- },
- {
-  "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
-  "sticky":"{\"name\":\"my_src_persist\"}",
-  "profiles":"\"fastL4\"",
-  "portforward":False
- }
-]
-
-
-## this value is used to create the virtual server name
-
-DEFAULT_SETTING = [
-                    { 
-                      "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46"],
-                      "sticky":"{\"name\":\"source_addr_300\"}",
-                      "profiles":"\"fastL4\"",
-                      "portforward":None
-                    },
-                    {
-                      "device":["10.10.30.101","10.10.30.102"],
-                      "sticky":"{\"name\":\"source_addr_300\"}",
-                      "profiles":"\"fastL4_loose\"",
-                      "portforward":None
-                    },
-                    {
-                      "device":["10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
-                      "sticky":"",
-                      "profiles":"\"fastL4\"",
-                      "portforward":None
-                    },
-                    {
-                      "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
-                      "sticky":"{\"name\":\"my_src_persist\"}",
-                      "profiles":"\"fastL4\"",
-                      "portforward":None
-                    }
-                  ]
 
 #### naming rule
 VIP_NAME_OPTION = [
@@ -155,6 +98,39 @@ COMMOM_CMD_FORMAT = {
                       "delete_virtualserver_command":F5_LTM_VIRTUAL + "%(virtualservername)s -H 'Content-Type: application/json' -X DELETE",
                       "sync_command":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json' -X POST -d '{\"command\":\"run\",\"utilCmdArgs\":\"config-sync to-group %(syncgroup)s\"}'"
                     }
+
+
+## CONFGURATION SETTING
+CONFIG_OPTION_SETTING_VALUE = [
+ {
+  "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46"],
+  "sticky":"{\"name\":\"source_addr_300\"}",
+  "profiles":"\"fastL4\"",
+  "portforward":False,
+  "format_to_create_pool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'"
+ },
+ {
+  "device":["10.10.30.101","10.10.30.102"],
+  "sticky":"{\"name\":\"source_addr_300\"}",
+  "profiles":"\"fastL4_loose\"",
+  "portforward":False,
+  "format_to_create_pool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'"
+ },
+ {
+  "device":["10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
+  "sticky":"",
+  "profiles":"\"fastL4\"",
+  "portforward":False,
+  "format_to_create_pool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'"
+ },
+ {
+  "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
+  "sticky":"{\"name\":\"my_src_persist\"}",
+  "profiles":"\"fastL4\"",
+  "portforward":False,
+  F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/my_tcp\""+"}'"
+ }
+]
 
 
 
@@ -500,28 +476,8 @@ def f5_create_config_lb(request,format=None):
            #   _loop1_[u'poolnames_list'] = _temp_listbox_
 
 
-           # virtual server and pool name creation
-
-           #_valid_user_input_data_ = []
-           #for _loop1_ in _user_input_data_nodes_confirm_:
-           #   if len(_loop1_[u'virtualserver_names_list']) != int(0):
-           #     # log message
-           #     f = open(LOG_FILE,"a")
-           #     _date_ = os.popen("date").read().strip()
-           #     log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" virtual ip port : "+str(_loop1_[u'virtual_ip_port'])+", assigned virtual server :  "+str(','.join(_loop1_[u'virtualserver_names_list']))+" !\n"
-           #     f.write(log_msg)
-           #     f.close()
-           #   else:
-           #     _valid_user_input_data_.append(_loop1_)
-
            _valid_user_input_data_ = copy.copy(_user_input_data_nodes_confirm_)
 
-           # command creation and f5 rest_api command
-           # virtual server name should be empty
-           # _valid_user_input_data_ : is full varified data
-
-           #for _loop1_ in _valid_user_input_data_:
-           #   _loop1_[u'configCmd'] = {}
 
            _return_message_list_ = []
            for _loop1_ in _valid_user_input_data_:
@@ -536,36 +492,44 @@ def f5_create_config_lb(request,format=None):
                  info_in_poolmembers = _loop1_[u'poolmembers']
                  info_in_device = _loop1_[u'device']
                  info_in_syncgroup = _loop1_[u'syncgroup']
+                 info_in_portforward_status = _loop1_[u'portforward_status']
 
                  ### server name recreation
                  SERVERHOST_name = str('_'.join(info_in_servername.strip().split('-')))
 
+                 ### GET CONFIG_OPTION_SETTING_VALUE
+                 sticky_from_CONFvalue = ""
+                 profile_from_CONFvalue = ""
+                 createpoolcmd_from_CONFvalue = ""
+                 for _dictvalues_ in CONFIG_OPTION_SETTING_VALUE:
+                    _ipaddresslist_ = _dictvalues_['device']
+                    if str(info_in_device) in _ipaddresslist_:
+                      sticky_from_CONFvalue = _dictvalues_['sticky']
+                      profile_from_CONFvalue = _dictvalues_['profiles']
+                      createpoolcmd_from_CONFvalue = _dictvalues_['format_to_create_pool']
+                      break
+ 
                  ### option check confirmation
-                 ### this part will be upgrade if you add new option
-                 ###
+                 ### stikcy option will be defined
                  info_in_sticky = ""
                  if u'options' in _loop1_.keys():
                    # option : sticky
                    if u'sticky' in _loop1_[u'options']:
-                     for _loop2_ in DEFAULT_SETTING:
-                        if str(info_in_device) in _loop2_['device']:
-                          info_in_sticky = _loop2_['sticky']
-                          break 
+                     info_in_sticky = sticky_from_CONFvalue 
 
-                 ### option check confirmation
-                 info_in_profiles = ""
-                 for _loop2_ in DEFAULT_SETTING:
-                    if str(info_in_device) in _loop2_['device']:
-                      info_in_profiles = _loop2_['profiles']
-                      break
+                 ### performace l4 option will be defined!
+                 info_in_profiles = profile_from_CONFvalue
    
                  # find out the command format to create the pool
                  command_format_to_pool = {}
-                 for _loop2_ in POOL_CREATE_CMD_FORMAT:
-                    if str(info_in_device) in _loop2_["device"]:
-                      command_format_to_pool[u'create'] = _loop2_["created_command"]
-                      command_format_to_pool[u'delete'] = COMMOM_CMD_FORMAT["delete_pool_command"]
-                      break
+                 command_format_to_pool[u'create'] = createpoolcmd_from_CONFvalue
+                 command_format_to_pool[u'delete'] = COMMOM_CMD_FORMAT["delete_pool_command"]
+
+                 #for _loop2_ in CONFIG_OPTION_SETTING_VALUE:
+                 #   if str(info_in_device) in _loop2_["device"]:
+                 #     command_format_to_pool[u'create'] = _loop2_["created_command"]
+                 #     command_format_to_pool[u'delete'] = COMMOM_CMD_FORMAT["delete_pool_command"]
+                 #     break
 
                  command_format_to_virtualserver = {}
                  for _loop2_ in VIRTUALSERVER_CREATE_CMD_FORMAT:
