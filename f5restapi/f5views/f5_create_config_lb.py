@@ -193,10 +193,12 @@ def f5_create_config_lb(request,format=None):
 
            # This part will check the essecial parameters (this use the first value in getview_message parameter)
            _musthave_key_ = []
-           for _item_ in getview_message[0]["items"][0].keys():
-              unicode_item = unicode(_item_)
-              if unicode_item not in _musthave_key_:
-                 _musthave_key_.append(unicode_item)
+           for _dictitem_ in getview_message[0]["items"]:
+              for _item_ in _dictitem_.keys():
+                 unicode_item = unicode(_item_)
+                 if unicode("options") != unicode_item:
+                   if unicode_item not in _musthave_key_:
+                     _musthave_key_.append(unicode_item)
 
            ## [2018.08.09] removed and exchanged with above  ##
            # _musthave_key_ = [u'device',u'poolmembers',u'servername',u'virtual_ip_port']
@@ -207,25 +209,20 @@ def f5_create_config_lb(request,format=None):
               element_keynames_list = element_dict.keys()
               element_keynames_list_string = []
               for _elem_ in element_keynames_list:
-                 element_keynames_list_string.append(str(_elem_))
+                 if str(_elem_) not in element_keynames_list_string:
+                   element_keynames_list_string.append(str(_elem_))
               for ess_keyname in _musthave_key_:
                  ess_keyname_string = str(ess_keyname)
                  if ess_keyname_string not in element_keynames_list_string:
                    message = "%(ess_keyname_string)s is not existed from input datas" % {"ess_keyname_string":ess_keyname_string} 
                    return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-                   
- 
-           #for _loop1_ in _input_[0][u'items']:
-           #   for _loop2_ in _musthave_key_:
-           #      if _loop2_ not in _loop1_.keys():
-           #        f = open(LOG_FILE,"a")
-           #        _date_ = os.popen("date").read().strip()
-           #        log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" , parameter ["+str(_loop2_)+"] is required !\n"
-           #        f.write(log_msg)
-           #        f.close()
-           #        # terminated
-           #        sys.exit(0)
+           ## 2016.12.06
+           CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'[{\"auth_key\":\""+ENCAP_PASSWORD+"\"}]\' http://0.0.0.0:"+RUNSERVER_PORT+"/f5/devicelist/"
+           get_info = os.popen(CURL_command).read().strip()
+           stream = BytesIO(get_info)
+           data_from_CURL_command = JSONParser().parse(stream)
+           print data_from_CURL_command
 
            ## Read the devices list database file.
            _devicelist_db_ = USER_DATABASES_DIR + "devicelist.txt"
@@ -235,6 +232,7 @@ def f5_create_config_lb(request,format=None):
            stream = BytesIO(_string_contents_[0])
            _data_from_file_ = JSONParser().parse(stream)
            _data_from_devicelist_db_  = copy.copy(_data_from_file_)
+           print _data_from_devicelist_db_
 
            ######### start ###########
            _user_input_data_ = copy.copy(input_inform_items_list)
