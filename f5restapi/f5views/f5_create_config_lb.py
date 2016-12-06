@@ -344,46 +344,55 @@ def f5_create_config_lb(request,format=None):
               else:
                  _item_dict_[u'portforward_status'] = True
 
-
-                 
-
-           # virtual ip address confirmation
-           # virtual ip address should be unique according to the device.
-           # input : _user_input_data_device_ip_changed_ (device ip exchanged data)
-           # output : _user_input_data_virtualipport_unique_
+           # check if virtual ip address of input values is unique
            _temp_dictbox_ = {}
            for _loop1_ in _user_input_data_device_ip_changed_:
               if str(_loop1_[u'device']) not in _temp_dictbox_.keys():
                 _temp_dictbox_[str(_loop1_[u'device'])] = {}
-
            for _loop1_ in _user_input_data_device_ip_changed_:
-              if str(_loop1_[u'virtual_ip_port']) not in _temp_dictbox_[str(_loop1_[u'device'])].keys():
-                _temp_dictbox_[str(_loop1_[u'device'])][str(_loop1_[u'virtual_ip_port'])] = int(1) 
+              _mydeviceinfo_ = str(_loop1_[u'device'])
+              _myvipinfo_ = str(_loop1_[u'virtual_ip_port'])
+              if _myvipinfo_ not in _temp_dictbox_[_mydeviceinfo_].keys():
+                _temp_dictbox_[_mydeviceinfo_][_myvipinfo_] = int(1) 
               else:
-                _temp_dictbox_[str(_loop1_[u'device'])][str(_loop1_[u'virtual_ip_port'])] = _temp_dictbox_[str(_loop1_[u'device'])][str(_loop1_[u'virtual_ip_port'])] + int(1)
-
+                _temp_dictbox_[_mydeviceinfo_][_myvipinfo_] = _temp_dictbox_[_mydeviceinfo_][_myvipinfo_] + int(1)
+           # this is unique value
            _user_input_data_virtualipport_unique_ = []
            for _loop1_ in _user_input_data_device_ip_changed_:
-              if _temp_dictbox_[str(_loop1_[u'device'])][str(_loop1_[u'virtual_ip_port'])] == int(1):
+              _mydeviceinfo_ = str(_loop1_[u'device'])
+              _myvipinfo_ = str(_loop1_[u'virtual_ip_port'])
+              if _temp_dictbox_[_mydeviceinfo_][_myvipinfo_] == int(1):
                 _user_input_data_virtualipport_unique_.append(_loop1_)  
               else:
-                dup_viport = str(_loop1_[u'virtual_ip_port'])
-                message = "input virtual ip and port [%(dup_viport)s] is duplicated!" % {"dup_viport":dup_viport}
+                message = "input virtual ip and port [%(dup_viport)s] is duplicated!" % {"dup_viport":_myvipinfo_}
                 return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
            # Using the Backup database file, We want to search the usage of the virtual server ip address and port
+           # backup information will be updated to sync
            for _loop1_ in _user_input_data_virtualipport_unique_:
               for _loop2_ in _data_from_devicelist_db_:
                  if re.search(str(_loop1_[u'device']),str(_loop2_[u'ip']),re.I):
                    _loop1_[u'syncgroup'] = str(_loop2_[u'devicegroupname'])
                    for _loop3_ in _data_from_devicelist_db_:
-                      if re.match(str(_loop2_[u'haclustername']),str(_loop3_[u'clustername']),re.I):
+                      if re.search(str(_loop2_[u'haclustername']),str(_loop3_[u'clustername']),re.I):
                         _loop1_[u'pairdevice'] = str(_loop3_[u'ip'])
            
            # virtual server ip port usage confirmation
            # this step will be find out the virtual server usage according to the virtual server ip and port information
            # _user_input_data_virtualipport_unique_ will be updated.
+
+
+           CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/f5/virtualserverlist/"
+           get_info = os.popen(CURL_command).read().strip()
+           stream = BytesIO(get_info)
+           _data_from_virtualserver_db_ = JSONParser().parse(stream)
+           print _data_from_virtualserver_db_
+
+
+
            for _loop1_ in _user_input_data_virtualipport_unique_:
+
+
               database_filename = USER_DATABASES_DIR+"virtualserverlist."+str(_loop1_[u'pairdevice'])+".txt"
               f = open(database_filename,"r")
               _contents_ = f.readlines()
