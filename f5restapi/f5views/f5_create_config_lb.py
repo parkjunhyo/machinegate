@@ -429,58 +429,73 @@ def f5_create_config_lb(request,format=None):
                  _mypoolmemberinfo_ = str(_loop2_)
                  _temp_traybox_[_thisdevice_][_mypoolmemberinfo_] = []
 
-
-           print _user_input_data_nodes_confirm_
            for _loop1_ in _user_input_data_nodes_confirm_:
-
-
+              _thispairdevice_ = str(_loop1_[u'pairdevice'])
               _thisdevice_ = str(_loop1_[u'device'])
               _mypoolmemberslist_ = _loop1_[u'poolmembers']
-
               for _loop2_ in _mypoolmemberslist_:
 
-                 database_filename = USER_DATABASES_DIR+"poollist."+str(_loop1_[u'pairdevice'])+".txt"
-                 f = open(database_filename,"r")
-                 _contents_ = f.readlines()
-                 f.close()
-                 stream = BytesIO(_contents_[0])
-                 data_from_file = JSONParser().parse(stream)
+                 #database_filename = USER_DATABASES_DIR+"poollist."+str(_loop1_[u'pairdevice'])+".txt"
+                 #f = open(database_filename,"r")
+                 #_contents_ = f.readlines()
+                 #f.close()
+                 #stream = BytesIO(_contents_[0])
+                 #data_from_file = JSONParser().parse(stream)
+
+                 _inputipport_info_ = str(_loop2_)
+                 for _dictbydevice_ in _data_from_poolmemberlist_api_[unicode(_thispairdevice_)]:
+                    _dictbydevice_keyname_ = _dictbydevice_.keys()
+                    for _keyname_ in _dictbydevice_keyname_:
+                       _keyname_string_ = str(_keyname_)
+                       for _memberitem_ in _dictbydevice_[_keyname_][u'poolmembers_status']:
+                          temp_parse_ipport_info = str(str(_memberitem_).strip().split("/")[-1])
+                          if re.match(_inputipport_info_,temp_parse_ipport_info,re.I) and (len(_inputipport_info_)==len(temp_parse_ipport_info)):
+                            _temp_traybox_[_thisdevice_][_inputipport_info_].append(_keyname_string_)
                  
-                 for _loop3_ in data_from_file[u'items']:
-                    for _loop4_ in _loop3_[u'poolmembers_status_list']:
-                       temp_parse_ipport_info = str(str(_loop4_).split("/")[-1])
-                       if re.match(str(_loop2_),temp_parse_ipport_info) and (len(str(_loop2_))==len(temp_parse_ipport_info)):
-                          _temp_traybox_[str(_loop1_[u'device'])][str(_loop2_)].append(str(_loop3_[u'name']))
+                 #for _loop3_ in data_from_file[u'items']:
+                 #   for _loop4_ in _loop3_[u'poolmembers_status_list']:
+                 #      temp_parse_ipport_info = str(str(_loop4_).split("/")[-1])
+                 #      if re.match(str(_loop2_),temp_parse_ipport_info) and (len(str(_loop2_))==len(temp_parse_ipport_info)):
+                 #         _temp_traybox_[str(_loop1_[u'device'])][str(_loop2_)].append(str(_loop3_[u'name']))
 
            for _loop1_ in _user_input_data_nodes_confirm_:
               _temp_dictbox_ = {}
-              for _loop2_ in _loop1_[u'poolmembers']:
-                 for _loop3_ in _temp_traybox_[str(_loop1_[u'device'])][str(_loop2_)]:
-                    if str(_loop3_) not in _temp_dictbox_.keys():
-                      _temp_dictbox_[str(_loop3_)] = int(1)
+              _mypoolmemberslist_ = _loop1_[u'poolmembers']
+              _thisdevice_ = str(_loop1_[u'device'])
+              # init box and counting
+              for _loop2_ in _mypoolmemberslist_:
+                 _inputipport_info_ = str(_loop2_)
+                 _searched_poolnamelist_ = _temp_traybox_[_thisdevice_][_inputipport_info_]
+                 for _loop3_ in _searched_poolnamelist_:
+                    _fromapi_poolname_ = str(_loop3_)
+                    if _fromapi_poolname_ not in _temp_dictbox_.keys():
+                      _temp_dictbox_[_fromapi_poolname_] = int(1)
                     else:
-                      _temp_dictbox_[str(_loop3_)] = _temp_dictbox_[str(_loop3_)] + int(1)
+                      _temp_dictbox_[_fromapi_poolname_] = _temp_dictbox_[_fromapi_poolname_] + int(1)
+              # find pool name matched (used poolname will be searched!)
               _temp_listbox_ = [] 
-              for _loop2_ in _temp_dictbox_.keys():
-                 if int(_temp_dictbox_[_loop2_]) == int(len(_loop1_[u'poolmembers'])):
-                   if str(_loop2_) not in _temp_listbox_:
-                     _temp_listbox_.append(str(_loop2_))
+              _temp_dictbox_keyname_ = _temp_dictbox_.keys()
+              for _fromapi_poolname_ in _temp_dictbox_keyname_:
+                 if int(_temp_dictbox_[_fromapi_poolname_]) == int(len(_mypoolmemberslist_)):
+                   if str(_fromapi_poolname_) not in _temp_listbox_:
+                     _temp_listbox_.append(str(_fromapi_poolname_))
               _loop1_[u'poolnames_list'] = _temp_listbox_
-                                        
-           for _loop1_ in _user_input_data_nodes_confirm_:
-              _temp_listbox_ = []
-              for _loop2_ in _loop1_[u'poolnames_list']:
-                 database_filename = USER_DATABASES_DIR+"poollist."+str(_loop1_[u'pairdevice'])+".txt"
-                 f = open(database_filename,"r")
-                 _contents_ = f.readlines()
-                 f.close()
-                 stream = BytesIO(_contents_[0])
-                 data_from_file = JSONParser().parse(stream)
-                 for _loop3_ in data_from_file[u'items']:
-                    if re.search(str(_loop2_),str(_loop3_[u'name'])) and len(_loop1_[u'poolmembers']) == len(_loop3_[u'poolmembers_status_list']):
-                      if str(_loop3_[u'name']) not in _temp_listbox_:
-                        _temp_listbox_.append(str(_loop3_[u'name']))
-              _loop1_[u'poolnames_list'] = _temp_listbox_
+           
+           # this is not necessay, it will be duplicated
+           #for _loop1_ in _user_input_data_nodes_confirm_:
+           #   _temp_listbox_ = []
+           #   for _loop2_ in _loop1_[u'poolnames_list']:
+           #      database_filename = USER_DATABASES_DIR+"poollist."+str(_loop1_[u'pairdevice'])+".txt"
+           #      f = open(database_filename,"r")
+           #      _contents_ = f.readlines()
+           #      f.close()
+           #      stream = BytesIO(_contents_[0])
+           #      data_from_file = JSONParser().parse(stream)
+           #      for _loop3_ in data_from_file[u'items']:
+           #         if re.search(str(_loop2_),str(_loop3_[u'name'])) and len(_loop1_[u'poolmembers']) == len(_loop3_[u'poolmembers_status_list']):
+           #           if str(_loop3_[u'name']) not in _temp_listbox_:
+           #             _temp_listbox_.append(str(_loop3_[u'name']))
+           #   _loop1_[u'poolnames_list'] = _temp_listbox_
 
 
            # virtual server and pool name creation
