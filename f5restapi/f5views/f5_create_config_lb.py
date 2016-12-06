@@ -22,31 +22,6 @@ from f5restapi.setting import RUNSERVER_PORT
 ## This is the Global Setting Configuration
 ## 
 
-#### naming rule
-VIP_NAME_OPTION = [
-                    {
-                      "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46","10.10.30.101","10.10.30.102","10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
-                      "name_string": "v_%(ipport)s_%(servername)s_%(portname)s",
-                      "VIRTUALIP_SPLITE_COUNT":int(2)
-                    },
-                    {
-                      "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
-                      "name_string": "vs_%(ipport)s_%(portname)s",
-                      "VIRTUALIP_SPLITE_COUNT":int(0)
-                    } 
-                  ]
-
-PORT_NAME_OPTION = [
-                    {
-                      "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46","10.10.30.101","10.10.30.102","10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
-                      "name_string": "p_%(servername)s_%(portname)s"
-                    },
-                    {
-                      "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
-                      "name_string": "p_%(ipport)s_%(portname)s"
-                    }
-                   ]
-
 #### command formatting
 # virtual
 F5_LTM_VIRTUAL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/"
@@ -63,35 +38,6 @@ VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST = "\"name\":\"%(virtualserve
 
 POOL_DEFAULT_SETTING_ROUNDROBIN = "\"name\":\"%(poolname)s\",\"members\":\"%(poolmembers)s\",\"serviceDownAction\":\"reset\",\"loadBalancingMode\":\"round-robin\""
 
-VIRTUALSERVER_CREATE_CMD_FORMAT = [
-                                    {
-                                      "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46"],
-                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"sourceAddressTranslation\":{}"+"}'"
-                                    },
-                                    {
-                                      "device":["10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
-                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"automap\"}"+"}'"
-                                    },
-                                    {
-                                      "device":["10.10.30.101","10.10.30.102"],
-                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"disabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'"
-                                    },
-                                    {
-                                      "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
-                                      "created_command":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'"
-                                    }
-                                  ]
-
-POOL_CREATE_CMD_FORMAT = [
-                           {
-                             "device":["10.10.77.29","10.10.77.30","10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34","10.10.77.45","10.10.77.46","10.10.30.101","10.10.30.102"],
-                             "created_command":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'"
-                           },
-                           {
-                             "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
-                             "created_command":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/my_tcp\""+"}'"
-                           }
-                         ]
 
 COMMOM_CMD_FORMAT = {
                       "delete_pool_command":F5_LTM_POOL + "%(poolname)s -H 'Content-Type: application/json' -X DELETE",
@@ -107,28 +53,44 @@ CONFIG_OPTION_SETTING_VALUE = [
   "sticky":"{\"name\":\"source_addr_300\"}",
   "profiles":"\"fastL4\"",
   "portforward":False,
-  "format_to_create_pool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'"
+  "formatcreatepool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'",
+  "formatcreatevirtual":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"sourceAddressTranslation\":{}"+"}'",
+  "vipnameformat":"v_%(ipport)s_%(servername)s_%(portname)s",
+  "ipsplitforname":int(2),
+  "poolnameformat":"p_%(servername)s_%(portname)s"
  },
  {
   "device":["10.10.30.101","10.10.30.102"],
   "sticky":"{\"name\":\"source_addr_300\"}",
   "profiles":"\"fastL4_loose\"",
   "portforward":False,
-  "format_to_create_pool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'"
+  "formatcreatepool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'",
+  "formatcreatevirtual":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"disabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'",
+  "vipnameformat":"v_%(ipport)s_%(servername)s_%(portname)s",
+  "ipsplitforname":int(2),
+  "poolnameformat":"p_%(servername)s_%(portname)s"
  },
  {
   "device":["10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
   "sticky":"",
   "profiles":"\"fastL4\"",
   "portforward":False,
-  "format_to_create_pool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'"
+  "formatcreatepool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'",
+  "formatcreatevirtual":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"automap\"}"+"}'",
+  "vipnameformat":"v_%(ipport)s_%(servername)s_%(portname)s",
+  "ipsplitforname":int(2),
+  "poolnameformat":"p_%(servername)s_%(portname)s"
  },
  {
   "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
   "sticky":"{\"name\":\"my_src_persist\"}",
   "profiles":"\"fastL4\"",
   "portforward":False,
-  "format_to_create_pool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/my_tcp\""+"}'"
+  "formatcreatepool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/my_tcp\""+"}'",
+  "formatcreatevirtual":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'",
+  "vipnameformat":"vs_%(ipport)s_%(portname)s",
+  "ipsplitforname":int(0),
+  "poolnameformat":"p_%(ipport)s_%(portname)s"
  }
 ]
 
@@ -505,14 +467,21 @@ def f5_create_config_lb(request,format=None):
                  sticky_from_CONFvalue = ""
                  profile_from_CONFvalue = ""
                  createpoolcmd_from_CONFvalue = ""
+                 createvirtualcmd_from_CONFvalue = ""
+                 vipnameform_from_CONFvalue = ""
+                 vipname_ipsplitecount = int(2)
                  for _dictvalues_ in CONFIG_OPTION_SETTING_VALUE:
                     _ipaddresslist_ = _dictvalues_['device']
                     if str(info_in_device) in _ipaddresslist_:
                       sticky_from_CONFvalue = _dictvalues_['sticky']
                       profile_from_CONFvalue = _dictvalues_['profiles']
-                      createpoolcmd_from_CONFvalue = _dictvalues_['format_to_create_pool']
+                      createpoolcmd_from_CONFvalue = _dictvalues_['formatcreatepool']
+                      createvirtualcmd_from_CONFvalue = _dictvalues_['formatcreatevirtual']
+                      vipnameform_from_CONFvalue = _dictvalues_['vipnameformat']
+                      vipname_ipsplitecount = _dictvalues_['ipsplitforname']
+                      poolnameform_from_CONFvalue = _dictvalues_['poolnameformat']
                       break
- 
+
                  ### option check confirmation
                  ### stikcy option will be defined
                  info_in_sticky = ""
@@ -523,7 +492,8 @@ def f5_create_config_lb(request,format=None):
 
                  ### performace l4 option will be defined!
                  info_in_profiles = profile_from_CONFvalue
-   
+
+
                  # find out the command format to create the pool
                  command_format_to_pool = {}
                  command_format_to_pool[u'create'] = createpoolcmd_from_CONFvalue
@@ -536,13 +506,16 @@ def f5_create_config_lb(request,format=None):
                  #     break
 
                  command_format_to_virtualserver = {}
-                 for _loop2_ in VIRTUALSERVER_CREATE_CMD_FORMAT:
-                    if str(info_in_device) in _loop2_["device"]:
-                      command_format_to_virtualserver[u'create'] = _loop2_["created_command"]
-                      command_format_to_virtualserver[u'delete'] = COMMOM_CMD_FORMAT["delete_virtualserver_command"]
-                      break
+                 command_format_to_virtualserver[u'create'] = createvirtualcmd_from_CONFvalue
+                 command_format_to_virtualserver[u'delete'] = COMMOM_CMD_FORMAT["delete_virtualserver_command"]
 
-                 # create the pool name new and update the pool name and create command
+                 #for _loop2_ in VIRTUALSERVER_CREATE_CMD_FORMAT:
+                 #   if str(info_in_device) in _loop2_["device"]:
+                 #     command_format_to_virtualserver[u'create'] = _loop2_["created_command"]
+                 #     command_format_to_virtualserver[u'delete'] = COMMOM_CMD_FORMAT["delete_virtualserver_command"]
+                 #     break
+
+                 # create port string, create poolmember string 
                  _temp_box_ = []
                  _temp_string_box_ = []
                  for _loop2_ in _loop1_[u'poolmembers']:
@@ -563,31 +536,42 @@ def f5_create_config_lb(request,format=None):
                  #      message = "pool name [%(_poolname_created_)s] has been already used over [%(info_in_device)s] device!" % {"_poolname_created_":_poolname_created_,"info_in_device":info_in_device}
                  #      return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
+
                  # create virtual server
-                 _splited_ip_ = str(_loop1_[u'virtual_ip_port']).strip().split(':')[0]
-                 _splited_port_ = str(_loop1_[u'virtual_ip_port']).strip().split(':')[-1]
-                 for optlist in VIP_NAME_OPTION:
-                    if info_in_device in optlist["device"]:
-                      VIRTUALIP_SPLITE_COUNT = int(optlist["VIRTUALIP_SPLITE_COUNT"])
-                 _rename_ip_value_ = str('.'.join(str(_splited_ip_).split('.')[int(VIRTUALIP_SPLITE_COUNT):]))
+                 _splited_ip_ = str(str(info_in_virtual_ip_port).strip().split(':')[0])
+                 _splited_port_ = str(str(info_in_virtual_ip_port).strip().split(':')[-1])
+                 _rename_ip_value_ = str('.'.join(str(_splited_ip_).split('.')[int(vipname_ipsplitecount):])) 
+                 _virtualservername_created_ = vipnameform_from_CONFvalue % {"ipport":_rename_ip_value_,"servername":SERVERHOST_name,"portname":_splited_port_}
+                 _poolname_created_ = poolnameform_from_CONFvalue % {"servername":SERVERHOST_name,"portname":_name_with_ports_,"ipport":_rename_ip_value_}
+
+                 
+                 #for optlist in VIP_NAME_OPTION:
+                 #   if info_in_device in optlist["device"]:
+                 #     VIRTUALIP_SPLITE_COUNT = int(optlist["VIRTUALIP_SPLITE_COUNT"])
+                 #_rename_ip_value_ = str('.'.join(str(_splited_ip_).split('.')[int(VIRTUALIP_SPLITE_COUNT):]))
 
 
                  # 2016.11.17 poolname creation
-                 for optlist in PORT_NAME_OPTION:
-                    if info_in_device in optlist["device"]:
-                      _poolname_created_ = optlist["name_string"] % {"servername":SERVERHOST_name,"portname":_name_with_ports_,"ipport":_rename_ip_value_} 
-                      break
+                 #for optlist in PORT_NAME_OPTION:
+                 #   if info_in_device in optlist["device"]:
+                 #     _poolname_created_ = optlist["name_string"] % {"servername":SERVERHOST_name,"portname":_name_with_ports_,"ipport":_rename_ip_value_} 
+                 #     break
+
+                 
                  for _pname_ in info_in_poolnames_list:
-                    if re.search(_poolname_created_,_pname_,re.I) or re.search(_pname_,_poolname_created_,re.I):
-                       message = "pool name [%(_poolname_created_)s] has been already used over [%(info_in_device)s] device!" % {"_poolname_created_":_poolname_created_,"info_in_device":info_in_device}
-                       return Response(message, status=status.HTTP_400_BAD_REQUEST)
+                    if re.search(str(_poolname_created_),str(_pname_),re.I) or re.search(str(_pname_),str(_poolname_created_),re.I):
+                      _poolname_created_ = str(_pname_)
+                      break
+
+                      # message = "pool name [%(_poolname_created_)s] has been already used over [%(info_in_device)s] device!" % {"_poolname_created_":_poolname_created_,"info_in_device":info_in_device}
+                      # return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
 
                  #_virtualservername_created_ = "v_%(ipport)s_%(servername)s_%(portname)s" % {"ipport":_rename_ip_value_,"servername":SERVERHOST_name,"portname":_splited_port_}
-                 for optlist in VIP_NAME_OPTION:
-                    if info_in_device in optlist["device"]:
-                      _virtualservername_created_ = optlist["name_string"] % {"ipport":_rename_ip_value_,"servername":SERVERHOST_name,"portname":_splited_port_}
-                      break
+                 #for optlist in VIP_NAME_OPTION:
+                 #   if info_in_device in optlist["device"]:
+                 #     _virtualservername_created_ = optlist["name_string"] % {"ipport":_rename_ip_value_,"servername":SERVERHOST_name,"portname":_splited_port_}
+                 #     break
 
 
                  # create the diction value for input
