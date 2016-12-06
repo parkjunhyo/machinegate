@@ -24,24 +24,21 @@ from f5restapi.setting import RUNSERVER_PORT
 
 #### command formatting
 # virtual
-F5_LTM_VIRTUAL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/"
-F5_LTM_VIRTUAL_CURL_URL = F5_LTM_VIRTUAL + " -H 'Content-Type: application/json'"
-F5_LTM_VIRTUAL_POST_CURL_URL = F5_LTM_VIRTUAL_CURL_URL + " -X POST -d "
+#F5_LTM_VIRTUAL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/"
+#F5_LTM_VIRTUAL_CURL_URL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json'"
+#F5_LTM_VIRTUAL_POST_CURL_URL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json' -X POST -d "
 
 # pool
-F5_LTM_POOL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/"
-F5_LTM_POOL_CURL_URL = F5_LTM_POOL + " -H 'Content-Type: application/json'"
-F5_LTM_POOL_POST_CURL_URL = F5_LTM_POOL_CURL_URL + " -X POST -d "
+#F5_LTM_POOL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/"
+#F5_LTM_POOL_CURL_URL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json'"
+#F5_LTM_POOL_POST_CURL_URL = "curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json' -X POST -d "
 
 # default parameter values
-VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST = "\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"profiles\":[%(profiles_option)s],\"persist\":[%(persist_option)s],\"mirror\":\"enabled\",\"translatePort\":\"enabled\""
-
-POOL_DEFAULT_SETTING_ROUNDROBIN = "\"name\":\"%(poolname)s\",\"members\":\"%(poolmembers)s\",\"serviceDownAction\":\"reset\",\"loadBalancingMode\":\"round-robin\""
 
 
 COMMOM_CMD_FORMAT = {
-                      "delete_pool_command":F5_LTM_POOL + "%(poolname)s -H 'Content-Type: application/json' -X DELETE",
-                      "delete_virtualserver_command":F5_LTM_VIRTUAL + "%(virtualservername)s -H 'Content-Type: application/json' -X DELETE",
+                      "delete_pool_command":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/%(poolname)s -H 'Content-Type: application/json' -X DELETE",
+                      "delete_virtualserver_command":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/%(virtualservername)s -H 'Content-Type: application/json' -X DELETE",
                       "sync_command":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json' -X POST -d '{\"command\":\"run\",\"utilCmdArgs\":\"config-sync to-group %(syncgroup)s\"}'"
                     }
 
@@ -53,8 +50,8 @@ CONFIG_OPTION_SETTING_VALUE = [
   "sticky":"{\"name\":\"source_addr_300\"}",
   "profiles":"\"fastL4\"",
   "portforward":False,
-  "formatcreatepool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'",
-  "formatcreatevirtual":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"sourceAddressTranslation\":{}"+"}'",
+  "formatcreatepool":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(poolname)s\",\"members\":\"%(poolmembers)s\",\"serviceDownAction\":\"reset\",\"loadBalancingMode\":\"round-robin\",\"monitor\":\"/Common/tcp_skp\""+"}'",
+  "formatcreatevirtual":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"profiles\":[%(profiles_option)s],\"persist\":[%(persist_option)s],\"mirror\":\"enabled\",\"translatePort\":\"enabled\",\"translateAddress\":\"enabled\",\"rules\":[\"/Common/vip_from_was_web_snatpool\"],\"sourceAddressTranslation\":{}"+"}'",
   "vipnameformat":"v_%(ipport)s_%(servername)s_%(portname)s",
   "ipsplitforname":int(2),
   "poolnameformat":"p_%(servername)s_%(portname)s"
@@ -64,8 +61,8 @@ CONFIG_OPTION_SETTING_VALUE = [
   "sticky":"{\"name\":\"source_addr_300\"}",
   "profiles":"\"fastL4_loose\"",
   "portforward":False,
-  "formatcreatepool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'",
-  "formatcreatevirtual":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"disabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'",
+  "formatcreatepool":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(poolname)s\",\"members\":\"%(poolmembers)s\",\"serviceDownAction\":\"reset\",\"loadBalancingMode\":\"round-robin\",\"monitor\":\"/Common/tcp_skp\""+"}'",
+  "formatcreatevirtual":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"profiles\":[%(profiles_option)s],\"persist\":[%(persist_option)s],\"mirror\":\"enabled\",\"translatePort\":\"enabled\",\"translateAddress\":\"disabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'",
   "vipnameformat":"v_%(ipport)s_%(servername)s_%(portname)s",
   "ipsplitforname":int(2),
   "poolnameformat":"p_%(servername)s_%(portname)s"
@@ -75,8 +72,8 @@ CONFIG_OPTION_SETTING_VALUE = [
   "sticky":"",
   "profiles":"\"fastL4\"",
   "portforward":False,
-  "formatcreatepool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/tcp_skp\""+"}'",
-  "formatcreatevirtual":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"automap\"}"+"}'",
+  "formatcreatepool":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(poolname)s\",\"members\":\"%(poolmembers)s\",\"serviceDownAction\":\"reset\",\"loadBalancingMode\":\"round-robin\",\"monitor\":\"/Common/tcp_skp\""+"}'",
+  "formatcreatevirtual":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"profiles\":[%(profiles_option)s],\"persist\":[%(persist_option)s],\"mirror\":\"enabled\",\"translatePort\":\"enabled\",\"translateAddress\":\"enabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"automap\"}"+"}'",
   "vipnameformat":"v_%(ipport)s_%(servername)s_%(portname)s",
   "ipsplitforname":int(2),
   "poolnameformat":"p_%(servername)s_%(portname)s"
@@ -86,8 +83,8 @@ CONFIG_OPTION_SETTING_VALUE = [
   "sticky":"{\"name\":\"my_src_persist\"}",
   "profiles":"\"fastL4\"",
   "portforward":False,
-  "formatcreatepool":F5_LTM_POOL_POST_CURL_URL + "'{"+POOL_DEFAULT_SETTING_ROUNDROBIN+",\"monitor\":\"/Common/my_tcp\""+"}'",
-  "formatcreatevirtual":F5_LTM_VIRTUAL_POST_CURL_URL + "'{"+VIRTUALSERVER_DEFAULT_SETTING_PERFORML4_TCP_PERSIST+",\"translateAddress\":\"enabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'",
+  "formatcreatepool":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/pool/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(poolname)s\",\"members\":\"%(poolmembers)s\",\"serviceDownAction\":\"reset\",\"loadBalancingMode\":\"round-robin\",\"monitor\":\"/Common/my_tcp\""+"}'",
+  "formatcreatevirtual":"curl -sk -u %(username)s:%(password)s https://%(device)s/mgmt/tm/ltm/virtual/ -H 'Content-Type: application/json' -X POST -d '{\"name\":\"%(virtualservername)s\",\"destination\":\"%(destination)s\",\"ip-protocol\":\"tcp\",\"pool\":\"%(poolname)s\",\"profiles\":[%(profiles_option)s],\"persist\":[%(persist_option)s],\"mirror\":\"enabled\",\"translatePort\":\"enabled\",\"translateAddress\":\"enabled\",\"rules\":[],\"sourceAddressTranslation\":{\"type\":\"none\"}"+"}'",
   "vipnameformat":"vs_%(ipport)s_%(portname)s",
   "ipsplitforname":int(0),
   "poolnameformat":"p_%(ipport)s_%(portname)s"
