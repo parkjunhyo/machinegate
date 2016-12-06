@@ -409,6 +409,10 @@ def f5_create_config_lb(request,format=None):
               _thispairdevice_ = str(_loop1_[u'pairdevice'])
               _thisdevice_ = str(_loop1_[u'device'])
               _mypoolmemberslist_ = _loop1_[u'poolmembers']
+              if unicode(_thispairdevice_) not in _data_from_poolmemberlist_api_.keys():
+                message = "%(_thispairdevice_)s or %(_thisdevice_)s poolmemberlist is not existed!" % {"_thispairdevice_":_thispairdevice_,"_thisdevice_":_thisdevice_}
+                return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
               for _loop2_ in _mypoolmemberslist_:
 
                  #database_filename = USER_DATABASES_DIR+"poollist."+str(_loop1_[u'pairdevice'])+".txt"
