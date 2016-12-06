@@ -218,7 +218,7 @@ def f5_create_config_lb(request,format=None):
                    return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
            ## 2016.12.06
-           CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'[{\"auth_key\":\""+ENCAP_PASSWORD+"\"}]\' http://0.0.0.0:"+RUNSERVER_PORT+"/f5/devicelist/"
+           CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/f5/devicelist/"
            get_info = os.popen(CURL_command).read().strip()
            stream = BytesIO(get_info)
            data_from_CURL_command = JSONParser().parse(stream)
