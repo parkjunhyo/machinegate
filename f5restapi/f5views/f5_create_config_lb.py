@@ -21,6 +21,34 @@ from f5restapi.setting import RUNSERVER_PORT
 ## Curl Command Format
 ## This is the Global Setting Configuration
 ## 
+## CONFGURATION SETTING
+CONFIG_OPTION_SETTING_VALUE = [
+ {
+  "device":["10.10.77.29","10.10.77.30","10.10.77.45","10.10.77.46"],
+  "sticky":"{\"name\":\"source_addr_300\"}",
+  "profiles":"\"fastL4\"",
+  "portforward":False
+ },
+ {
+  "device":["10.10.30.101","10.10.30.102"],
+  "sticky":"{\"name\":\"source_addr_300\"}",
+  "profiles":"\"fastL4_loose\"",
+  "portforward":False
+ },
+ {
+  "device":["10.10.77.31","10.10.77.32","10.10.77.33","10.10.77.34"],
+  "sticky":"",
+  "profiles":"\"fastL4\"",
+  "portforward":False
+ },
+ {
+  "device":["172.18.177.101","172.18.177.102","172.18.177.103","172.18.177.104","172.18.177.105","172.18.177.106"],
+  "sticky":"{\"name\":\"my_src_persist\"}",
+  "profiles":"\"fastL4\"",
+  "portforward":False
+ }
+]
+
 
 ## this value is used to create the virtual server name
 
@@ -200,9 +228,6 @@ def f5_create_config_lb(request,format=None):
                    if unicode_item not in _musthave_key_:
                      _musthave_key_.append(unicode_item)
 
-           ## [2018.08.09] removed and exchanged with above  ##
-           # _musthave_key_ = [u'device',u'poolmembers',u'servername',u'virtual_ip_port']
-
            # This part will be check the essencial parametes with input data values
            input_inform_items_list = _input_[0][u'items']
            for element_dict in input_inform_items_list:
@@ -221,25 +246,20 @@ def f5_create_config_lb(request,format=None):
            CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/f5/devicelist/"
            get_info = os.popen(CURL_command).read().strip()
            stream = BytesIO(get_info)
-           data_from_CURL_command = JSONParser().parse(stream)
-           print data_from_CURL_command
+           _data_from_devicelist_db_ = JSONParser().parse(stream)
 
            ## Read the devices list database file.
-           _devicelist_db_ = USER_DATABASES_DIR + "devicelist.txt"
-           f = open(_devicelist_db_,'r')
-           _string_contents_ = f.readlines()
-           f.close()
-           stream = BytesIO(_string_contents_[0])
-           _data_from_file_ = JSONParser().parse(stream)
-           _data_from_devicelist_db_  = copy.copy(_data_from_file_)
-           print _data_from_devicelist_db_
+           #_devicelist_db_ = USER_DATABASES_DIR + "devicelist.txt"
+           #f = open(_devicelist_db_,'r')
+           #_string_contents_ = f.readlines()
+           #f.close()
+           #stream = BytesIO(_string_contents_[0])
+           #_data_from_file_ = JSONParser().parse(stream)
+           #_data_from_devicelist_db_  = copy.copy(_data_from_file_)
 
            ######### start ###########
            _user_input_data_ = copy.copy(input_inform_items_list)
-           ## [2018.08.09] removed and exchanged with above  ##
-           # _user_input_data_ = copy.copy(_input_[0][u'items'])
 
-           ## Whatever the device information of your input data will be exchaged to the active device ip address 
 
            _user_input_data_device_ip_changed_ = []
            copy_loop_param = copy.copy(_user_input_data_)
@@ -270,7 +290,6 @@ def f5_create_config_lb(request,format=None):
                 if not devicename_status:
                    message = "the device name [%(_device_input_)s] is not in the device list!" % {"_device_input_":str(_device_input_)}
                    return Response(message, status=status.HTTP_400_BAD_REQUEST)
-                  
               else:
                 # input device information will be name 
                 devicename_status = None
@@ -292,28 +311,20 @@ def f5_create_config_lb(request,format=None):
                 if not devicename_status:
                    message = "the device name [%(_device_input_)s] is not in the device list!" % {"_device_input_":str(_device_input_)}
                    return Response(message, status=status.HTTP_400_BAD_REQUEST)
-
-
+              # this part will change the device information as the active device ip address
               if _target_device_ip_:
                 _loop1_[u'device'] = _target_device_ip_
-                _user_input_data_device_ip_changed_.append(_loop1_) 
-
-              ## [2018.08.09] removed and exchanged with below  ##
-              #if re.match('',str(_target_device_ip_)):
-              #  _loop1_[u'device'] = _target_device_ip_
-              #  _user_input_data_device_ip_changed_.append(_loop1_)
+                _user_input_data_device_ip_changed_.append(_loop1_)
+              else:
+                return Response("error, device name is not proper, please check your input or device list!", status=status.HTTP_400_BAD_REQUEST)
 
            ## This part will check the this operation policy is allow that port Forwarding is enable
            for _item_dict_ in _user_input_data_device_ip_changed_:
-
               active_device_ipaddr = str(_item_dict_[u'device'])
-              # basically port forwarding is not allowed
-              port_forward_status = None
-              for _dict_value_ in DEFAULT_SETTING:
-                 if active_device_ipaddr in _dict_value_["device"]:
+              for _dict_value_ in CONFIG_OPTION_SETTING_VALUE:
+                 if (str(_dict_value_) in _dict_value_["device"]) or (unicode(_dict_value_) in _dict_value_["device"]):
                    port_forward_status = _dict_value_["portforward"] 
                    break
-
               if not port_forward_status:
                  virtualport = str(_item_dict_[u'virtual_ip_port']).strip().split(":")[-1]
                  realport = []
@@ -328,6 +339,11 @@ def f5_create_config_lb(request,format=None):
                  if not re.match(virtualport,realport[-1],re.I):
                     message = "port forwarding is not allow, virtual port [%(virtualport)s], server port [%(realport)s]!" % {"virtualport":str(virtualport),"realport":str(realport[-1])}
                     return Response(message, status=status.HTTP_400_BAD_REQUEST)
+                 # port forward status confirmation
+                 _item_dict_[u'portforward_status'] = False 
+              else:
+                 _item_dict_[u'portforward_status'] = True
+
 
                  
 
