@@ -386,35 +386,26 @@ def f5_create_config_lb(request,format=None):
            get_info = os.popen(CURL_command).read().strip()
            stream = BytesIO(get_info)
            _data_from_virtualserver_db_ = JSONParser().parse(stream)
-           print _data_from_virtualserver_db_
-
-
 
            for _loop1_ in _user_input_data_virtualipport_unique_:
+              #database_filename = USER_DATABASES_DIR+"virtualserverlist."+str(_loop1_[u'pairdevice'])+".txt"
+              #f = open(database_filename,"r")
+              #_contents_ = f.readlines()
+              #f.close()
+              #stream = BytesIO(_contents_[0])
+              #data_from_file = JSONParser().parse(stream)
 
-
-              database_filename = USER_DATABASES_DIR+"virtualserverlist."+str(_loop1_[u'pairdevice'])+".txt"
-              f = open(database_filename,"r")
-              _contents_ = f.readlines()
-              f.close()
-              stream = BytesIO(_contents_[0])
-              data_from_file = JSONParser().parse(stream)
-
-              pairdevicename = str(_loop1_[u'pairdevice'])
               compvipport = str(_loop1_[u'virtual_ip_port'])
-
-
-              for _loop2_ in data_from_file[u'items']:
-                 if re.match(compvipport,str(_loop2_[u'destination']),re.I):
-                   message = "input virtual ip and port [%(compvipport)s] has already used on [%(pairdevicename)s]" % {"compvipport":compvipport,"pairdevicename":pairdevicename}
-                   return Response(message, status=status.HTTP_400_BAD_REQUEST)   
-                 
-
-              ## [2018.08.09] removed and exchanged with below  ##
-              #_loop1_[u'virtualserver_names_list'] = []
-              #for _loop2_ in data_from_file[u'items']:
-              #   if re.search(str(_loop1_[u'virtual_ip_port']),str(_loop2_[u'destination']),re.I):
-              #     _loop1_[u'virtualserver_names_list'].append(str(_loop2_[u'fullPath']))
+              pairdevicename = str(_loop1_[u'pairdevice'])
+              for _dict_virtualinfo_ in _data_from_virtualserver_db_:
+                 _keynamelist_ = _dict_virtualinfo_.keys()
+                 for _keyname_ in _keynamelist_:
+                    _searched_vipinfo_ = str(_dict_virtualinfo_[_keyname_][u'destination'])
+                    parsed_searched_vipinfo = str(_searched_vipinfo_.strip().split("/")[-1])
+                    if re.search(compvipport,_searched_vipinfo_,re.I) or re.search(compvipport,parsed_searched_vipinfo,re.I):
+                      message = "input virtual ip and port [%(compvipport)s] has already used on [%(pairdevicename)s]" % {"compvipport":compvipport,"pairdevicename":pairdevicename}
+                      return Response(message, status=status.HTTP_400_BAD_REQUEST)
+                    
 
 
             
