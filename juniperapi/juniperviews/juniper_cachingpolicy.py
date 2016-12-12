@@ -135,6 +135,10 @@ def run_caching(_filename_pattern_):
       for _start_end_ in _searched_startend_:
          _searched_linelist_ = _policy_info_list_[_start_end_[0]:_start_end_[-1]+int(1)]
          # protocol infomation
+         # there is three type of any 
+         # 1. 0/0-0     : any/0-0 or any/0-65535
+         # 2. tcp/0-0   : tcp/0-0 or tcp/0-65535
+         # 3. udp/0-0   : udp/0-0 or udp/0-65535
          _ipprotocol_ = "0"
          for _eachline_ in _searched_linelist_:
             if re.search(r"IP protocol:",str(_eachline_),re.I):
