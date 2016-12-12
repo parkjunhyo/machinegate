@@ -204,7 +204,7 @@ def juniper_searchpolicy(request,format=None):
            {
              "sourceip" : "172.22.112.0/23",
              "destinationip" : "172.22.208.10/28",
-             "application" : "any/0-0:0-0"
+             "application" : "any/0-0:0-0;tcp/0-0:0-0;udp/0-65535:0-65535"
            }
          ]
          return Response(get_message)
@@ -263,14 +263,14 @@ def juniper_searchpolicy(request,format=None):
                     #  _src_portrange_ = "0-0"
                     #  _dst_portrange_ = "0-0"  
                   
-                    if re.search("0-0",_src_portrange_,re.I) or re.search("0-0",_dst_portrange_,re.I):
-                      _src_portrange_ = "0-65535"   
-                      _dst_portrange_ = "0-65535"
+                    #if re.search("0-0",_src_portrange_,re.I) or re.search("0-0",_dst_portrange_,re.I):
+                    #  _src_portrange_ = "0-65535"   
+                    #  _dst_portrange_ = "0-65535"
                     
-                    if re.search("any",_app_proto_.lower(),re.I):
-                      _app_proto_ = 0
-                      _src_portrange_ = "0-65535"
-                      _dst_portrange_ = "0-65535"                
+                    #if re.search("any",_app_proto_.lower(),re.I):
+                    #  _app_proto_ = 0
+                    #  _src_portrange_ = "0-65535"
+                    #  _dst_portrange_ = "0-65535"                
                         
                     policy_cache_filename = "cachepolicy_%(_devicestring_)s_from_%(_fromzone_)s_to_%(_tozone_)s.txt" % {"_devicestring_":str(inputsrc_device),"_fromzone_":str(inputsrc_zone),"_tozone_":str(inputdst_zone)}
 
@@ -342,7 +342,7 @@ def juniper_searchpolicy(request,format=None):
                           maching_policy_status = True
 
                     # third find policy from database include match! partial_includ_match_netip
-                    if not maching_policy_status:
+                    #if not maching_policy_status:
                       source_in_filedb_list = []
                       destination_in_filedb_list = []
                       application_in_filedb_list = []
