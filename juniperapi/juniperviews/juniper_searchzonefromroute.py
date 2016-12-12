@@ -296,7 +296,27 @@ def juniper_searchzonefromroute(request,format=None):
            possible_destination_list = source_destination_routinglookup(destination_ip_list,primarysecondary_devicelist,primarysecondary_devicename,routingtable_inmemory)
            traybox_dict[u'destinationip'] = logest_matching(possible_destination_list)
            # application processing
-           traybox_dict[u'application'] = _dictData_[u'application']
+ 
+           changed_application = []
+           for _expected_ipvalue_ in str(_dictData_[u'application']).strip().split(";"):
+              [ _app_proto_, _app_portrange_ ] = str(_expected_ipvalue_).strip().split("/")
+              [ _srcportrange_, _dstportrange_ ] = str(_app_portrange_).strip().split(":")
+              # source port range re-define
+              if re.search(str("0-0"),str(_srcportrange_),re.I) or re.search(str("0-65535"),str(_srcportrange_),re.I):
+                _srcportrange_ = str("0-65535")
+              # destination port range re-define
+              if re.search(str("0-0"),str(_dstportrange_),re.I) or re.search(str("0-65535"),str(_dstportrange_),re.I):
+                _dstportrange_ = str("0-65535")      
+              redefined_srcdstportrange_ = str(":".join([ _srcportrange_, _dstportrange_ ]))                
+              if re.search("any",str(_app_proto_).lower(),re.I):
+                redefined_application = "0/%(_prange_)s;tcp/%(_prange_)s;udp/%(_prange_)s" % {"_prange_":redefined_srcdstportrange_}
+                if redefined_application not in changed_application:
+                  changed_application.append(redefined_application)
+              else:
+                redefined_application = "%(_proto_)s/%(_prange_)s" % {"_proto_":str(_app_proto_).lower(),"_prange_":redefined_srcdstportrange_}
+                if redefined_application not in changed_application:
+                  changed_application.append(redefined_application)
+           traybox_dict[u'application'] = str(";".join(changed_application))
            # 
            full_searched_devicelist.append(traybox_dict)
 
