@@ -155,7 +155,8 @@ def run_caching(_filename_pattern_):
               _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str(_port_range_value_)}
               if str(_application_string_) not in service_src_cache_dict.keys():      
                 service_src_cache_dict[str(_application_string_)] = []
-              service_src_cache_dict[str(_application_string_)].append(_mylocation_)
+              if _mylocation_ not in service_src_cache_dict[str(_application_string_)]:
+                service_src_cache_dict[str(_application_string_)].append(_mylocation_)
               break
             
          # destination application
@@ -172,7 +173,8 @@ def run_caching(_filename_pattern_):
               _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str(_port_range_value_)}
               if str(_application_string_) not in service_dst_cache_dict.keys():
                 service_dst_cache_dict[str(_application_string_)] = []
-              service_dst_cache_dict[str(_application_string_)].append(_mylocation_)
+              if _mylocation_ not in service_dst_cache_dict[str(_application_string_)]:
+                service_dst_cache_dict[str(_application_string_)].append(_mylocation_)
               break
 
          # icmp application
@@ -185,7 +187,8 @@ def run_caching(_filename_pattern_):
               service_src_cache_dict[str(_application_string_)].append(_mylocation_)
               if str(_application_string_) not in service_dst_cache_dict.keys():
                 service_dst_cache_dict[str(_application_string_)] = []
-              service_dst_cache_dict[str(_application_string_)].append(_mylocation_)
+              if _mylocation_ not in service_dst_cache_dict[str(_application_string_)]:
+                service_dst_cache_dict[str(_application_string_)].append(_mylocation_)
               break
       # processing counter
       print "processing %(_counter_)s/%(_total_)s completed!" % {"_counter_":str(int(policy_counter)),"_total_":str(int(policy_total_count))}
