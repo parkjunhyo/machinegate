@@ -339,7 +339,7 @@ def juniper_searchpolicy(request,format=None):
                         if len(matched_policylist) != 0:
                           tempdict_box[u'matchedpolicy'] = matched_policylist
                           tempdict_box[u'matchproperity'] = str("includematch")
-                          maching_policy_status = True
+                          # maching_policy_status = True
 
                     # third find policy from database include match! partial_includ_match_netip
                     #if not maching_policy_status:
