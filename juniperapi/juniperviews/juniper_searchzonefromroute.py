@@ -310,8 +310,9 @@ def juniper_searchzonefromroute(request,format=None):
               redefined_srcdstportrange_ = str(":".join([ _srcportrange_, _dstportrange_ ]))                
               if re.search("any",str(_app_proto_).lower(),re.I):
                 redefined_application = "0/%(_prange_)s;tcp/%(_prange_)s;udp/%(_prange_)s" % {"_prange_":redefined_srcdstportrange_}
-                if redefined_application not in changed_application:
-                  changed_application.append(redefined_application)
+                for _redef_app_ in redefined_application.split("/"):
+                   if _redef_app_ not in changed_application:
+                     changed_application.append(_redef_app_)
               else:
                 redefined_application = "%(_proto_)s/%(_prange_)s" % {"_proto_":str(_app_proto_).lower(),"_prange_":redefined_srcdstportrange_}
                 if redefined_application not in changed_application:
