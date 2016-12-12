@@ -316,7 +316,7 @@ def juniper_searchzonefromroute(request,format=None):
                 redefined_application = "%(_proto_)s/%(_prange_)s" % {"_proto_":str(_app_proto_).lower(),"_prange_":redefined_srcdstportrange_}
                 if redefined_application not in changed_application:
                   changed_application.append(redefined_application)
-           traybox_dict[u'application'] = str(";".join(changed_application))
+           traybox_dict[u'application'] = changed_application
            # 
            full_searched_devicelist.append(traybox_dict)
 
