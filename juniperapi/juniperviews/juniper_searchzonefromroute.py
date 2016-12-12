@@ -200,7 +200,7 @@ def juniper_searchzonefromroute(request,format=None):
            {
              "sourceip" : "172.22.112.0/23",
              "destinationip" : "172.22.208.10/28",
-             "application" : "any/0-0:0-0"
+             "application" : "any/0-0:0-0;tcp/0-0:0-0;udp/0-65535:0-65535"
            }
          ]
          return Response(get_message)
@@ -296,7 +296,6 @@ def juniper_searchzonefromroute(request,format=None):
            possible_destination_list = source_destination_routinglookup(destination_ip_list,primarysecondary_devicelist,primarysecondary_devicename,routingtable_inmemory)
            traybox_dict[u'destinationip'] = logest_matching(possible_destination_list)
            # application processing
- 
            changed_application = []
            for _expected_ipvalue_ in _dictData_[u'application']:
               [ _app_proto_, _app_portrange_ ] = str(_expected_ipvalue_).strip().split("/")
