@@ -298,7 +298,7 @@ def juniper_searchzonefromroute(request,format=None):
            # application processing
  
            changed_application = []
-           for _expected_ipvalue_ in str(_dictData_[u'application']).strip().split(";"):
+           for _expected_ipvalue_ in _dictData_[u'application']:
               [ _app_proto_, _app_portrange_ ] = str(_expected_ipvalue_).strip().split("/")
               [ _srcportrange_, _dstportrange_ ] = str(_app_portrange_).strip().split(":")
               # source port range re-define
