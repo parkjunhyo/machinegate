@@ -254,14 +254,23 @@ def juniper_searchpolicy(request,format=None):
                     if len(src_dst_portrange) != int(2):
                       return Response("error, application : any is wrong format!", status=status.HTTP_400_BAD_REQUEST)
                     [ _src_portrange_, _dst_portrange_ ] = src_dst_portrange
-                    if re.search("0-65535",_src_portrange_,re.I) or re.search("0-65535",_dst_portrange_,re.I):
-                      _src_portrange_ = "0-0"   
-                      _dst_portrange_ = "0-0"
+                    #if re.search("0-65535",_src_portrange_,re.I) or re.search("0-65535",_dst_portrange_,re.I):
+                    #  _src_portrange_ = "0-0"   
+                    #  _dst_portrange_ = "0-0"
+                    
+                    #if re.search("any",_app_proto_.lower(),re.I):
+                    #  _app_proto_ = 0
+                    #  _src_portrange_ = "0-0"
+                    #  _dst_portrange_ = "0-0"  
+                  
+                    if re.search("0-0",_src_portrange_,re.I) or re.search("0-0",_dst_portrange_,re.I):
+                      _src_portrange_ = "0-65535"   
+                      _dst_portrange_ = "0-65535"
                     
                     if re.search("any",_app_proto_.lower(),re.I):
                       _app_proto_ = 0
-                      _src_portrange_ = "0-0"
-                      _dst_portrange_ = "0-0"  
+                      _src_portrange_ = "0-65535"
+                      _dst_portrange_ = "0-65535"                
                         
                     policy_cache_filename = "cachepolicy_%(_devicestring_)s_from_%(_fromzone_)s_to_%(_tozone_)s.txt" % {"_devicestring_":str(inputsrc_device),"_fromzone_":str(inputsrc_zone),"_tozone_":str(inputdst_zone)}
 
