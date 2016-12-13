@@ -137,14 +137,14 @@ def export_policy(_ipaddress_,_hostname_):
            export_command_list.append(_command_)
 
    # depend on the device performace you can adjust this number below      
-   multi_access_ssh_usernumber = int(3)     
+   multi_access_ssh_usernumber = int(4)     
    ( _divnumber_, _modnumber_ ) = divmod(len(export_command_list),multi_access_ssh_usernumber)
+   _loopinglist_ = []
    if int(_modnumber_) == int(0):
-     _loopinglist_ = range(int(_modnumber_))
-     _looptotalcount_ = int(_modnumber_)
+     _looptotalcount_ = int(_divnumber_)
    else:
-     _loopinglist_ = range(int(_modnumber_)+1)
-     _looptotalcount_ = int(_modnumber_)+1
+     _looptotalcount_ = int(_divnumber_) + 1
+   _loopinglist_ = range(_looptotalcount_)
     
    _loopcount_ = 1
    for _loopid_ in _loopinglist_:
