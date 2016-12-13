@@ -60,7 +60,7 @@ def run_command(_command_,fromtozone_pair,_ipaddress_,_hostname_):
         break
 
    # time parameter 60s * 4 min
-   hold_timeout = 60 * 4
+   hold_timeout = 60 * 5
    # connect              
    remote_conn_pre = paramiko.SSHClient()
    remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -136,8 +136,8 @@ def export_policy(_ipaddress_,_hostname_):
            _command_ = "show security policies from-zone %(_from_)s to-zone %(_to_)s count %(_maxcount_)s start %(_start_)s detail | no-more\n" % {"_from_":_from_zone_,"_to_":_to_zone_,"_maxcount_":str(POLICY_FILE_MAX),"_start_":str(start_value)}
            export_command_list.append(_command_)
 
-   # depend on the device performace you can adjust this number below      
-   multi_access_ssh_usernumber = int(4)     
+   # depend on the device performace you can adjust this number below : SRX 1400 : MAX 3     
+   multi_access_ssh_usernumber = int(3)     
    ( _divnumber_, _modnumber_ ) = divmod(len(export_command_list),multi_access_ssh_usernumber)
    _loopinglist_ = []
    if int(_modnumber_) == int(0):
