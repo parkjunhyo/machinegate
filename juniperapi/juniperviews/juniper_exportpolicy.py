@@ -60,7 +60,7 @@ def run_command(_command_,fromtozone_pair,_ipaddress_,_hostname_):
         break
 
    # time parameter 60s * 4 min
-   hold_timeout = 60 * 5
+   hold_timeout = 60 * 4
    # connect              
    remote_conn_pre = paramiko.SSHClient()
    remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
