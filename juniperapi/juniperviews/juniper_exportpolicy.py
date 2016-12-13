@@ -136,16 +136,47 @@ def export_policy(_ipaddress_,_hostname_):
            _command_ = "show security policies from-zone %(_from_)s to-zone %(_to_)s count %(_maxcount_)s start %(_start_)s detail | no-more\n" % {"_from_":_from_zone_,"_to_":_to_zone_,"_maxcount_":str(POLICY_FILE_MAX),"_start_":str(start_value)}
            export_command_list.append(_command_)
 
-   _threads_ = []
-   for _command_ in export_command_list:      
-      th = threading.Thread(target=run_command, args=(_command_,fromtozone_pair,_ipaddress_,_hostname_,))
-      th.start()
-      _threads_.append(th)
-   for th in _threads_:
-      th.join()   
+   # depend on the device performace you can adjust this number below      
+   multi_access_ssh_usernumber = int(3)     
+   ( _divnumber_, _modnumber_ ) = divmod(len(export_command_list),multi_access_ssh_usernumber)
+   if int(_modnumber_) == int(0):
+     _loopinglist_ = range(int(_modnumber_))
+     _looptotalcount_ = int(_modnumber_)
+   else:
+     _loopinglist_ = range(int(_modnumber_)+1)
+     _looptotalcount_ = int(_modnumber_)+1
+    
+   _loopcount_ = 1
+   for _loopid_ in _loopinglist_:
+      _splited_export_command_list_ = [] 
+      _start_id_ = int(_loopid_) * int(multi_access_ssh_usernumber)
+      _end_id_ = ( int(_loopid_) + 1 ) * int(multi_access_ssh_usernumber)
+      if int(_loopcount_) != int(_looptotalcount_):
+        _splited_export_command_list_ = export_command_list[_start_id_:_end_id_]
+      else:
+        _splited_export_command_list_ = export_command_list[_start_id_:]        
+      _loopcount_ = _loopcount_ + 1 
+    
+      _threads_ = []
+      for _command_ in _splited_export_command_list_:      
+         th = threading.Thread(target=run_command, args=(_command_,fromtozone_pair,_ipaddress_,_hostname_,))
+         th.start()
+         _threads_.append(th)
+      for th in _threads_:
+         th.join()   
+
+
+
+   #_threads_ = []
+   #for _command_ in export_command_list:      
+   #   th = threading.Thread(target=run_command, args=(_command_,fromtozone_pair,_ipaddress_,_hostname_,))
+   #   th.start()
+   #   _threads_.append(th)
+   #for th in _threads_:
+   #   th.join()   
 
    # thread timeout 
-   time.sleep(1)
+   time.sleep(10)
 
 def viewer_information():
    filenames_list = os.listdir(USER_VAR_POLICIES)
