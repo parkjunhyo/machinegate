@@ -16,7 +16,7 @@ from juniperapi.setting import RUNSERVER_PORT
 from juniperapi.setting import PARAMIKO_DEFAULT_TIMEWAIT
 from juniperapi.setting import USER_VAR_CHCHES
 
-import os,re,copy,json,time,threading,sys
+import os,re,copy,json,time,threading,sys,random
 import paramiko
 from netaddr import *
 
@@ -181,7 +181,7 @@ def partial_including_application(file_database,input_application):
           if set(portragne_list).intersection(keyportragne_list) == set(keyportragne_list):
             return_matched_list = return_matched_list + file_database[_keyname_]
    return return_matched_list
-     
+
 
 @api_view(['GET','POST'])
 @csrf_exempt
@@ -216,6 +216,12 @@ def juniper_searchpolicy(request,format=None):
    elif request.method == 'POST':
 
       try:
+
+        # random
+        random.seed(time.time())
+        random_number = random.random()
+        random_string = str(str(random_number).strip().split(".")[-1])
+
         # input
         _input_ = JSONParser().parse(request)
 
@@ -254,23 +260,6 @@ def juniper_searchpolicy(request,format=None):
                     if len(src_dst_portrange) != int(2):
                       return Response("error, application : any is wrong format!", status=status.HTTP_400_BAD_REQUEST)
                     [ _src_portrange_, _dst_portrange_ ] = src_dst_portrange
-                    #if re.search("0-65535",_src_portrange_,re.I) or re.search("0-65535",_dst_portrange_,re.I):
-                    #  _src_portrange_ = "0-0"   
-                    #  _dst_portrange_ = "0-0"
-                    
-                    #if re.search("any",_app_proto_.lower(),re.I):
-                    #  _app_proto_ = 0
-                    #  _src_portrange_ = "0-0"
-                    #  _dst_portrange_ = "0-0"  
-                  
-                    #if re.search("0-0",_src_portrange_,re.I) or re.search("0-0",_dst_portrange_,re.I):
-                    #  _src_portrange_ = "0-65535"   
-                    #  _dst_portrange_ = "0-65535"
-                    
-                    #if re.search("any",_app_proto_.lower(),re.I):
-                    #  _app_proto_ = 0
-                    #  _src_portrange_ = "0-65535"
-                    #  _dst_portrange_ = "0-65535"                
                         
                     policy_cache_filename = "cachepolicy_%(_devicestring_)s_from_%(_fromzone_)s_to_%(_tozone_)s.txt" % {"_devicestring_":str(inputsrc_device),"_fromzone_":str(inputsrc_zone),"_tozone_":str(inputdst_zone)}
 
@@ -283,11 +272,10 @@ def juniper_searchpolicy(request,format=None):
                     tempdict_box[u'devicename'] = str(inputsrc_device)
                     tempdict_box[u'fromzone'] = str(inputsrc_zone)
                     tempdict_box[u'tozone'] = str(inputdst_zone)
-                    tempdict_box[u'matchedpolicy'] = []
-                    tempdict_box[u'matchproperity'] = str("none")
-
-                    # first find policy from database perfect match!
-                    maching_policy_status = False
+                    tempdict_box[u'matchedpolicy'] = {}
+                    tempdict_box[u'matchedpolicy'][u'perfectmatch'] = []
+                    tempdict_box[u'matchedpolicy'][u'includematch'] = []
+                    tempdict_box[u'matchedpolicy'][u'partialmatch'] = []
 
                     if str(policy_cache_filename) in cache_filename:
                       # file db read
@@ -297,7 +285,8 @@ def juniper_searchpolicy(request,format=None):
                       f.close()
                       stream = BytesIO(string_contents[0])
                       file_database = JSONParser().parse(stream)
-                      
+                     
+                      # perfect matching processing 
                       source_in_filedb_list = []
                       destination_in_filedb_list = []
                       application_in_filedb_list = []
@@ -312,24 +301,16 @@ def juniper_searchpolicy(request,format=None):
                         matched_policylist = []
                         matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
                         if len(matched_policylist) != 0:
-                          tempdict_box[u'matchedpolicy'] = matched_policylist
-                          tempdict_box[u'matchproperity'] = str("perfectmatch")
-                          maching_policy_status = True  
-                    else:
-                      # this part mean "there is none definition in routing table in the device"
-                      # management interface is included in this category
-                      maching_policy_status = False  
-                      continue
-                        
-                    # second find policy from database include match!
-                    if not maching_policy_status:
+                          tempdict_box[u'matchedpolicy'][u'perfectmatch'] = tempdict_box[u'matchedpolicy'][u'perfectmatch'] + matched_policylist
+
+                      # include matching processing 
                       source_in_filedb_list = []
                       destination_in_filedb_list = []
                       application_in_filedb_list = []
                       source_in_filedb_list = compare_including_netip(file_database[u'source'],inputsrc_netip)
                       destination_in_filedb_list = compare_including_netip(file_database[u'destination'],inputdst_netip)
                       src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_src_portrange_)}
-                      dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)} 
+                      dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)}
                       src_application_in_filedb_list = compare_including_application(file_database[u'source_application'],src_proto_port_string)
                       dst_application_in_filedb_list = compare_including_application(file_database[u'destination_application'],dst_proto_port_string)
                       if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
@@ -337,12 +318,9 @@ def juniper_searchpolicy(request,format=None):
                         matched_policylist = []
                         matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
                         if len(matched_policylist) != 0:
-                          tempdict_box[u'matchedpolicy'] = matched_policylist
-                          tempdict_box[u'matchproperity'] = str("includematch")
-                          # maching_policy_status = True
+                          tempdict_box[u'matchedpolicy'][u'includematch'] = tempdict_box[u'matchedpolicy'][u'includematch'] + matched_policylist
 
-                    # third find policy from database include match! partial_includ_match_netip
-                    #if not maching_policy_status:
+                      # patial matching processing 
                       source_in_filedb_list = []
                       destination_in_filedb_list = []
                       application_in_filedb_list = []
@@ -357,10 +335,13 @@ def juniper_searchpolicy(request,format=None):
                         matched_policylist = []
                         matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
                         if len(matched_policylist) != 0:
-                          tempdict_box[u'matchedpolicy'] = matched_policylist
-                          tempdict_box[u'matchproperity'] = str("partialmatch")
-                          maching_policy_status = True
-                      
+                          tempdict_box[u'matchedpolicy'][u'partialmatch'] = tempdict_box[u'matchedpolicy'][u'partialmatch'] + matched_policylist
+
+                    else:
+                      # this part mean "there is none definition in routing table in the device"
+                      # management interface is included in this category
+                      continue
+                        
                     # add the container
                     return_list_temp.append(tempdict_box)
         
