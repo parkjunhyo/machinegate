@@ -20,6 +20,9 @@ import os,re,copy,json,time,threading,sys,random
 import paramiko
 from netaddr import *
 
+# thread parameter (added)
+global tatalsearched_values, threadlock_key
+
 class JSONResponse(HttpResponse):
     """
     An HttpResponse that renders its content into JSON.
@@ -184,6 +187,10 @@ def partial_including_application(file_database,input_application):
 
 
 def searching_matchingpolicy_from_request(_dictData_,_routing_dict_,cache_filename):
+
+   # thread parameter (added)
+   global tatalsearched_values, threadlock_key
+
    return_list_temp = []
    for _src_string_ in _dictData_[u"sourceip"]:
       [ inputsrc_netip, inputsrc_device, inputsrc_zone ] = parsing_filename_to_data(_routing_dict_,_src_string_)
@@ -296,14 +303,26 @@ def searching_matchingpolicy_from_request(_dictData_,_routing_dict_,cache_filena
               # this part mean "there is none definition in routing table in the device"
               # management interface is included in this category
               continue
-                        
             # add the container
             return_list_temp.append(tempdict_box)   
-   return return_list_temp
+   
+   # thread parameter (added)
+   threadlock_key.acquire()
+   tatalsearched_values = tatalsearched_values + return_list_temp
+   threadlock_key.release()
+   time.sleep(5)
+
+   # thread parameter (removing)
+   #return return_list_temp
 
 @api_view(['GET','POST'])
 @csrf_exempt
 def juniper_searchpolicy(request,format=None):
+
+   # thread parameter (added)
+   global tatalsearched_values, threadlock_key
+   tatalsearched_values = []
+   threadlock_key = threading.Lock()
 
    # get method
    if request.method == 'GET':
@@ -357,122 +376,28 @@ def juniper_searchpolicy(request,format=None):
         get_info = os.popen(CURL_command).read().strip()
         stream = BytesIO(get_info)
         data_from_CURL_command = JSONParser().parse(stream)
- 
-        return_list_temp = []
+
+        # thread parameter (removing) 
+        #return_list_temp = []
+        _threads_ = []
         for _dictData_ in data_from_CURL_command:
 
-           _searched_result_ = searching_matchingpolicy_from_request(_dictData_,_routing_dict_,cache_filename)
-           _return_error_ = []
-           if type(_searched_result_) != type(_return_error_):
-             return Response(return_list_temp, status=status.HTTP_400_BAD_REQUEST)
-           return_list_temp = return_list_temp + _searched_result_
-           
+           # thread parameter (removing)
+           #_searched_result_ = searching_matchingpolicy_from_request(_dictData_,_routing_dict_,cache_filename)
+           #_return_error_ = []
+           #if type(_searched_result_) != type(_return_error_):
+           #  return Response(return_list_temp, status=status.HTTP_400_BAD_REQUEST)
+           #return_list_temp = return_list_temp + _searched_result_
 
-           #for _src_string_ in _dictData_[u"sourceip"]:
-           #   [ inputsrc_netip, inputsrc_device, inputsrc_zone ] = parsing_filename_to_data(_routing_dict_,_src_string_)
-           #   for _dst_value_ in _dictData_[u"destinationip"]:
-           #      [ inputdst_netip, inputdst_device, inputdst_zone ] = parsing_filename_to_data(_routing_dict_,_dst_value_) 
-           #      if not re.match(inputsrc_device, inputdst_device, re.I):
-           #        return Response(["error, search zone from routing table has issue!"], status=status.HTTP_400_BAD_REQUEST) 
-           #      for _app_value_ in _dictData_[u"application"]:       
-
-                    ## initialization the container
-                    #tempdict_box = {}
-                    ## any rule define
-                    #appvalue_string = _app_value_.strip().split("/")
-                    #if len(appvalue_string) != int(2):
-                    #  return Response("error, application : any is wrong format!", status=status.HTTP_400_BAD_REQUEST)
-                    #[ _app_proto_, _app_number_ ] = appvalue_string
-                    #src_dst_portrange = _app_number_.strip().split(":")
-                    #if len(src_dst_portrange) != int(2):
-                    #  return Response("error, application : any is wrong format!", status=status.HTTP_400_BAD_REQUEST)
-                    #[ _src_portrange_, _dst_portrange_ ] = src_dst_portrange
-                        
-                    #policy_cache_filename = "cachepolicy_%(_devicestring_)s_from_%(_fromzone_)s_to_%(_tozone_)s.txt" % {"_devicestring_":str(inputsrc_device),"_fromzone_":str(inputsrc_zone),"_tozone_":str(inputdst_zone)}
-
-                    ## fill default container
-                    #tempdict_box[u'sourceip'] = str(inputsrc_netip)
-                    #tempdict_box[u'destinationip'] = str(inputdst_netip)
-                    #tempdict_box[u'proto_application'] = str(_app_proto_)
-                    #tempdict_box[u'src_application'] = str(_src_portrange_)
-                    #tempdict_box[u'dst_application'] = str(_dst_portrange_)
-                    #tempdict_box[u'devicename'] = str(inputsrc_device)
-                    #tempdict_box[u'fromzone'] = str(inputsrc_zone)
-                    #tempdict_box[u'tozone'] = str(inputdst_zone)
-                    #tempdict_box[u'matchedpolicy'] = {}
-                    #tempdict_box[u'matchedpolicy'][u'perfectmatch'] = []
-                    #tempdict_box[u'matchedpolicy'][u'includematch'] = []
-                    #tempdict_box[u'matchedpolicy'][u'partialmatch'] = []
-
-                    #if str(policy_cache_filename) in cache_filename:
-                    #  # file db read
-                    #  database_filefull = USER_VAR_CHCHES + str(policy_cache_filename) 
-                    #  f = open(database_filefull,"r")
-                    #  string_contents = f.readlines()
-                    #  f.close()
-                    #  stream = BytesIO(string_contents[0])
-                    #  file_database = JSONParser().parse(stream)
-                     
-                    #  # perfect matching processing 
-                    #  source_in_filedb_list = []
-                    #  destination_in_filedb_list = []
-                    #  application_in_filedb_list = []
-                    #  source_in_filedb_list  = get_listvalue_matchedby_keyname(file_database[u'source'],inputsrc_netip)
-                    #  destination_in_filedb_list  = get_listvalue_matchedby_keyname(file_database[u'destination'],inputdst_netip)
-                    #  src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_src_portrange_)}
-                    #  dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)}  
-                    #  src_application_in_filedb_list = get_listvalue_matchedby_keyname(file_database[u'source_application'],src_proto_port_string)
-                    #  dst_application_in_filedb_list = get_listvalue_matchedby_keyname(file_database[u'destination_application'],dst_proto_port_string)
-                    #  if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
-                    #    # there is something matched in the cache
-                    #    matched_policylist = []
-                    #    matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
-                    #    if len(matched_policylist) != 0:
-                    #      tempdict_box[u'matchedpolicy'][u'perfectmatch'] = tempdict_box[u'matchedpolicy'][u'perfectmatch'] + matched_policylist
-
-                    #  # include matching processing 
-                    #  source_in_filedb_list = []
-                    #  destination_in_filedb_list = []
-                    #  application_in_filedb_list = []
-                    #  source_in_filedb_list = compare_including_netip(file_database[u'source'],inputsrc_netip)
-                    #  destination_in_filedb_list = compare_including_netip(file_database[u'destination'],inputdst_netip)
-                    #  src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_src_portrange_)}
-                    #  dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)}
-                    #  src_application_in_filedb_list = compare_including_application(file_database[u'source_application'],src_proto_port_string)
-                    #  dst_application_in_filedb_list = compare_including_application(file_database[u'destination_application'],dst_proto_port_string)
-                    #  if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
-                    #    # there is something matched in the cache
-                    #    matched_policylist = []
-                    #    matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
-                    #    if len(matched_policylist) != 0:
-                    #      tempdict_box[u'matchedpolicy'][u'includematch'] = tempdict_box[u'matchedpolicy'][u'includematch'] + matched_policylist
-
-                    #  # patial matching processing 
-                    #  source_in_filedb_list = []
-                    #  destination_in_filedb_list = []
-                    #  application_in_filedb_list = []
-                    #  source_in_filedb_list = partial_includ_match_netip(file_database[u'source'],inputsrc_netip)
-                    #  destination_in_filedb_list = partial_includ_match_netip(file_database[u'destination'],inputdst_netip)
-                    #  src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_src_portrange_)}
-                    #  dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)}
-                    #  src_application_in_filedb_list = partial_including_application(file_database[u'source_application'],src_proto_port_string)
-                    #  dst_application_in_filedb_list = partial_including_application(file_database[u'destination_application'],dst_proto_port_string)
-                    #  if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
-                    #    # there is something matched in the cache 
-                    #    matched_policylist = []
-                    #    matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
-                    #    if len(matched_policylist) != 0:
-                    #      tempdict_box[u'matchedpolicy'][u'partialmatch'] = tempdict_box[u'matchedpolicy'][u'partialmatch'] + matched_policylist
-
-                    #else:
-                    #  # this part mean "there is none definition in routing table in the device"
-                    #  # management interface is included in this category
-                    #  continue
-                        
-                    ## add the container
-                    #return_list_temp.append(tempdict_box)
-        
-        return Response(return_list_temp)
+           th = threading.Thread(target=searching_matchingpolicy_from_request, args=(_dictData_,_routing_dict_,cache_filename,))
+           th.start()
+           _threads_.append(th)
+        for th in _threads_:
+           th.join()
+   
+        # thread parameter (removing) 
+        #return Response(return_list_temp)
+        return Response(tatalsearched_values)
 
       except:
         message = "Post Algorithm has some problem!"
