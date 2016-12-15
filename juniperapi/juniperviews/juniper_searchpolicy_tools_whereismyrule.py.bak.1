@@ -19,7 +19,9 @@ from juniperapi.setting import USER_VAR_POLICIES
 import os,re,copy,json,time,threading,sys,random
 import paramiko
 from netaddr import *
-from multiprocessing import Process, Queue, Lock
+
+# thread parameter (added)
+global tatalsearched_values, threadlock_key
 
 class JSONResponse(HttpResponse):
     """
@@ -180,16 +182,11 @@ def policydetail_obtain(in_devicename, in_destinationip, in_src_application, in_
         threadlock_key.release()
       else:
         continue
+
    # threading waiting
-   time.sleep(0)
+   time.sleep(1)
 
-def findout_rule_from_policiesdatabase(in_devicename, in_destinationip, in_src_application, in_dst_application, in_fromzone, in_tozone, in_proto_application, in_sourceip, policies_filename, using_deviceinfo_values, policymatch_status, in_matchedpolicy, file_contents_lists, process_lock, process_queues):
-
-   # thread parameter initailization
-   global tatalsearched_values, threadlock_key
-   # this parameter will be just in this process for the multiple thread
-   tatalsearched_values = {}
-   threadlock_key = threading.Lock()
+def findout_rule_from_policiesdatabase(in_devicename, in_destinationip, in_src_application, in_dst_application, in_fromzone, in_tozone, in_proto_application, in_sourceip, policies_filename, using_deviceinfo_values, policymatch_status, in_matchedpolicy, file_contents_lists):
 
    _threads_ = []
    for _rulename_seqno_ in in_matchedpolicy[unicode(policymatch_status)]:
@@ -200,25 +197,18 @@ def findout_rule_from_policiesdatabase(in_devicename, in_destinationip, in_src_a
    for th in _threads_:
       th.join()
 
-   # processing summary
-   process_lock.acquire()
-   process_common_values = process_queues.get()
-   # sum dictionay   
-   tatalsearched_values_keyname = tatalsearched_values.keys()
-   process_common_values_keyname = process_common_values.keys()
-   for _keyname_ in tatalsearched_values_keyname:
-     if (unicode(_keyname_) not in process_common_values_keyname) or (str(_keyname_) not in process_common_values_keyname):
-       process_common_values[unicode(_keyname_)] = {}
-       process_common_values[unicode(_keyname_)] = tatalsearched_values[_keyname_]
-   process_queues.put(process_common_values)
-   process_lock.release()
-   # thread time out
-   time.sleep(0)
+   # threading waiting
+   time.sleep(1)
 
 
 @api_view(['GET','POST'])
 @csrf_exempt
 def juniper_searchpolicy_tools_whereismyrule(request,format=None):
+
+   # thread parameter initailization
+   global tatalsearched_values, threadlock_key
+   tatalsearched_values = {}
+   threadlock_key = threading.Lock()
 
    # get method
    if request.method == 'GET':
@@ -275,11 +265,6 @@ def juniper_searchpolicy_tools_whereismyrule(request,format=None):
         stream = BytesIO(get_info)
         data_from_CURL_command = JSONParser().parse(stream)
 
-        # multiple processing : process_lock, process_queues
-        process_lock = Lock()
-        process_queues = Queue()
-        process_common_values = {}
-        process_queues.put(process_common_values)
 
         _threads_ = []
         for _dictData_values_ in data_from_CURL_command:
@@ -306,19 +291,18 @@ def juniper_searchpolicy_tools_whereismyrule(request,format=None):
                 f.close()
                 file_contents_lists = file_contents_lists + read_contents
 
-           # multiple processing
+           # processing
            in_matchedpolicy_keynameslist = in_matchedpolicy.keys()
            for _keyname_ in in_matchedpolicy_keynameslist:
               policymatch_status = str(_keyname_)
-              th = Process(target = findout_rule_from_policiesdatabase, args=(in_devicename, in_destinationip, in_src_application, in_dst_application, in_fromzone, in_tozone, in_proto_application, in_sourceip, policies_filename, using_deviceinfo_values, policymatch_status, in_matchedpolicy, file_contents_lists, process_lock, process_queues,))
+              th = threading.Thread(target = findout_rule_from_policiesdatabase, args=(in_devicename, in_destinationip, in_src_application, in_dst_application, in_fromzone, in_tozone, in_proto_application, in_sourceip, policies_filename, using_deviceinfo_values, policymatch_status, in_matchedpolicy, file_contents_lists,))
               th.start()
               _threads_.append(th)
            for th in _threads_:
               th.join()
 
         # thread finish : read and transfer global value 
-        everysum_from_each_process = process_queues.get()
-        return Response(everysum_from_each_process.values())
+        return Response(tatalsearched_values.values())
 
       except:
         message = "Post Algorithm has some problem!"

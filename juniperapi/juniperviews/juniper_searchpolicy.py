@@ -19,9 +19,7 @@ from juniperapi.setting import USER_VAR_CHCHES
 import os,re,copy,json,time,threading,sys,random
 import paramiko
 from netaddr import *
-
-# thread parameter (added)
-global tatalsearched_values, threadlock_key
+from multiprocessing import Process, Queue, Lock
 
 class JSONResponse(HttpResponse):
     """
@@ -289,13 +287,20 @@ def procesing_searchingmatching(inputsrc_netip, inputsrc_device, inputsrc_zone, 
           threadlock_key.release()
 
    # thread time out
-   time.sleep(2)
+   time.sleep(0)
 
 
 
 
 
-def searching_matchingpolicy_from_request(_dictData_,_routing_dict_,cache_filename):
+def searching_matchingpolicy_from_request(_dictData_, _routing_dict_, cache_filename, process_lock, process_queues):
+
+   # thread in each processing 
+   global tatalsearched_values, threadlock_key
+   # create the key and box for the values
+   threadlock_key = threading.Lock()
+   tatalsearched_values = []
+
    _threads_ = []
    for _src_string_ in _dictData_[u"sourceip"]:
       [ inputsrc_netip, inputsrc_device, inputsrc_zone ] = parsing_filename_to_data(_routing_dict_,_src_string_)
@@ -303,23 +308,25 @@ def searching_matchingpolicy_from_request(_dictData_,_routing_dict_,cache_filena
          [ inputdst_netip, inputdst_device, inputdst_zone ] = parsing_filename_to_data(_routing_dict_,_dst_value_) 
          if re.match(inputsrc_device, inputdst_device, re.I):
            for _app_value_ in _dictData_[u"application"]:       
-              th = threading.Thread(target=procesing_searchingmatching, args=(inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, cache_filename, _app_value_,))
+              th = threading.Thread(target = procesing_searchingmatching, args=(inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, cache_filename, _app_value_,))
               th.start()
               _threads_.append(th) 
    for th in _threads_:
       th.join()
+
+   # processing summary
+   process_lock.acquire()
+   process_common_values = process_queues.get()
+   process_common_values = process_common_values + tatalsearched_values
+   process_queues.put(process_common_values)
+   process_lock.release()
    # thread time out
-   time.sleep(2)
+   time.sleep(0)
 
 
 @api_view(['GET','POST'])
 @csrf_exempt
 def juniper_searchpolicy(request,format=None):
-
-   # thread parameter initailization
-   global tatalsearched_values, threadlock_key
-   tatalsearched_values = []
-   threadlock_key = threading.Lock()
 
    # get method
    if request.method == 'GET':
@@ -368,17 +375,24 @@ def juniper_searchpolicy(request,format=None):
         stream = BytesIO(get_info)
         data_from_CURL_command = JSONParser().parse(stream)
 
+        # multiple processing
+        process_lock = Lock()
+        process_queues = Queue()
+        process_common_values = []
+        process_queues.put(process_common_values)
+
         # thread parameter
         _threads_ = []
         for _dictData_ in data_from_CURL_command:
-           th = threading.Thread(target=searching_matchingpolicy_from_request, args=(_dictData_,_routing_dict_,cache_filename,))
+           th = Process(target = searching_matchingpolicy_from_request, args=(_dictData_, _routing_dict_, cache_filename, process_lock, process_queues,))
            th.start()
            _threads_.append(th)
         for th in _threads_:
            th.join()
    
         # thread finish : read and transfer global value 
-        return Response(tatalsearched_values)
+        everysum_from_each_process = process_queues.get()
+        return Response(everysum_from_each_process)
 
       except:
         message = "Post Algorithm has some problem!"
