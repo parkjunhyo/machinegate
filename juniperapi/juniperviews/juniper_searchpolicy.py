@@ -15,6 +15,7 @@ from juniperapi.setting import ENCAP_PASSWORD
 from juniperapi.setting import RUNSERVER_PORT
 from juniperapi.setting import PARAMIKO_DEFAULT_TIMEWAIT
 from juniperapi.setting import USER_VAR_CHCHES
+from juniperapi.setting import PYTHON_MULTI_PROCESS
 
 import os,re,copy,json,time,threading,sys,random
 import paramiko
@@ -289,39 +290,53 @@ def procesing_searchingmatching(inputsrc_netip, inputsrc_device, inputsrc_zone, 
    # thread time out
    time.sleep(0)
 
+def searching_matchingpolicy_from_request(_dictData_, _routing_dict_, cache_filename):
 
-
-
-
-def searching_matchingpolicy_from_request(_dictData_, _routing_dict_, cache_filename, process_lock, process_queues):
-
-   # thread in each processing 
-   global tatalsearched_values, threadlock_key
-   # create the key and box for the values
-   threadlock_key = threading.Lock()
-   tatalsearched_values = []
-
-   _threads_ = []
    for _src_string_ in _dictData_[u"sourceip"]:
       [ inputsrc_netip, inputsrc_device, inputsrc_zone ] = parsing_filename_to_data(_routing_dict_,_src_string_)
       for _dst_value_ in _dictData_[u"destinationip"]:
          [ inputdst_netip, inputdst_device, inputdst_zone ] = parsing_filename_to_data(_routing_dict_,_dst_value_) 
          if re.match(inputsrc_device, inputdst_device, re.I):
            for _app_value_ in _dictData_[u"application"]:       
-              th = threading.Thread(target = procesing_searchingmatching, args=(inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, cache_filename, _app_value_,))
-              th.start()
-              _threads_.append(th) 
-   for th in _threads_:
-      th.join()
+              procesing_searchingmatching(inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, cache_filename, _app_value_)
 
-   # processing summary
+   # thread time out
+   time.sleep(0)
+
+def calculation_for_dividing( listData, divNumber ):
+   ( _div_value_, _mod_value_ ) = divmod(int(len(listData)),int(divNumber))
+   element_count = int(0)
+   if _mod_value_ == int(0):
+     element_count = int(_div_value_)
+   else:
+     element_count = int(_div_value_) + int(1)
+   return element_count
+
+def run_each_processor(_dictData_list_, _routing_dict_, cache_filename, process_lock, process_queues):
+
+   # from this process, multi thread will be started
+   global tatalsearched_values, threadlock_key
+   threadlock_key = threading.Lock()
+   tatalsearched_values = []
+ 
+   # 
+   _threadlist_ = []
+   for _dictData_ in _dictData_list_: 
+      _thread_ = threading.Thread( target = searching_matchingpolicy_from_request, args = (_dictData_, _routing_dict_, cache_filename,) )
+      _thread_.start()
+      _threadlist_.append(_thread_)
+   for _thread_ in _threadlist_:
+      _thread_.join()
+
+   # 
    process_lock.acquire()
    process_common_values = process_queues.get()
    process_common_values = process_common_values + tatalsearched_values
    process_queues.put(process_common_values)
    process_lock.release()
-   # thread time out
+   # processor cpu  
    time.sleep(0)
+
 
 
 @api_view(['GET','POST'])
@@ -381,15 +396,26 @@ def juniper_searchpolicy(request,format=None):
         process_common_values = []
         process_queues.put(process_common_values)
 
-        # thread parameter
-        _threads_ = []
-        for _dictData_ in data_from_CURL_command:
-           th = Process(target = searching_matchingpolicy_from_request, args=(_dictData_, _routing_dict_, cache_filename, process_lock, process_queues,))
-           th.start()
-           _threads_.append(th)
-        for th in _threads_:
-           th.join()
-   
+        # processing number and seperate the data
+        each_element_number = calculation_for_dividing( data_from_CURL_command, int(PYTHON_MULTI_PROCESS) )
+        processing_number = calculation_for_dividing( data_from_CURL_command, int(each_element_number))
+        dividedData_list = []
+        for _ivalue_ in range(int(processing_number)):
+           expected_begin_index = int(_ivalue_) * each_element_number
+           expected_last_index = (int(_ivalue_) + 1) * each_element_number
+           if len(data_from_CURL_command) < int(expected_last_index):
+             expected_last_index = len(data_from_CURL_command)
+           dividedData_list.append(data_from_CURL_command[expected_begin_index:expected_last_index])
+       
+        # threading depend my difined number
+        _multiprocess_ = []
+        for _dictData_list_ in dividedData_list:
+           _processor_ = Process( target = run_each_processor, args=(_dictData_list_, _routing_dict_, cache_filename, process_lock, process_queues,) )
+           _processor_.start()
+           _multiprocess_.append(_processor_)
+        for _processor_ in _multiprocess_:
+           _processor_.join()
+        
         # thread finish : read and transfer global value 
         everysum_from_each_process = process_queues.get()
         return Response(everysum_from_each_process)

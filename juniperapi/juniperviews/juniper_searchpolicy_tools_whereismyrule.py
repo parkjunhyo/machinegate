@@ -15,6 +15,7 @@ from juniperapi.setting import ENCAP_PASSWORD
 from juniperapi.setting import RUNSERVER_PORT
 from juniperapi.setting import PARAMIKO_DEFAULT_TIMEWAIT
 from juniperapi.setting import USER_VAR_POLICIES 
+from juniperapi.setting import PYTHON_MULTI_PROCESS
 
 import os,re,copy,json,time,threading,sys,random
 import paramiko
@@ -183,24 +184,68 @@ def policydetail_obtain(in_devicename, in_destinationip, in_src_application, in_
    # threading waiting
    time.sleep(0)
 
-def findout_rule_from_policiesdatabase(in_devicename, in_destinationip, in_src_application, in_dst_application, in_fromzone, in_tozone, in_proto_application, in_sourceip, policies_filename, using_deviceinfo_values, policymatch_status, in_matchedpolicy, file_contents_lists, process_lock, process_queues):
+def findout_rule_from_policiesdatabase(in_devicename, in_destinationip, in_src_application, in_dst_application, in_fromzone, in_tozone, in_proto_application, in_matchedpolicy, in_sourceip, policies_filename, using_deviceinfo_values, file_contents_lists, policymatch_status):
 
-   # thread parameter initailization
+   for _rulename_seqno_ in in_matchedpolicy[unicode(policymatch_status)]:
+      policyname_seqnumber = str(_rulename_seqno_)
+      policydetail_obtain(in_devicename, in_destinationip, in_src_application, in_dst_application, in_fromzone, in_tozone, in_proto_application, in_sourceip, policies_filename, using_deviceinfo_values, policymatch_status, in_matchedpolicy, file_contents_lists, policyname_seqnumber)
+
+   # thread time out
+   time.sleep(0)
+
+def calculation_for_dividing( listData, divNumber ):
+   ( _div_value_, _mod_value_ ) = divmod(int(len(listData)),int(divNumber))
+   element_count = int(0)
+   if _mod_value_ == int(0):
+     element_count = int(_div_value_)
+   else:
+     element_count = int(_div_value_) + int(1)
+   return element_count
+
+def run_each_processor(_dictData_list_, process_lock, process_queues, policies_filename, using_deviceinfo_values):
+
    global tatalsearched_values, threadlock_key
-   # this parameter will be just in this process for the multiple thread
    tatalsearched_values = {}
    threadlock_key = threading.Lock()
 
-   _threads_ = []
-   for _rulename_seqno_ in in_matchedpolicy[unicode(policymatch_status)]:
-      policyname_seqnumber = str(_rulename_seqno_)
-      th = threading.Thread(target = policydetail_obtain, args=(in_devicename, in_destinationip, in_src_application, in_dst_application, in_fromzone, in_tozone, in_proto_application, in_sourceip, policies_filename, using_deviceinfo_values, policymatch_status, in_matchedpolicy, file_contents_lists, policyname_seqnumber,))
-      th.start()
-      _threads_.append(th)
-   for th in _threads_:
-      th.join()
+   _threadlist_ = []
 
-   # processing summary
+   for _dictData_values_ in _dictData_list_:
+
+      # initailizaed values
+      in_devicename = _dictData_values_[u"devicename"]
+      in_destinationip = _dictData_values_[u"destinationip"]
+      in_src_application = _dictData_values_[u"src_application"]
+      in_dst_application = _dictData_values_[u"dst_application"]
+      in_fromzone = _dictData_values_[u"fromzone"]
+      in_tozone = _dictData_values_[u"tozone"]
+      in_proto_application = _dictData_values_[u"proto_application"]
+      in_matchedpolicy = _dictData_values_[u"matchedpolicy"]
+      in_sourceip = _dictData_values_[u"sourceip"]
+
+      # every file read
+      filename_pattern = "%(_devicename_)s_from_%(_fromzone_)s_to_%(_tozone_)s" % {"_devicename_":str(in_devicename), "_fromzone_":str(in_fromzone), "_tozone_":str(in_tozone)}
+      file_contents_lists = []
+      for _filefrom_ in policies_filename:
+         if re.search(str(filename_pattern),str(_filefrom_),re.I):
+           fullfilename = USER_VAR_POLICIES + str(_filefrom_)
+           f = open(fullfilename,"r")
+           read_contents = f.readlines()
+           f.close()
+           file_contents_lists = file_contents_lists + read_contents
+
+      # 
+      in_matchedpolicy_keynameslist = in_matchedpolicy.keys()
+      for _keyname_ in in_matchedpolicy_keynameslist:
+         policymatch_status = str(_keyname_)
+         _thread_ = threading.Thread( target = findout_rule_from_policiesdatabase, args = (in_devicename, in_destinationip, in_src_application, in_dst_application, in_fromzone, in_tozone, in_proto_application, in_matchedpolicy, in_sourceip, policies_filename, using_deviceinfo_values, file_contents_lists, policymatch_status,) )
+         _thread_.start()
+         _threadlist_.append(_thread_)
+
+   # finishing
+   for _thread_ in _threadlist_:
+      _thread_.join()
+   #
    process_lock.acquire()
    process_common_values = process_queues.get()
    # sum dictionay   
@@ -212,9 +257,8 @@ def findout_rule_from_policiesdatabase(in_devicename, in_destinationip, in_src_a
        process_common_values[unicode(_keyname_)] = tatalsearched_values[_keyname_]
    process_queues.put(process_common_values)
    process_lock.release()
-   # thread time out
+   #
    time.sleep(0)
-
 
 @api_view(['GET','POST'])
 @csrf_exempt
@@ -281,40 +325,25 @@ def juniper_searchpolicy_tools_whereismyrule(request,format=None):
         process_common_values = {}
         process_queues.put(process_common_values)
 
-        _threads_ = []
-        for _dictData_values_ in data_from_CURL_command:
-           
-           # initailizaed values
-           in_devicename = _dictData_values_[u"devicename"]
-           in_destinationip = _dictData_values_[u"destinationip"]
-           in_src_application = _dictData_values_[u"src_application"]
-           in_dst_application = _dictData_values_[u"dst_application"]
-           in_fromzone = _dictData_values_[u"fromzone"]
-           in_tozone = _dictData_values_[u"tozone"]
-           in_proto_application = _dictData_values_[u"proto_application"]
-           in_matchedpolicy = _dictData_values_[u"matchedpolicy"]
-           in_sourceip = _dictData_values_[u"sourceip"]
+        # processing number and seperate the data
+        each_element_number = calculation_for_dividing( data_from_CURL_command, int(PYTHON_MULTI_PROCESS) )
+        processing_number = calculation_for_dividing( data_from_CURL_command, int(each_element_number))
+        dividedData_list = []
+        for _ivalue_ in range(int(processing_number)):
+           expected_begin_index = int(_ivalue_) * each_element_number
+           expected_last_index = (int(_ivalue_) + 1) * each_element_number
+           if len(data_from_CURL_command) < int(expected_last_index):
+             expected_last_index = len(data_from_CURL_command)
+           dividedData_list.append(data_from_CURL_command[expected_begin_index:expected_last_index])
 
-           # file read
-           filename_pattern = "%(_devicename_)s_from_%(_fromzone_)s_to_%(_tozone_)s" % {"_devicename_":str(in_devicename), "_fromzone_":str(in_fromzone), "_tozone_":str(in_tozone)}
-           file_contents_lists = []
-           for _filefrom_ in policies_filename:
-              if re.search(str(filename_pattern),str(_filefrom_),re.I):
-                fullfilename = USER_VAR_POLICIES + str(_filefrom_)
-                f = open(fullfilename,"r")
-                read_contents = f.readlines()
-                f.close()
-                file_contents_lists = file_contents_lists + read_contents
-
-           # multiple processing
-           in_matchedpolicy_keynameslist = in_matchedpolicy.keys()
-           for _keyname_ in in_matchedpolicy_keynameslist:
-              policymatch_status = str(_keyname_)
-              th = Process(target = findout_rule_from_policiesdatabase, args=(in_devicename, in_destinationip, in_src_application, in_dst_application, in_fromzone, in_tozone, in_proto_application, in_sourceip, policies_filename, using_deviceinfo_values, policymatch_status, in_matchedpolicy, file_contents_lists, process_lock, process_queues,))
-              th.start()
-              _threads_.append(th)
-           for th in _threads_:
-              th.join()
+        # run processing : run_each_processor(dividedData_list, process_lock, process_queues, policies_filename, using_deviceinfo_values)
+        _multiprocess_ = []
+        for _dictData_list_ in dividedData_list:
+           _processor_ = Process( target = run_each_processor, args=(_dictData_list_, process_lock, process_queues, policies_filename, using_deviceinfo_values,) )
+           _processor_.start()
+           _multiprocess_.append(_processor_)
+        for _processor_ in _multiprocess_:
+           _processor_.join() 
 
         # thread finish : read and transfer global value 
         everysum_from_each_process = process_queues.get()
