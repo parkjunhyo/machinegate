@@ -137,7 +137,6 @@ def run_caching(_filename_pattern_):
 
       # policy name searching (searched_policyname, _policyaction_status_, searched_sequencenumber, searched_from, searched_to)
       ( _policyname_, _policyaction_status_, _sequence_number_, _policyfromzone_, _policytozone_ ) = findout_policyname_sequence(_policy_info_list_) 
-      print ( _policyname_, _policyaction_status_, _sequence_number_, _policyfromzone_, _policytozone_ )
 
       #_policyname_ = str(str(str(string_sum_content[_policy_start_end_[0]]).strip().split("Policy: ")[1]).strip().split(",")[0])
       ## sequence number : Sequence number:
