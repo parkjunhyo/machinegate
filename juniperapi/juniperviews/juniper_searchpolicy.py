@@ -135,7 +135,7 @@ def compare_including_application(file_database,input_application):
    else:
      if re.search(r"icmp", application_split[0].strip().lower(), re.I):
        return file_database[unicode(r"icmp")]
-
+   # tcp udp processing
    return_matched_list = [] 
    _keyname_database_ = file_database.keys()
    for _keyname_ in _keyname_database_:    
@@ -164,7 +164,7 @@ def partial_including_application(file_database,input_application):
    else:
      if re.search(r"icmp", application_split[0].strip().lower(), re.I):
        return file_database[unicode(r"icmp")]
-
+   # tcp udp processing
    return_matched_list = []
    _keyname_database_ = file_database.keys()
    for _keyname_ in _keyname_database_:    
@@ -267,29 +267,9 @@ def procesing_searchingmatching(inputsrc_netip, inputsrc_device, inputsrc_zone, 
        tempdict_box[u'src_application'] = str(_src_portrange_)
        tempdict_box[u'dst_application'] = str(_dst_portrange_)
        tempdict_box[u'proto_application'] = str(_app_proto_)
-
        # application port definition
        src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_src_portrange_)}
        dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)}
-
-       # perfect matching processing
-       matched_policylist = perfect_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
-       tempdict_box[u'matchedpolicy'][u'perfectmatch'] = tempdict_box[u'matchedpolicy'][u'perfectmatch'] + matched_policylist
-       perfect_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'perfectmatch'])
-
-       # include matching processing
-       matched_policylist = include_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
-       for _matcheditem_ in matched_policylist:
-          if _matcheditem_ not in perfect_matched_policylist:
-            tempdict_box[u'matchedpolicy'][u'includematch'].append(_matcheditem_)
-       included_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'includematch'])
-
-       # patial matching processing
-       matched_policylist = patial_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
-       for _matcheditem_ in matched_policylist:
-          if (_matcheditem_ not in perfect_matched_policylist) and (_matcheditem_ not in included_matched_policylist):
-            tempdict_box[u'matchedpolicy'][u'partialmatch'].append(_matcheditem_)
-
      else:
        if icmp_app_matching:
          _app_proto_  = appvalue_string[0]
@@ -300,22 +280,23 @@ def procesing_searchingmatching(inputsrc_netip, inputsrc_device, inputsrc_zone, 
          src_proto_port_string = "%(_proto_)s" % {"_proto_":str(_app_proto_)}
          dst_proto_port_string = "%(_proto_)s" % {"_proto_":str(_app_proto_)}
 
-         # perfect matching processing
-         matched_policylist = perfect_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
-         tempdict_box[u'matchedpolicy'][u'perfectmatch'] = tempdict_box[u'matchedpolicy'][u'perfectmatch'] + matched_policylist
-         perfect_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'perfectmatch'])
+     # perfect matching processing
+     matched_policylist = perfect_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
+     tempdict_box[u'matchedpolicy'][u'perfectmatch'] = tempdict_box[u'matchedpolicy'][u'perfectmatch'] + matched_policylist
+     perfect_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'perfectmatch'])
 
-         # include matching processing
-         matched_policylist = include_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
-         for _matcheditem_ in matched_policylist:
-            if _matcheditem_ not in perfect_matched_policylist:
-              tempdict_box[u'matchedpolicy'][u'includematch'].append(_matcheditem_)
-         included_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'includematch'])         
-         ## patial matching processing
-         #matched_policylist = patial_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
-         #for _matcheditem_ in matched_policylist:
-         #   if (_matcheditem_ not in perfect_matched_policylist) and (_matcheditem_ not in included_matched_policylist):
-         #     tempdict_box[u'matchedpolicy'][u'partialmatch'].append(_matcheditem_)
+     # include matching processing
+     matched_policylist = include_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
+     for _matcheditem_ in matched_policylist:
+        if _matcheditem_ not in perfect_matched_policylist:
+          tempdict_box[u'matchedpolicy'][u'includematch'].append(_matcheditem_)
+     included_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'includematch'])
+
+     # patial matching processing
+     matched_policylist = patial_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
+     for _matcheditem_ in matched_policylist:
+        if (_matcheditem_ not in perfect_matched_policylist) and (_matcheditem_ not in included_matched_policylist):
+          tempdict_box[u'matchedpolicy'][u'partialmatch'].append(_matcheditem_)
 
      process_lock.acquire()
      process_queues.put(tempdict_box)
