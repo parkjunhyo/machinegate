@@ -16,6 +16,7 @@ from juniperapi.setting import RUNSERVER_PORT
 from juniperapi.setting import PARAMIKO_DEFAULT_TIMEWAIT
 from juniperapi.setting import USER_VAR_CHCHES
 from juniperapi.setting import PYTHON_MULTI_PROCESS
+from juniperapi.setting import PYTHON_MULTI_THREAD
 
 import os,re,copy,json,time,threading,sys,random
 import paramiko
@@ -127,178 +128,176 @@ def partial_includ_match_netip(file_database,inputsrc_netip):
 
 def compare_including_application(file_database,input_application):
    application_split = input_application.strip().split("/")
-   if (len(application_split) != 2):
-     Response("error, including application function has error!", status=status.HTTP_400_BAD_REQUEST)
    [ _proto_, _port_range_ ] = application_split   
    portrange_split = _port_range_.strip().split("-") 
-   if (len(portrange_split) != 2):
-     Response("error, including application function has error!", status=status.HTTP_400_BAD_REQUEST)
    [ _start_port_, _end_port_ ] = portrange_split
    return_matched_list = []
    _keyname_database_ = file_database.keys()
    for _keyname_ in _keyname_database_:    
-      key_split = _keyname_.strip().split("/")
-      if (len(key_split) != 2):
-        Response("error, caching data has wrong format!", status=status.HTTP_400_BAD_REQUEST)
-      [ _key_proto_, _key_port_range_ ] = key_split    
-      keyport_split = _key_port_range_.strip().split("-")
-      if (len(keyport_split) != 2):
-        Response("error, caching data has wrong format!", status=status.HTTP_400_BAD_REQUEST)
-      [ _key_start_port_, _key_end_port_ ] = keyport_split
-      if re.match(str(_proto_).lower(),str(_key_proto_).lower(),re.I):
-        keyportragne_list = range(int(_key_start_port_),int(_key_end_port_)+int(1))
-        portragne_list = range(int(_start_port_),int(_end_port_)+int(1))
-        if len(portragne_list) <= len(keyportragne_list):
-          if set(portragne_list).intersection(keyportragne_list) == set(portragne_list):
-            return_matched_list = return_matched_list + file_database[_keyname_]
+      if re.search(r"tcp", str(_keyname_), re.I) or re.search(r"udp", str(_keyname_), re.I):
+        key_split = _keyname_.strip().split("/")
+        [ _key_proto_, _key_port_range_ ] = key_split
+        keyport_split = _key_port_range_.strip().split("-")
+        [ _key_start_port_, _key_end_port_ ] = keyport_split
+        if re.match(str(_proto_).lower(),str(_key_proto_).lower(),re.I):
+          keyportragne_list = range(int(_key_start_port_),int(_key_end_port_)+int(1))
+          portragne_list = range(int(_start_port_),int(_end_port_)+int(1))
+          if len(portragne_list) <= len(keyportragne_list):
+            if set(portragne_list).intersection(keyportragne_list) == set(portragne_list):
+              return_matched_list = return_matched_list + file_database[_keyname_]
+      else:
+        if re.search(r"icmp", str(_keyname_), re.I):
+          continue
    return return_matched_list            
     
 def partial_including_application(file_database,input_application):
    application_split = input_application.strip().split("/")
-   if (len(application_split) != 2):
-     Response("error, including application function has error!", status=status.HTTP_400_BAD_REQUEST)
    [ _proto_, _port_range_ ] = application_split   
    portrange_split = _port_range_.strip().split("-") 
-   if (len(portrange_split) != 2):
-     Response("error, including application function has error!", status=status.HTTP_400_BAD_REQUEST)
    [ _start_port_, _end_port_ ] = portrange_split
    return_matched_list = []
    _keyname_database_ = file_database.keys()
    for _keyname_ in _keyname_database_:    
-      key_split = _keyname_.strip().split("/")
-      if (len(key_split) != 2):
-        Response("error, caching data has wrong format!", status=status.HTTP_400_BAD_REQUEST)
-      [ _key_proto_, _key_port_range_ ] = key_split    
-      keyport_split = _key_port_range_.strip().split("-")
-      if (len(keyport_split) != 2):
-        Response("error, caching data has wrong format!", status=status.HTTP_400_BAD_REQUEST)
-      [ _key_start_port_, _key_end_port_ ] = keyport_split
-      if re.match(str(_proto_).lower(),str(_key_proto_).lower(),re.I):
-        keyportragne_list = range(int(_key_start_port_),int(_key_end_port_)+int(1))
-        portragne_list = range(int(_start_port_),int(_end_port_)+int(1))
-        if len(portragne_list) <= len(keyportragne_list):
-          if set(portragne_list).intersection(keyportragne_list) == set(portragne_list):
-            return_matched_list = return_matched_list + file_database[_keyname_]
-        else:
-          if set(portragne_list).intersection(keyportragne_list) == set(keyportragne_list):
-            return_matched_list = return_matched_list + file_database[_keyname_]
+      if re.search(r"tcp", str(_keyname_), re.I) or re.search(r"udp", str(_keyname_), re.I):
+        key_split = _keyname_.strip().split("/")
+        [ _key_proto_, _key_port_range_ ] = key_split    
+        keyport_split = _key_port_range_.strip().split("-")
+        [ _key_start_port_, _key_end_port_ ] = keyport_split
+        if re.match(str(_proto_).lower(),str(_key_proto_).lower(),re.I):
+          keyportragne_list = range(int(_key_start_port_),int(_key_end_port_)+int(1))
+          portragne_list = range(int(_start_port_),int(_end_port_)+int(1))
+          if len(portragne_list) <= len(keyportragne_list):
+            if set(portragne_list).intersection(keyportragne_list) == set(portragne_list):
+              return_matched_list = return_matched_list + file_database[_keyname_]
+          else:
+            if set(portragne_list).intersection(keyportragne_list) == set(keyportragne_list):
+              return_matched_list = return_matched_list + file_database[_keyname_]
+      else:
+        if re.search(r"icmp", str(_keyname_), re.I):
+          continue
    return return_matched_list
 
-def procesing_searchingmatching(inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, cache_filename, _app_value_):
-   # thread parameter 
-   global tatalsearched_values, threadlock_key
+def perfect_match_lookup_function(srcnetip_file_database, dstnetip_file_database, srcapp_file_database, dstapp_file_database, inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string):
+   perfect_matched_policylist = []
+   source_in_filedb_list = []
+   destination_in_filedb_list = []
+   application_in_filedb_list = []
+   source_in_filedb_list  = get_listvalue_matchedby_keyname(srcnetip_file_database, inputsrc_netip)
+   destination_in_filedb_list  = get_listvalue_matchedby_keyname(dstnetip_file_database, inputdst_netip)
+   src_application_in_filedb_list = get_listvalue_matchedby_keyname(srcapp_file_database, src_proto_port_string)
+   dst_application_in_filedb_list = get_listvalue_matchedby_keyname(dstapp_file_database, dst_proto_port_string)
+   matched_policylist = []
+   if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
+     matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
+   return matched_policylist    
 
-   # initialization the container
+def include_match_lookup_function(srcnetip_file_database, dstnetip_file_database, srcapp_file_database, dstapp_file_database, inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string):
+   included_matched_policylist = []
+   source_in_filedb_list = []
+   destination_in_filedb_list = []
+   application_in_filedb_list = []
+   source_in_filedb_list = compare_including_netip(srcnetip_file_database, inputsrc_netip)
+   destination_in_filedb_list = compare_including_netip(dstnetip_file_database, inputdst_netip)
+   src_application_in_filedb_list = compare_including_application(srcapp_file_database, src_proto_port_string)
+   dst_application_in_filedb_list = compare_including_application(dstapp_file_database, dst_proto_port_string)
+   matched_policylist = []
+   if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
+     matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
+   return matched_policylist    
+
+def patial_match_lookup_function(srcnetip_file_database, dstnetip_file_database, srcapp_file_database, dstapp_file_database, inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string):
+   source_in_filedb_list = []
+   destination_in_filedb_list = []
+   application_in_filedb_list = []
+   source_in_filedb_list = partial_includ_match_netip(srcnetip_file_database, inputsrc_netip)
+   destination_in_filedb_list = partial_includ_match_netip(dstnetip_file_database, inputdst_netip)
+   src_application_in_filedb_list = partial_including_application(srcapp_file_database, src_proto_port_string)
+   dst_application_in_filedb_list = partial_including_application(dstapp_file_database, dst_proto_port_string)
+   matched_policylist = []
+   if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
+     matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
+   return matched_policylist    
+
+def procesing_searchingmatching(inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, cache_filename, _app_value_, process_lock, process_queues):
+   
    tempdict_box = {}
 
-   # any rule define
-   appvalue_string = _app_value_.strip().split("/")
-   if len(appvalue_string) == int(2):
-      [ _app_proto_, _app_number_ ] = appvalue_string
-      src_dst_portrange = _app_number_.strip().split(":")
-      if len(src_dst_portrange) == int(2):
-        [ _src_portrange_, _dst_portrange_ ] = src_dst_portrange
+   policy_cache_filename = "cachepolicy_%(_devicestring_)s_from_%(_fromzone_)s_to_%(_tozone_)s.txt" % {"_devicestring_":str(inputsrc_device),"_fromzone_":str(inputsrc_zone),"_tozone_":str(inputdst_zone)}
+   if str(policy_cache_filename) in cache_filename:
 
-        policy_cache_filename = "cachepolicy_%(_devicestring_)s_from_%(_fromzone_)s_to_%(_tozone_)s.txt" % {"_devicestring_":str(inputsrc_device),"_fromzone_":str(inputsrc_zone),"_tozone_":str(inputdst_zone)}
-        if str(policy_cache_filename) in cache_filename:
-          # fill default container
-          tempdict_box[u'sourceip'] = str(inputsrc_netip)
-          tempdict_box[u'destinationip'] = str(inputdst_netip)
-          tempdict_box[u'proto_application'] = str(_app_proto_)
-          tempdict_box[u'src_application'] = str(_src_portrange_)
-          tempdict_box[u'dst_application'] = str(_dst_portrange_)
-          tempdict_box[u'devicename'] = str(inputsrc_device)
-          tempdict_box[u'fromzone'] = str(inputsrc_zone)
-          tempdict_box[u'tozone'] = str(inputdst_zone)
-          tempdict_box[u'matchedpolicy'] = {}
-          tempdict_box[u'matchedpolicy'][u'perfectmatch'] = []
-          tempdict_box[u'matchedpolicy'][u'includematch'] = []
-          tempdict_box[u'matchedpolicy'][u'partialmatch'] = []
+     # file existed to read, it will be used searching
+     database_filefull = USER_VAR_CHCHES + str(policy_cache_filename)
+     f = open(database_filefull,"r")
+     string_contents = f.readlines()
+     f.close()
+     stream = BytesIO(string_contents[0])
+     file_database = JSONParser().parse(stream)
+  
+     # default values not related
+     tempdict_box[u'sourceip'] = str(inputsrc_netip)
+     tempdict_box[u'destinationip'] = str(inputdst_netip)
+     tempdict_box[u'devicename'] = str(inputsrc_device)
+     tempdict_box[u'fromzone'] = str(inputsrc_zone)
+     tempdict_box[u'tozone'] = str(inputdst_zone)
+     tempdict_box[u'matchedpolicy'] = {}
+     tempdict_box[u'matchedpolicy'][u'perfectmatch'] = []
+     tempdict_box[u'matchedpolicy'][u'includematch'] = []
+     tempdict_box[u'matchedpolicy'][u'partialmatch'] = []
+     
+     appvalue_string = _app_value_.strip().split("/")
 
-          # file db read
-          database_filefull = USER_VAR_CHCHES + str(policy_cache_filename) 
-          f = open(database_filefull,"r")
-          string_contents = f.readlines()
-          f.close()
-          stream = BytesIO(string_contents[0])
-          file_database = JSONParser().parse(stream)
-                     
-          # perfect matching processing 
-          perfect_matched_policylist = []
-          source_in_filedb_list = []
-          destination_in_filedb_list = []
-          application_in_filedb_list = []
-          source_in_filedb_list  = get_listvalue_matchedby_keyname(file_database[u'source'],inputsrc_netip)
-          destination_in_filedb_list  = get_listvalue_matchedby_keyname(file_database[u'destination'],inputdst_netip)
-          src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_src_portrange_)}
-          dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)}  
-          src_application_in_filedb_list = get_listvalue_matchedby_keyname(file_database[u'source_application'],src_proto_port_string)
-          dst_application_in_filedb_list = get_listvalue_matchedby_keyname(file_database[u'destination_application'],dst_proto_port_string)
-          if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
-            # there is something matched in the cache
-            matched_policylist = []
-            matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
-            if len(matched_policylist) != 0:
-              tempdict_box[u'matchedpolicy'][u'perfectmatch'] = tempdict_box[u'matchedpolicy'][u'perfectmatch'] + matched_policylist
-          perfect_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'perfectmatch'])
+     # matching app protocol
+     tcp_app_matching = re.search(r"tcp", str(appvalue_string[0].strip().lower()), re.I)
+     udp_app_matching = re.search(r"udp", str(appvalue_string[0].strip().lower()), re.I)
+     icmp_app_matching = re.search(r"icmp", str(appvalue_string[0].strip().lower()), re.I)
 
-          # include matching processing
-          included_matched_policylist = []
-          source_in_filedb_list = []
-          destination_in_filedb_list = []
-          application_in_filedb_list = []
-          source_in_filedb_list = compare_including_netip(file_database[u'source'],inputsrc_netip)
-          destination_in_filedb_list = compare_including_netip(file_database[u'destination'],inputdst_netip)
-          src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_src_portrange_)}
-          dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)}
-          src_application_in_filedb_list = compare_including_application(file_database[u'source_application'],src_proto_port_string)
-          dst_application_in_filedb_list = compare_including_application(file_database[u'destination_application'],dst_proto_port_string)
-          if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
-            # there is something matched in the cache
-            matched_policylist = []
-            matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
-            if len(matched_policylist) != 0:
-              for _matcheditem_ in matched_policylist:
-                 if _matcheditem_ not in perfect_matched_policylist:
-                   tempdict_box[u'matchedpolicy'][u'includematch'].append(_matcheditem_)
-          included_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'includematch'])
-                       
-          # patial matching processing 
-          source_in_filedb_list = []
-          destination_in_filedb_list = []
-          application_in_filedb_list = []
-          source_in_filedb_list = partial_includ_match_netip(file_database[u'source'],inputsrc_netip)
-          destination_in_filedb_list = partial_includ_match_netip(file_database[u'destination'],inputdst_netip)
-          src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_src_portrange_)}
-          dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)}
-          src_application_in_filedb_list = partial_including_application(file_database[u'source_application'],src_proto_port_string)
-          dst_application_in_filedb_list = partial_including_application(file_database[u'destination_application'],dst_proto_port_string)
-          if len(source_in_filedb_list)*len(destination_in_filedb_list)*len(src_application_in_filedb_list)*len(dst_application_in_filedb_list):
-            # there is something matched in the cache 
-            matched_policylist = []
-            matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
-            if len(matched_policylist) != 0:
-              for _matcheditem_ in matched_policylist:
-                 if (_matcheditem_ not in perfect_matched_policylist) and (_matcheditem_ not in included_matched_policylist):
-                   tempdict_box[u'matchedpolicy'][u'partialmatch'].append(_matcheditem_)
+     if tcp_app_matching or udp_app_matching:
+       [ _app_proto_, _app_number_ ] = appvalue_string
+       [ _src_portrange_, _dst_portrange_ ] = _app_number_.strip().split(":")
+       tempdict_box[u'src_application'] = str(_src_portrange_)
+       tempdict_box[u'dst_application'] = str(_dst_portrange_)
+       tempdict_box[u'proto_application'] = str(_app_proto_)
 
-          # fill default container
-          threadlock_key.acquire()
-          tatalsearched_values.append(tempdict_box)
-          threadlock_key.release()
+       # application port definition
+       src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_src_portrange_)}
+       dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)}
 
-   # thread time out
-   time.sleep(0)
+       # perfect matching processing
+       matched_policylist = perfect_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
+       tempdict_box[u'matchedpolicy'][u'perfectmatch'] = tempdict_box[u'matchedpolicy'][u'perfectmatch'] + matched_policylist
+       perfect_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'perfectmatch'])
 
-def searching_matchingpolicy_from_request(_dictData_, _routing_dict_, cache_filename):
+       # include matching processing
+       matched_policylist = include_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
+       for _matcheditem_ in matched_policylist:
+          if _matcheditem_ not in perfect_matched_policylist:
+            tempdict_box[u'matchedpolicy'][u'includematch'].append(_matcheditem_)
+       included_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'includematch'])
 
-   for _src_string_ in _dictData_[u"sourceip"]:
-      [ inputsrc_netip, inputsrc_device, inputsrc_zone ] = parsing_filename_to_data(_routing_dict_,_src_string_)
-      for _dst_value_ in _dictData_[u"destinationip"]:
-         [ inputdst_netip, inputdst_device, inputdst_zone ] = parsing_filename_to_data(_routing_dict_,_dst_value_) 
-         if re.match(inputsrc_device, inputdst_device, re.I):
-           for _app_value_ in _dictData_[u"application"]:       
-              procesing_searchingmatching(inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, cache_filename, _app_value_)
+       # patial matching processing
+       matched_policylist = patial_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
+       for _matcheditem_ in matched_policylist:
+          if (_matcheditem_ not in perfect_matched_policylist) and (_matcheditem_ not in included_matched_policylist):
+            tempdict_box[u'matchedpolicy'][u'partialmatch'].append(_matcheditem_)
+
+     else:
+       if icmp_app_matching:
+         _app_proto_  = appvalue_string[0]
+         tempdict_box[u'src_application'] = str("none")
+         tempdict_box[u'dst_application'] = str("none")
+         tempdict_box[u'proto_application'] = str(_app_proto_)
+         # application port definition
+         src_proto_port_string = "%(_proto_)s" % {"_proto_":str(_app_proto_)}
+         dst_proto_port_string = "%(_proto_)s" % {"_proto_":str(_app_proto_)}
+
+         # perfect matching processing
+         matched_policylist = perfect_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
+         tempdict_box[u'matchedpolicy'][u'perfectmatch'] = tempdict_box[u'matchedpolicy'][u'perfectmatch'] + matched_policylist
+         perfect_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'perfectmatch'])
+   #
+     process_lock.acquire()
+     process_queues.put(tempdict_box)
+     process_lock.release()
 
    # thread time out
    time.sleep(0)
@@ -312,28 +311,38 @@ def calculation_for_dividing( listData, divNumber ):
      element_count = int(_div_value_) + int(1)
    return element_count
 
-def run_each_processor(_dictData_list_, _routing_dict_, cache_filename, process_lock, process_queues):
-
-   # from this process, multi thread will be started
+def run_each_processor(_dictData_list_, _routing_dict_, cache_filename):
+   
+   # multi thread parameter
    global tatalsearched_values, threadlock_key
-   threadlock_key = threading.Lock()
-   tatalsearched_values = []
- 
-   # 
-   _threadlist_ = []
-   for _dictData_ in _dictData_list_: 
-      _thread_ = threading.Thread( target = searching_matchingpolicy_from_request, args = (_dictData_, _routing_dict_, cache_filename,) )
-      _thread_.start()
-      _threadlist_.append(_thread_)
-   for _thread_ in _threadlist_:
-      _thread_.join()
 
-   # 
-   process_lock.acquire()
-   process_common_values = process_queues.get()
-   process_common_values = process_common_values + tatalsearched_values
-   process_queues.put(process_common_values)
-   process_lock.release()
+   # multiple processing
+   process_lock = Lock()
+   process_queues = Queue()
+
+   _multiprocess_ = []
+   for _dictData_ in _dictData_list_:
+      for _src_string_ in _dictData_[u"sourceip"]:
+         [ inputsrc_netip, inputsrc_device, inputsrc_zone ] = parsing_filename_to_data(_routing_dict_,_src_string_)
+         for _dst_value_ in _dictData_[u"destinationip"]:
+            [ inputdst_netip, inputdst_device, inputdst_zone ] = parsing_filename_to_data(_routing_dict_,_dst_value_)
+            if re.match(inputsrc_device, inputdst_device, re.I):
+              for _app_value_ in _dictData_[u"application"]:
+                 _processor_ = Process(target = procesing_searchingmatching, args = (inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, cache_filename, _app_value_, process_lock, process_queues,))
+                 _processor_.start()
+                 _multiprocess_.append(_processor_)
+
+   for _processor_ in _multiprocess_:
+      _processor_.join()
+      time.sleep(0)
+
+   print "processor..in this thread... completed!"
+  
+   threadlock_key.acquire()
+   while not process_queues.empty():
+      tatalsearched_values.append(process_queues.get())
+   threadlock_key.release()    
+
    # processor cpu  
    time.sleep(0)
 
@@ -342,6 +351,11 @@ def run_each_processor(_dictData_list_, _routing_dict_, cache_filename, process_
 @api_view(['GET','POST'])
 @csrf_exempt
 def juniper_searchpolicy(request,format=None):
+
+   # 
+   global tatalsearched_values, threadlock_key
+   threadlock_key = threading.Lock()
+   tatalsearched_values = []
 
    # get method
    if request.method == 'GET':
@@ -355,7 +369,7 @@ def juniper_searchpolicy(request,format=None):
            {
              "sourceip" : "172.22.0.0/16",
              "destinationip" : "172.22.209.0/24",
-             "application" : "icmp/0-0:0-65535"
+             "application" : "icmp"
            },
            {
              "sourceip" : "172.22.112.0/23",
@@ -390,14 +404,8 @@ def juniper_searchpolicy(request,format=None):
         stream = BytesIO(get_info)
         data_from_CURL_command = JSONParser().parse(stream)
 
-        # multiple processing
-        process_lock = Lock()
-        process_queues = Queue()
-        process_common_values = []
-        process_queues.put(process_common_values)
-
         # processing number and seperate the data
-        each_element_number = calculation_for_dividing( data_from_CURL_command, int(PYTHON_MULTI_PROCESS) )
+        each_element_number = calculation_for_dividing( data_from_CURL_command, int(PYTHON_MULTI_THREAD) )
         processing_number = calculation_for_dividing( data_from_CURL_command, int(each_element_number))
         dividedData_list = []
         for _ivalue_ in range(int(processing_number)):
@@ -410,15 +418,14 @@ def juniper_searchpolicy(request,format=None):
         # threading depend my difined number
         _multiprocess_ = []
         for _dictData_list_ in dividedData_list:
-           _processor_ = Process( target = run_each_processor, args=(_dictData_list_, _routing_dict_, cache_filename, process_lock, process_queues,) )
+           _processor_ = threading.Thread( target = run_each_processor, args=(_dictData_list_, _routing_dict_, cache_filename,) )
            _processor_.start()
            _multiprocess_.append(_processor_)
         for _processor_ in _multiprocess_:
            _processor_.join()
-        
-        # thread finish : read and transfer global value 
-        everysum_from_each_process = process_queues.get()
-        return Response(everysum_from_each_process)
+           time.sleep(0)
+
+        return Response(tatalsearched_values)
 
       except:
         message = "Post Algorithm has some problem!"
