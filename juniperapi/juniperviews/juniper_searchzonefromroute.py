@@ -222,6 +222,9 @@ def juniper_searchzonefromroute(request,format=None):
         # validation check
         ipaddr_pattern = "[0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+"
         _confirmed_input_list_ = []
+        # application correct matching
+        _tcpudp_portmatching_ = r"[a-zA-Z0-9]+/[0-9]+-[0-9]+:[0-9]+-[0-9]+"
+        _icmp_appmatching_ = r"icmp"
         for _dictData_ in _input_:
            dictBox_temp = {} 
            dictBox_temp[u'sourceip'] = []
@@ -240,8 +243,9 @@ def juniper_searchzonefromroute(request,format=None):
                 return Response(["error, desination ip address format has problem!"], status=status.HTTP_400_BAD_REQUEST)
            dictBox_temp[u'application'] = []
            for _expected_ipvalue_ in str(_dictData_[u'application']).strip().split(";"):
-              search_element = re.search("[a-zA-Z0-9]+/[0-9]+-[0-9]+:[0-9]+-[0-9]+",str(_expected_ipvalue_),re.I)
-              if search_element:
+              tcpudp_search_element = re.search(_tcpudp_portmatching_, str(_expected_ipvalue_).lower(), re.I)
+              icmp_search_element = re.search(_icmp_appmatching_, str(_expected_ipvalue_).lower(), re.I)
+              if tcpudp_search_element or icmp_search_element:
                 if str(_expected_ipvalue_) not in dictBox_temp[u'application']:
                   dictBox_temp[u'application'].append(str(_expected_ipvalue_))
               else:
@@ -298,24 +302,53 @@ def juniper_searchzonefromroute(request,format=None):
            # application processing
            changed_application = []
            for _expected_ipvalue_ in _dictData_[u'application']:
-              [ _app_proto_, _app_portrange_ ] = str(_expected_ipvalue_).strip().split("/")
-              [ _srcportrange_, _dstportrange_ ] = str(_app_portrange_).strip().split(":")
-              # source port range re-define
-              if re.search(str("0-0"),str(_srcportrange_),re.I) or re.search(str("0-65535"),str(_srcportrange_),re.I):
-                _srcportrange_ = str("0-65535")
-              # destination port range re-define
-              if re.search(str("0-0"),str(_dstportrange_),re.I) or re.search(str("0-65535"),str(_dstportrange_),re.I):
-                _dstportrange_ = str("0-65535")      
-              redefined_srcdstportrange_ = str(":".join([ _srcportrange_, _dstportrange_ ]))                
-              if re.search("any",str(_app_proto_).lower(),re.I):
-                redefined_application = "0/%(_prange_)s;tcp/%(_prange_)s;udp/%(_prange_)s" % {"_prange_":redefined_srcdstportrange_}
+
+              _splited_prototype_portrange_ = str(_expected_ipvalue_).strip().split("/")
+              expected_udp_searched = re.search(r"tcp", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
+              expected_tcp_searched = re.search(r"udp", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
+              expected_icmp_searched = re.search(r"icmp", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
+
+              if expected_udp_searched or expected_tcp_searched:
+                [ _app_proto_, _app_portrange_ ] = _splited_prototype_portrange_
+                [ _srcportrange_, _dstportrange_ ] = str(_app_portrange_).strip().split(":")
+                # source port range re-define
+                if re.search(str("0-0"),str(_srcportrange_),re.I) or re.search(str("0-65535"),str(_srcportrange_),re.I):
+                  _srcportrange_ = str("0-65535")
+                # destination port range re-define
+                if re.search(str("0-0"),str(_dstportrange_),re.I) or re.search(str("0-65535"),str(_dstportrange_),re.I):
+                  _dstportrange_ = str("0-65535")
+                redefined_srcdstportrange_ = str(":".join([ _srcportrange_, _dstportrange_ ]))
+                # protocol redefine
+                if re.search("any",str(_app_proto_).lower(),re.I):
+                  redefined_application = "0/%(_prange_)s;tcp/%(_prange_)s;udp/%(_prange_)s" % {"_prange_":redefined_srcdstportrange_}
+                else:
+                  redefined_application = "%(_proto_)s/%(_prange_)s" % {"_proto_":str(_app_proto_).lower(),"_prange_":redefined_srcdstportrange_}
                 for _redef_app_ in redefined_application.split(";"):
                    if _redef_app_ not in changed_application:
                      changed_application.append(_redef_app_)
               else:
-                redefined_application = "%(_proto_)s/%(_prange_)s" % {"_proto_":str(_app_proto_).lower(),"_prange_":redefined_srcdstportrange_}
-                if redefined_application not in changed_application:
-                  changed_application.append(redefined_application)
+                if expected_icmp_searched:
+                  if str("icmp") not in changed_application:
+                    changed_application.append(str("icmp"))
+
+              #[ _app_proto_, _app_portrange_ ] = str(_expected_ipvalue_).strip().split("/")
+              #[ _srcportrange_, _dstportrange_ ] = str(_app_portrange_).strip().split(":")
+              ## source port range re-define
+              #if re.search(str("0-0"),str(_srcportrange_),re.I) or re.search(str("0-65535"),str(_srcportrange_),re.I):
+              #  _srcportrange_ = str("0-65535")
+              ## destination port range re-define
+              #if re.search(str("0-0"),str(_dstportrange_),re.I) or re.search(str("0-65535"),str(_dstportrange_),re.I):
+              #  _dstportrange_ = str("0-65535")      
+              #redefined_srcdstportrange_ = str(":".join([ _srcportrange_, _dstportrange_ ]))                
+              #if re.search("any",str(_app_proto_).lower(),re.I):
+              #  redefined_application = "0/%(_prange_)s;tcp/%(_prange_)s;udp/%(_prange_)s" % {"_prange_":redefined_srcdstportrange_}
+              #  for _redef_app_ in redefined_application.split(";"):
+              #     if _redef_app_ not in changed_application:
+              #       changed_application.append(_redef_app_)
+              #else:
+              #  redefined_application = "%(_proto_)s/%(_prange_)s" % {"_proto_":str(_app_proto_).lower(),"_prange_":redefined_srcdstportrange_}
+              #  if redefined_application not in changed_application:
+              #    changed_application.append(redefined_application)
            traybox_dict[u'application'] = changed_application
            # 
            full_searched_devicelist.append(traybox_dict)
