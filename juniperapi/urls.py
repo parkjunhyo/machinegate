@@ -9,7 +9,6 @@ urlpatterns = [
     url(r'^juniper/cachingpolicy/$', views.juniper_cachingpolicy),
     url(r'^juniper/searchzonefromroute/$', views.juniper_searchzonefromroute),
     url(r'^juniper/searchpolicy/$', views.juniper_searchpolicy),
-    url(r'^juniper/searchpolicy/tools/whereismyrule/$', views.juniper_searchpolicy_tools_whereismyrule),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
