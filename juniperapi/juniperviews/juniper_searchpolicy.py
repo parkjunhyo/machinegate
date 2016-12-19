@@ -228,127 +228,100 @@ def patial_match_lookup_function(srcnetip_file_database, dstnetip_file_database,
      matched_policylist = compare_srcdstapplist(source_in_filedb_list,destination_in_filedb_list,src_application_in_filedb_list,dst_application_in_filedb_list)
    return matched_policylist    
 
-def procesing_searchingmatching(inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, cache_filename, _app_value_, process_lock, process_queues):
-   
-   tempdict_box = {}
 
-   policy_cache_filename = "cachepolicy_%(_devicestring_)s_from_%(_fromzone_)s_to_%(_tozone_)s.txt" % {"_devicestring_":str(inputsrc_device),"_fromzone_":str(inputsrc_zone),"_tozone_":str(inputdst_zone)}
-   if str(policy_cache_filename) in cache_filename:
+def findout_policydetail_from_cache(_rulename_list_, device_fromtozone_string, file_database):
+   policy_detail = {}
+   for _rulename_string_ in _rulename_list_:
+      if unicode(_rulename_string_) not in policy_detail.keys():
+        unique_string_name = "%(_rulename_string_)s@%(device_fromtozone_string)s" % {"_rulename_string_":str(_rulename_string_), "device_fromtozone_string":str(device_fromtozone_string)}
+        policy_detail[unicode(_rulename_string_)] = file_database[unicode(unique_string_name)] 
+   return policy_detail
+      
 
-     # file existed to read, it will be used searching
-     database_filefull = USER_VAR_CHCHES + str(policy_cache_filename)
-     f = open(database_filefull,"r")
-     string_contents = f.readlines()
-     f.close()
-     stream = BytesIO(string_contents[0])
-     file_database = JSONParser().parse(stream)
-  
-     # default values not related
-     tempdict_box[u'sourceip'] = str(inputsrc_netip)
-     tempdict_box[u'destinationip'] = str(inputdst_netip)
-     tempdict_box[u'devicename'] = str(inputsrc_device)
-     tempdict_box[u'fromzone'] = str(inputsrc_zone)
-     tempdict_box[u'tozone'] = str(inputdst_zone)
-     tempdict_box[u'matchedpolicy'] = {}
-     tempdict_box[u'matchedpolicy'][u'perfectmatch'] = []
-     tempdict_box[u'matchedpolicy'][u'includematch'] = []
-     tempdict_box[u'matchedpolicy'][u'partialmatch'] = []
-     
-     appvalue_string = _app_value_.strip().split("/")
+def procesing_searchingmatching(_each_processorData_, this_processor_queue):
 
-     # matching app protocol
-     tcp_app_matching = re.search(r"tcp", str(appvalue_string[0].strip().lower()), re.I)
-     udp_app_matching = re.search(r"udp", str(appvalue_string[0].strip().lower()), re.I)
-     icmp_app_matching = re.search(r"icmp", str(appvalue_string[0].strip().lower()), re.I)
+   for parameter_combination in _each_processorData_:
+      [ inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, _app_value_, cache_filename ] = parameter_combination 
+      string_Dictvalues = {"inputsrc_netip":str(inputsrc_netip), "inputsrc_device":str(inputsrc_device), "inputsrc_zone":str(inputsrc_zone), "inputdst_netip":str(inputdst_netip), "inputdst_device":str(inputdst_device), "inputdst_zone":str(inputdst_zone)}
 
-     if tcp_app_matching or udp_app_matching:
-       [ _app_proto_, _app_number_ ] = appvalue_string
-       [ _src_portrange_, _dst_portrange_ ] = _app_number_.strip().split(":")
-       tempdict_box[u'src_application'] = str(_src_portrange_)
-       tempdict_box[u'dst_application'] = str(_dst_portrange_)
-       tempdict_box[u'proto_application'] = str(_app_proto_)
-       # application port definition
-       src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_src_portrange_)}
-       dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(_dst_portrange_)}
-     else:
-       if icmp_app_matching:
-         _app_proto_  = appvalue_string[0]
-         tempdict_box[u'src_application'] = str("none")
-         tempdict_box[u'dst_application'] = str("none")
-         tempdict_box[u'proto_application'] = str(_app_proto_)
-         # application port definition
-         src_proto_port_string = "%(_proto_)s" % {"_proto_":str(_app_proto_)}
-         dst_proto_port_string = "%(_proto_)s" % {"_proto_":str(_app_proto_)}
+      if re.match(inputsrc_device, inputdst_device, re.I):
+        policy_cache_filename = "cachepolicy_%(inputsrc_device)s_from_%(inputsrc_zone)s_to_%(inputdst_zone)s.txt" % string_Dictvalues
+        device_fromtozone_string = "%(inputsrc_device)s_from_%(inputsrc_zone)s_to_%(inputdst_zone)s" % string_Dictvalues
 
-     # perfect matching processing
-     matched_policylist = perfect_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
-     tempdict_box[u'matchedpolicy'][u'perfectmatch'] = tempdict_box[u'matchedpolicy'][u'perfectmatch'] + matched_policylist
-     perfect_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'perfectmatch'])
+        if (str(policy_cache_filename) in cache_filename) or (unicode(policy_cache_filename) in cache_filename):
+          # database file read
+          database_filefull = USER_VAR_CHCHES + policy_cache_filename
+          f = open(database_filefull,"r")
+          string_contents = f.readlines()
+          f.close()
+          stream = BytesIO(string_contents[0])
+          file_database = JSONParser().parse(stream) 
+          #
+          tempdict_box = {}
+          tempdict_box[u'sourceip'] = str(inputsrc_netip)
+          tempdict_box[u'destinationip'] = str(inputdst_netip)
+          tempdict_box[u'devicename'] = str(inputsrc_device)
+          tempdict_box[u'fromzone'] = str(inputsrc_zone)
+          tempdict_box[u'tozone'] = str(inputdst_zone)
+          tempdict_box[u'matchedpolicy'] = {}
+          tempdict_box[u'matchedpolicy'][u'perfectmatch'] = []
+          tempdict_box[u'matchedpolicy'][u'includematch'] = []
+          tempdict_box[u'matchedpolicy'][u'partialmatch'] = []
+          tempdict_box[u'matchedpolicydetail'] = {}
+          tempdict_box[u'matchedpolicydetail'][u'perfectmatch'] = {}
+          tempdict_box[u'matchedpolicydetail'][u'includematch'] = {}
+          tempdict_box[u'matchedpolicydetail'][u'partialmatch'] = {}
 
-     # include matching processing
-     matched_policylist = include_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
-     for _matcheditem_ in matched_policylist:
-        if _matcheditem_ not in perfect_matched_policylist:
-          tempdict_box[u'matchedpolicy'][u'includematch'].append(_matcheditem_)
-     included_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'includematch'])
+          # 
+          appvalue_string = _app_value_.strip().split("/")
+          # match the what kind of the protocol is required!
+          tcp_app_matching = re.search(r"tcp", str(appvalue_string[0].strip().lower()), re.I)
+          udp_app_matching = re.search(r"udp", str(appvalue_string[0].strip().lower()), re.I)
+          icmp_app_matching = re.search(r"icmp", str(appvalue_string[0].strip().lower()), re.I)
+          # 
+          if tcp_app_matching or udp_app_matching:
+            [ _app_proto_, _app_number_ ] = appvalue_string
+            [ _src_portrange_, _dst_portrange_ ] = _app_number_.strip().split(":")
+            tempdict_box[u'protocoltype'] = str(_app_proto_)
+            tempdict_box[u'sourceportrange'] = str(_src_portrange_)
+            tempdict_box[u'destinationportrange'] = str(_dst_portrange_)
+            src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(tempdict_box[u'sourceportrange'])}
+            dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(tempdict_box[u'destinationportrange'])}
+          else:
+            if icmp_app_matching:
+              _app_proto_  = appvalue_string[0]
+              tempdict_box[u'protocoltype'] = str(_app_proto_)
+              tempdict_box[u'sourceportrange'] = str("none")
+              tempdict_box[u'destinationportrange'] = str("none")
+              src_proto_port_string = "%(_proto_)s" % {"_proto_":str(_app_proto_)}
+              dst_proto_port_string = "%(_proto_)s" % {"_proto_":str(_app_proto_)}
+          # perfect matching processing
+          matched_policylist = perfect_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
+          #tempdict_box[u'matchedpolicy'][u'perfectmatch'] = tempdict_box[u'matchedpolicy'][u'perfectmatch'] + matched_policylist
+          tempdict_box[u'matchedpolicy'][u'perfectmatch'] = matched_policylist
+          tempdict_box[u'matchedpolicydetail'][u'perfectmatch'] = findout_policydetail_from_cache(tempdict_box[u'matchedpolicy'][u'perfectmatch'], device_fromtozone_string, file_database[u'policydetail'])
+          perfect_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'perfectmatch'])
 
-     # patial matching processing
-     matched_policylist = patial_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
-     for _matcheditem_ in matched_policylist:
-        if (_matcheditem_ not in perfect_matched_policylist) and (_matcheditem_ not in included_matched_policylist):
-          tempdict_box[u'matchedpolicy'][u'partialmatch'].append(_matcheditem_)
+          # include matching processing
+          matched_policylist = include_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
+          for _matcheditem_ in matched_policylist:
+             if _matcheditem_ not in perfect_matched_policylist:
+               tempdict_box[u'matchedpolicy'][u'includematch'].append(_matcheditem_)
+          tempdict_box[u'matchedpolicydetail'][u'includematch'] = findout_policydetail_from_cache(tempdict_box[u'matchedpolicy'][u'includematch'], device_fromtozone_string, file_database[u'policydetail'])
+          included_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'includematch'])
 
-     process_lock.acquire()
-     process_queues.put(tempdict_box)
-     process_lock.release()
+          # patial matching processing
+          matched_policylist = patial_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
+          for _matcheditem_ in matched_policylist:
+             if (_matcheditem_ not in perfect_matched_policylist) and (_matcheditem_ not in included_matched_policylist):
+               tempdict_box[u'matchedpolicy'][u'partialmatch'].append(_matcheditem_)
+          tempdict_box[u'matchedpolicydetail'][u'partialmatch'] = findout_policydetail_from_cache(tempdict_box[u'matchedpolicy'][u'partialmatch'], device_fromtozone_string, file_database[u'policydetail'])
 
-   # thread time out
+          # insert the queue
+          this_processor_queue.put(tempdict_box)
+ 
+   print "processor is completed....!"
    time.sleep(0)
-
-def calculation_for_dividing( listData, divNumber ):
-   ( _div_value_, _mod_value_ ) = divmod(int(len(listData)),int(divNumber))
-   element_count = int(0)
-   if _mod_value_ == int(0):
-     element_count = int(_div_value_)
-   else:
-     element_count = int(_div_value_) + int(1)
-   return element_count
-
-def run_each_processor(_dictData_list_, _routing_dict_, cache_filename):
-   
-   # multi thread parameter
-   global tatalsearched_values, threadlock_key
-
-   # multiple processing
-   process_lock = Lock()
-   process_queues = Queue(maxsize=0)
-
-   _multiprocess_ = []
-   for _dictData_ in _dictData_list_:
-      for _src_string_ in _dictData_[u"sourceip"]:
-         [ inputsrc_netip, inputsrc_device, inputsrc_zone ] = parsing_filename_to_data(_routing_dict_,_src_string_)
-         for _dst_value_ in _dictData_[u"destinationip"]:
-            [ inputdst_netip, inputdst_device, inputdst_zone ] = parsing_filename_to_data(_routing_dict_,_dst_value_)
-            if re.match(inputsrc_device, inputdst_device, re.I):
-              for _app_value_ in _dictData_[u"application"]:
-                 _processor_ = Process(target = procesing_searchingmatching, args = (inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, cache_filename, _app_value_, process_lock, process_queues,))
-                 _processor_.start()
-                 _multiprocess_.append(_processor_)
-
-   for _processor_ in _multiprocess_:
-      _processor_.join()
-
-   print "thread processing... parameter adding!"
-  
-   threadlock_key.acquire()
-   while not process_queues.empty():
-      tatalsearched_values.append(process_queues.get())
-   threadlock_key.release()    
-
-   print "processor..in this thread... completed!"
-   # processor cpu  
-   time.sleep(0)
-
 
 
 @api_view(['GET','POST'])
@@ -407,28 +380,52 @@ def juniper_searchpolicy(request,format=None):
         stream = BytesIO(get_info)
         data_from_CURL_command = JSONParser().parse(stream)
 
-        # processing number and seperate the data
-        each_element_number = calculation_for_dividing( data_from_CURL_command, int(PYTHON_MULTI_THREAD) )
-        processing_number = calculation_for_dividing( data_from_CURL_command, int(each_element_number))
-        dividedData_list = []
-        for _ivalue_ in range(int(processing_number)):
-           expected_begin_index = int(_ivalue_) * each_element_number
-           expected_last_index = (int(_ivalue_) + 1) * each_element_number
-           if len(data_from_CURL_command) < int(expected_last_index):
-             expected_last_index = len(data_from_CURL_command)
-           dividedData_list.append(data_from_CURL_command[expected_begin_index:expected_last_index])
-       
-        # threading depend my difined number
-        _multiprocess_ = []
-        for _dictData_list_ in dividedData_list:
-           _processor_ = threading.Thread( target = run_each_processor, args=(_dictData_list_, _routing_dict_, cache_filename,) )
+        #
+        every_parameter_combination_list = []
+        for _dictData_ in data_from_CURL_command:
+           for _src_string_ in _dictData_[u"sourceip"]:
+              [ inputsrc_netip, inputsrc_device, inputsrc_zone ] = parsing_filename_to_data(_routing_dict_,_src_string_)
+              for _dst_value_ in _dictData_[u"destinationip"]:
+                 [ inputdst_netip, inputdst_device, inputdst_zone ] = parsing_filename_to_data(_routing_dict_,_dst_value_)
+                 if re.match(inputsrc_device, inputdst_device, re.I):
+                   for _app_value_ in _dictData_[u"application"]:
+                      parameter_combination = [ inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, _app_value_, cache_filename ]
+                      every_parameter_combination_list.append(parameter_combination)
+        # init 
+        processing_combination = []
+        processing_queue = []
+        if len(every_parameter_combination_list) <= int(PYTHON_MULTI_PROCESS): 
+          for _i_ in range(len(every_parameter_combination_list)):
+             processing_combination.append([])
+             processing_queue.append(Queue(maxsize=0))
+        else:
+          for _i_ in range(int(PYTHON_MULTI_PROCESS)):
+             processing_combination.append([])
+             processing_queue.append(Queue(maxsize=0))
+        #
+        count = 0
+        for parameter_combination in every_parameter_combination_list:
+           (_values_, _last_) = divmod(count, int(int(PYTHON_MULTI_PROCESS)))
+           processing_combination[_last_].append(parameter_combination)
+           count = count + 1   
+        #
+        count = 0
+        _processor_list_ = []
+        for _each_processorData_ in processing_combination:
+           this_processor_queue = processing_queue[count]
+           _processor_ = Process(target = procesing_searchingmatching, args = (_each_processorData_, this_processor_queue,)) 
            _processor_.start()
-           _multiprocess_.append(_processor_)
-        for _processor_ in _multiprocess_:
+           _processor_list_.append(_processor_) 
+           count = count + 1 
+        for _processor_ in _processor_list_:
            _processor_.join()
-           
-
-        return Response(tatalsearched_values)
+        #
+        search_result = [] 
+        for _queue_ in processing_queue:
+           while not _queue_.empty():
+                search_result.append(_queue_.get())
+        #
+        return Response(search_result)
 
       except:
         message = "Post Algorithm has some problem!"
