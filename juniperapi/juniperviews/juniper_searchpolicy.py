@@ -321,7 +321,7 @@ def run_each_processor(_dictData_list_, _routing_dict_, cache_filename):
 
    # multiple processing
    process_lock = Lock()
-   process_queues = Queue()
+   process_queues = Queue(maxsize=0)
 
    _multiprocess_ = []
    for _dictData_ in _dictData_list_:
@@ -337,15 +337,15 @@ def run_each_processor(_dictData_list_, _routing_dict_, cache_filename):
 
    for _processor_ in _multiprocess_:
       _processor_.join()
-      time.sleep(0)
 
-   print "processor..in this thread... completed!"
+   print "thread processing... parameter adding!"
   
    threadlock_key.acquire()
    while not process_queues.empty():
       tatalsearched_values.append(process_queues.get())
    threadlock_key.release()    
 
+   print "processor..in this thread... completed!"
    # processor cpu  
    time.sleep(0)
 
@@ -426,7 +426,7 @@ def juniper_searchpolicy(request,format=None):
            _multiprocess_.append(_processor_)
         for _processor_ in _multiprocess_:
            _processor_.join()
-           time.sleep(0)
+           
 
         return Response(tatalsearched_values)
 
