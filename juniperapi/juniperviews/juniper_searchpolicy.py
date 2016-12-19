@@ -403,11 +403,13 @@ def juniper_searchpolicy(request,format=None):
              processing_combination.append([])
              processing_queue.append(Queue(maxsize=0))
         #
+        print "Total number of Data : %(_tnumber_)s.... planned with queues for the processing...." % {"_tnumber_":str(len(processing_combination))}
         count = 0
         for parameter_combination in every_parameter_combination_list:
            (_values_, _last_) = divmod(count, int(int(PYTHON_MULTI_PROCESS)))
            processing_combination[_last_].append(parameter_combination)
            count = count + 1   
+        print "datas are divied..!"
         #
         count = 0
         _processor_list_ = []
