@@ -127,19 +127,39 @@ def partial_includ_match_netip(file_database,inputsrc_netip):
 
 
 def compare_including_application(file_database,input_application):
+   #
    application_split = input_application.strip().split("/")
-   if re.search(r"tcp", application_split[0].strip().lower(), re.I) or re.search(r"udp", application_split[0].strip().lower(), re.I):
+   #
+   any_app_matching = re.search(r"any", str(application_split[0].strip().lower()), re.I)
+   interger_any_app_matching = re.search(r"0", str(application_split[0].strip().lower()), re.I)
+   tcp_app_matching = re.search(r"tcp", str(application_split[0].strip().lower()), re.I)
+   udp_app_matching = re.search(r"udp", str(application_split[0].strip().lower()), re.I)
+   icmp_app_matching = re.search(r"icmp", str(application_split[0].strip().lower()), re.I) 
+   #
+   #if re.search(r"tcp", application_split[0].strip().lower(), re.I) or re.search(r"udp", application_split[0].strip().lower(), re.I):
+   if any_app_matching or interger_any_app_matching or tcp_app_matching or udp_app_matching:
      [ _proto_, _port_range_ ] = application_split   
      portrange_split = _port_range_.strip().split("-") 
      [ _start_port_, _end_port_ ] = portrange_split 
    else:
-     if re.search(r"icmp", application_split[0].strip().lower(), re.I):
+     if icmp_app_matching:
+     #if re.search(r"icmp", application_split[0].strip().lower(), re.I):
        return file_database[unicode(r"icmp")]
    # tcp udp processing
    return_matched_list = [] 
    _keyname_database_ = file_database.keys()
    for _keyname_ in _keyname_database_:    
-      if re.search(r"tcp", str(_keyname_), re.I) or re.search(r"udp", str(_keyname_), re.I):
+      #
+      _stringkeyname_values_ = str(_keyname_)
+      #
+      _any_app_match_ = re.search(r"any", _stringkeyname_values_.lower(), re.I)
+      _interger_any_app_match_ = re.search(r"0", _stringkeyname_values_.lower(), re.I)
+      _tcp_app_match_ = re.search(r"tcp", _stringkeyname_values_.lower(), re.I)
+      _udp_app_match_ = re.search(r"udp", _stringkeyname_values_.lower(), re.I)
+      _icmp_app_match_ = re.search(r"icmp", _stringkeyname_values_.lower(), re.I) 
+      # 
+      #if re.search(r"tcp", str(_keyname_), re.I) or re.search(r"udp", str(_keyname_), re.I):
+      if _any_app_match_ or _interger_any_app_match_ or _tcp_app_match_ or _udp_app_match_:
         key_split = _keyname_.strip().split("/")
         [ _key_proto_, _key_port_range_ ] = key_split
         keyport_split = _key_port_range_.strip().split("-")
@@ -151,24 +171,45 @@ def compare_including_application(file_database,input_application):
             if set(portragne_list).intersection(keyportragne_list) == set(portragne_list):
               return_matched_list = return_matched_list + file_database[_keyname_]
       else:
-        if re.search(r"icmp", str(_keyname_), re.I):
+        #if re.search(r"icmp", str(_keyname_), re.I):
+        if _icmp_app_match_:
           continue
    return return_matched_list            
     
 def partial_including_application(file_database,input_application):
+   #
    application_split = input_application.strip().split("/")
-   if re.search(r"tcp", application_split[0].strip().lower(), re.I) or re.search(r"udp", application_split[0].strip().lower(), re.I):
+   #
+   any_app_matching = re.search(r"any", str(application_split[0].strip().lower()), re.I)
+   interger_any_app_matching = re.search(r"0", str(application_split[0].strip().lower()), re.I)
+   tcp_app_matching = re.search(r"tcp", str(application_split[0].strip().lower()), re.I)
+   udp_app_matching = re.search(r"udp", str(application_split[0].strip().lower()), re.I)
+   icmp_app_matching = re.search(r"icmp", str(application_split[0].strip().lower()), re.I)
+   #
+   if any_app_matching or interger_any_app_matching or tcp_app_matching or udp_app_matching:
+   #if re.search(r"tcp", application_split[0].strip().lower(), re.I) or re.search(r"udp", application_split[0].strip().lower(), re.I):
      [ _proto_, _port_range_ ] = application_split
      portrange_split = _port_range_.strip().split("-")
      [ _start_port_, _end_port_ ] = portrange_split
    else:
-     if re.search(r"icmp", application_split[0].strip().lower(), re.I):
+     #if re.search(r"icmp", application_split[0].strip().lower(), re.I):
+     if icmp_app_matching:
        return file_database[unicode(r"icmp")]
    # tcp udp processing
    return_matched_list = []
    _keyname_database_ = file_database.keys()
    for _keyname_ in _keyname_database_:    
-      if re.search(r"tcp", str(_keyname_), re.I) or re.search(r"udp", str(_keyname_), re.I):
+      #
+      _stringkeyname_values_ = str(_keyname_)
+      #
+      _any_app_match_ = re.search(r"any", _stringkeyname_values_.lower(), re.I)
+      _interger_any_app_match_ = re.search(r"0", _stringkeyname_values_.lower(), re.I)
+      _tcp_app_match_ = re.search(r"tcp", _stringkeyname_values_.lower(), re.I)
+      _udp_app_match_ = re.search(r"udp", _stringkeyname_values_.lower(), re.I)
+      _icmp_app_match_ = re.search(r"icmp", _stringkeyname_values_.lower(), re.I)             
+      # 
+      #if re.search(r"tcp", str(_keyname_), re.I) or re.search(r"udp", str(_keyname_), re.I):
+      if _any_app_match_ or _interger_any_app_match_ or _tcp_app_match_ or _udp_app_match_:
         key_split = _keyname_.strip().split("/")
         [ _key_proto_, _key_port_range_ ] = key_split    
         keyport_split = _key_port_range_.strip().split("-")
@@ -183,7 +224,8 @@ def partial_including_application(file_database,input_application):
             if set(portragne_list).intersection(keyportragne_list) == set(keyportragne_list):
               return_matched_list = return_matched_list + file_database[_keyname_]
       else:
-        if re.search(r"icmp", str(_keyname_), re.I):
+        #if re.search(r"icmp", str(_keyname_), re.I):
+        if _icmp_app_match_:
           continue
    return return_matched_list
 
@@ -275,11 +317,13 @@ def procesing_searchingmatching(_each_processorData_, this_processor_queue):
           # 
           appvalue_string = _app_value_.strip().split("/")
           # match the what kind of the protocol is required!
+          any_app_matching = re.search(r"any", str(appvalue_string[0].strip().lower()), re.I)
+          interger_any_app_matching = re.search(r"0", str(appvalue_string[0].strip().lower()), re.I)
           tcp_app_matching = re.search(r"tcp", str(appvalue_string[0].strip().lower()), re.I)
           udp_app_matching = re.search(r"udp", str(appvalue_string[0].strip().lower()), re.I)
           icmp_app_matching = re.search(r"icmp", str(appvalue_string[0].strip().lower()), re.I)
           # 
-          if tcp_app_matching or udp_app_matching:
+          if tcp_app_matching or udp_app_matching or any_app_matching or interger_any_app_matching:
             [ _app_proto_, _app_number_ ] = appvalue_string
             [ _src_portrange_, _dst_portrange_ ] = _app_number_.strip().split(":")
             tempdict_box[u'protocoltype'] = str(_app_proto_)

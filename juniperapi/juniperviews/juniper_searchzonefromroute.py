@@ -304,11 +304,12 @@ def juniper_searchzonefromroute(request,format=None):
            for _expected_ipvalue_ in _dictData_[u'application']:
 
               _splited_prototype_portrange_ = str(_expected_ipvalue_).strip().split("/")
+              expected_any_searched = re.search(r"any", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
               expected_udp_searched = re.search(r"tcp", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
               expected_tcp_searched = re.search(r"udp", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
               expected_icmp_searched = re.search(r"icmp", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
 
-              if expected_udp_searched or expected_tcp_searched:
+              if expected_udp_searched or expected_tcp_searched or expected_any_searched:
                 [ _app_proto_, _app_portrange_ ] = _splited_prototype_portrange_
                 [ _srcportrange_, _dstportrange_ ] = str(_app_portrange_).strip().split(":")
                 # source port range re-define
