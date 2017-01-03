@@ -55,34 +55,56 @@ def run_command(_command_,fromtozone_pair,_ipaddress_,_hostname_):
    _from_zone_ = searched_value.group(1)
    _to_zone_ = searched_value.group(2)
    _start_count_ = searched_value.group(4)
-   
-   #max_count = POLICY_FILE_MAX
-   #for _dictvalue_ in fromtozone_pair:
-   #   if re.match(str(_from_zone_),str(_dictvalue_['from']),re.I) and re.match(str(_to_zone_),str(_dictvalue_['to']),re.I):
-   #     max_count = _dictvalue_['count']
-   #     break
-
-   # time parameter 180 seconds
-   hold_timeout = 200
-   # connect              
+   # 
+   filename_string = "%(_hostname_)s@%(_ipaddress_)s_from_%(_from_zone_)s_to_%(_to_zone_)s_start_%(_start_count_)s.policy" % {"_ipaddress_":str(_ipaddress_),"_hostname_":str(_hostname_),"_start_count_":str(_start_count_),"_from_zone_":str(_from_zone_),"_to_zone_":str(_to_zone_)}
+   save_directory = "/var/tmp/%(filename_string)s" % {"filename_string":filename_string} 
+   save_command_string = "%(_command_)s | save %(save_directory)s\n" % {"save_directory":save_directory, "_command_":_command_.strip()}
+   #
+   JUNIPER_DEVICELIST_DBFILE = USER_VAR_POLICIES + filename_string
+   # connect to tranfer the command to save              
+   hold_timeout = 180
    remote_conn_pre = paramiko.SSHClient()
    remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
    remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
    remote_conn = remote_conn_pre.invoke_shell()
-   remote_conn.send(_command_)
-   remote_conn.send("exit\n")
+   remote_conn.send(save_command_string)
    time.sleep(hold_timeout)
-   output = remote_conn.recv(2097152)
+   remote_conn.send("exit\n")
+   time.sleep(10)
    remote_conn_pre.close()
+   print "%(_hostname_)s, %(_command_)s ... saved" % {"_command_":str(_command_),"_hostname_":str(_hostname_)}
+   # connect to tranfer the saved file
+   hold_timeout = 60
+   remote_conn_pre = paramiko.SSHClient()
+   remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+   remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
+   remote_conn_sftp = remote_conn_pre.open_sftp()
+   remote_conn_sftp.get(save_directory, JUNIPER_DEVICELIST_DBFILE)
+   time.sleep(hold_timeout)
+   remote_conn_sftp.close()
+   remote_conn_pre.close()
+   print "%(_hostname_)s, %(_command_)s ... obtained into remote server!" % {"_command_":str(_command_),"_hostname_":str(_hostname_)}
 
-   print "%(_hostname_)s, %(_command_)s ... obtain from device.." % {"_command_":str(_command_),"_hostname_":str(_hostname_)}
-   # file write
-   filename_string = "%(_hostname_)s@%(_ipaddress_)s_from_%(_from_zone_)s_to_%(_to_zone_)s_start_%(_start_count_)s.policy" % {"_ipaddress_":str(_ipaddress_),"_hostname_":str(_hostname_),"_start_count_":str(_start_count_),"_from_zone_":str(_from_zone_),"_to_zone_":str(_to_zone_)} 
-   JUNIPER_DEVICELIST_DBFILE = USER_VAR_POLICIES + filename_string
-   f = open(JUNIPER_DEVICELIST_DBFILE,"w")
-   f.write(output)
-   f.close()
-   print "%(_hostname_)s, %(_command_)s ... done/completed." % {"_command_":str(_command_),"_hostname_":str(_hostname_)}
+   # 2017.01.03 removed...
+   #hold_timeout = 200
+   #remote_conn_pre = paramiko.SSHClient()
+   #remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+   #remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
+   #remote_conn = remote_conn_pre.invoke_shell()
+   #remote_conn.send(_command_)
+   #remote_conn.send("exit\n")
+   #time.sleep(hold_timeout)
+   #output = remote_conn.recv(2097152)
+   #remote_conn_pre.close()
+
+   # 2017.01.03 removed...
+   #filename_string = "%(_hostname_)s@%(_ipaddress_)s_from_%(_from_zone_)s_to_%(_to_zone_)s_start_%(_start_count_)s.policy" % {"_ipaddress_":str(_ipaddress_),"_hostname_":str(_hostname_),"_start_count_":str(_start_count_),"_from_zone_":str(_from_zone_),"_to_zone_":str(_to_zone_)} 
+   #JUNIPER_DEVICELIST_DBFILE = USER_VAR_POLICIES + filename_string
+   #f = open(JUNIPER_DEVICELIST_DBFILE,"w")
+   #f.write(output)
+   #f.close()
+   #print "%(_hostname_)s, %(_command_)s ... done/completed." % {"_command_":str(_command_),"_hostname_":str(_hostname_)}
+
    #
    time.sleep(0)
 
@@ -181,7 +203,6 @@ def export_policy(_each_processorData_, ip_device_dict):
             threadlist.append(_thread_)
          for _thread_ in threadlist:
             _thread_.join()
-         
 
    # thread timeout 
    time.sleep(0)
@@ -226,13 +247,6 @@ def juniper_exportpolicy(request,format=None):
         _input_ = JSONParser().parse(request)
 
         if re.match(ENCAP_PASSWORD,str(_input_[0]['auth_key'])):
-
-           # log message
-           #f = open(LOG_FILE,"a")
-           #_date_ = os.popen("date").read().strip()
-           #log_msg = _date_+" from : "+request.META['REMOTE_ADDR']+" , method POST request to run f5_devicelist function!\n"
-           #f.write(log_msg)
-           #f.close()
 
            # device file read
            CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/juniper/devicelist/"
