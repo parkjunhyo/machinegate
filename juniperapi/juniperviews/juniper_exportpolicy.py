@@ -15,12 +15,15 @@ from juniperapi.setting import ENCAP_PASSWORD
 from juniperapi.setting import RUNSERVER_PORT
 from juniperapi.setting import PARAMIKO_DEFAULT_TIMEWAIT
 from juniperapi.setting import USER_VAR_POLICIES
+from juniperapi.setting import USER_VAR_NAT
 from juniperapi.setting import POLICY_FILE_MAX
 from juniperapi.setting import PYTHON_MULTI_PROCESS
 
 import os,re,copy,json,time,threading,sys
 import paramiko
 from multiprocessing import Process, Queue, Lock
+
+multi_access_ssh_usernumber = int(3)
 
 class JSONResponse(HttpResponse):
     """
@@ -184,9 +187,8 @@ def export_policy(_each_processorData_, ip_device_dict):
               _command_ = "show security policies from-zone %(_from_)s to-zone %(_to_)s count %(_maxcount_)s start %(_start_)s detail | no-more\n" % {"_from_":_from_zone_,"_to_":_to_zone_,"_maxcount_":str(POLICY_FILE_MAX),"_start_":str(start_value)}
               export_command_list.append(_command_)
 
-
       # depend on the device performace you can adjust this number below : SRX 1400 : MAX 3     
-      multi_access_ssh_usernumber = int(3)     
+      #multi_access_ssh_usernumber = int(3)     
       (_values_, _last_) = divmod(len(export_command_list),multi_access_ssh_usernumber)
       login_number = 0
       if int(_last_) == int(0):
@@ -204,6 +206,79 @@ def export_policy(_each_processorData_, ip_device_dict):
          for _thread_ in threadlist:
             _thread_.join()
 
+   # thread timeout 
+   time.sleep(0)
+
+def run_exportnat_command(_keyname_,command_nat_values,_ipaddress_,_hostname_):
+   default_filename = command_nat_values[_keyname_]["filename"] % {"_hostname_":str(_hostname_).strip(), "_ipaddress_":str(_ipaddress_).strip()}
+   savefilename_in_device = "/var/tmp/%(default_filename)s" % {"default_filename":str(default_filename)}
+   savefilename_in_remote = USER_VAR_NAT + default_filename
+   # connect to tranfer the command to save              
+   save_command_string = "%(_default_cli_)s %(savefilename_in_device)s\n" % {"savefilename_in_device":savefilename_in_device, "_default_cli_":command_nat_values[_keyname_]["clicommand"]}
+   print "%(save_command_string)s ... start" % {"save_command_string":save_command_string}
+   hold_timeout = 60
+   remote_conn_pre = paramiko.SSHClient()
+   remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+   remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
+   remote_conn = remote_conn_pre.invoke_shell()
+   remote_conn.send(save_command_string)
+   time.sleep(hold_timeout)
+   remote_conn.send("exit\n")
+   time.sleep(10)
+   remote_conn_pre.close()
+   print "%(save_command_string)s ... done" % {"save_command_string":save_command_string}
+   # connect to tranfer the saved file
+   hold_timeout = 60
+   remote_conn_pre = paramiko.SSHClient()
+   remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+   remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
+   remote_conn_sftp = remote_conn_pre.open_sftp()
+   remote_conn_sftp.get(savefilename_in_device, savefilename_in_remote)
+   time.sleep(hold_timeout)
+   remote_conn_sftp.close()
+   remote_conn_pre.close()
+   # thread timeout 
+   time.sleep(0)
+   print "%(save_command_string)s ... downloaded" % {"save_command_string":save_command_string}
+
+
+def export_nat_information(_each_processorData_, ip_device_dict):
+   #
+   command_nat_values = {
+                          "sourcenatrule" : {
+                                               "filename" : "%(_hostname_)s@%(_ipaddress_)s.nat.source.rule",
+                                               "clicommand" : "show security nat source rule all node primary | no-more | save"
+                                            },
+                          "sourcenatpool" : {
+                                               "filename" : "%(_hostname_)s@%(_ipaddress_)s.nat.source.pool",
+                                               "clicommand" : "show security nat source pool all node primary | no-more | save"
+                                            },
+                          "staticnatrule" : {
+                                               "filename" : "%(_hostname_)s@%(_ipaddress_)s.nat.static.rule",
+                                               "clicommand" : "show security nat static rule all node primary | no-more | save"
+                                            }
+                        }
+   #
+   for _ipaddress_ in _each_processorData_:
+      _hostname_ = ip_device_dict[_ipaddress_]
+      #
+      command_nat_values_keyname = command_nat_values.keys()
+      (_values_, _last_) = divmod(len(command_nat_values_keyname),multi_access_ssh_usernumber)
+      login_number = 0
+      if int(_last_) == int(0):
+        login_number = int(_values_)
+      else:
+        login_number = int(_values_) + 1
+      _splited_command_nat_values_keyname_ = regroup_by_number(command_nat_values_keyname, login_number)
+      # run thread
+      for _command_group_ in _splited_command_nat_values_keyname_:
+         threadlist = []
+         for _keyname_ in _command_group_:
+            _thread_ = threading.Thread(target= run_exportnat_command, args=(_keyname_,command_nat_values,_ipaddress_,_hostname_,))
+            _thread_.start()
+            threadlist.append(_thread_)
+         for _thread_ in threadlist:
+            _thread_.join()
    # thread timeout 
    time.sleep(0)
 
@@ -272,7 +347,7 @@ def juniper_exportpolicy(request,format=None):
            processing_combination = []
            processing_combination = regroup_by_number(valid_access_ip, PYTHON_MULTI_PROCESS)
            # 
-           count = 0
+           #count = 0
            _processor_list_ = []
            for _each_processorData_ in processing_combination:
               _processor_ = Process(target = export_policy, args = (_each_processorData_, ip_device_dict,))
@@ -280,7 +355,17 @@ def juniper_exportpolicy(request,format=None):
               _processor_list_.append(_processor_)
            for _processor_ in _processor_list_:
               _processor_.join()
-           print "export processors are completed..!"
+           print "policy export processors are completed..!"
+
+           # nat information 
+           _processor_list_ = []
+           for _each_processorData_ in processing_combination:
+              _processor_ = Process(target = export_nat_information, args = (_each_processorData_, ip_device_dict,))
+              _processor_.start()
+              _processor_list_.append(_processor_)
+           for _processor_ in _processor_list_:
+              _processor_.join()
+           print "nat export processors are completed..!"
 
            # return
            return Response(viewer_information())
