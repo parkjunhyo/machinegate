@@ -51,7 +51,6 @@ def start_end_parse_from_string(return_lines_string,pattern_start,pattern_end):
 
 def run_command(_command_,fromtozone_pair,_ipaddress_,_hostname_):
 
-   print "%(_hostname_)s, %(_command_)s ... start" % {"_command_":str(_command_),"_hostname_":str(_hostname_)}
    # find the all counter
    pattern_string = "show security policies from-zone ([a-zA-Z0-9\-\_\.]+) to-zone ([a-zA-Z0-9\-\_\.]+) count ([a-zA-Z0-9\-\_\.]+) start ([a-zA-Z0-9\-\_\.]+) detail | no-more\n"
    searched_value = re.search(pattern_string,_command_,re.I)
@@ -62,31 +61,47 @@ def run_command(_command_,fromtozone_pair,_ipaddress_,_hostname_):
    filename_string = "%(_hostname_)s@%(_ipaddress_)s_from_%(_from_zone_)s_to_%(_to_zone_)s_start_%(_start_count_)s.policy" % {"_ipaddress_":str(_ipaddress_),"_hostname_":str(_hostname_),"_start_count_":str(_start_count_),"_from_zone_":str(_from_zone_),"_to_zone_":str(_to_zone_)}
    save_directory = "/var/tmp/%(filename_string)s" % {"filename_string":filename_string} 
    save_command_string = "%(_command_)s | save %(save_directory)s\n" % {"save_directory":save_directory, "_command_":_command_.strip()}
+   # after file save, the pattern displayed
+   filesave_pattern = "Wrote [0-9]+ lines of output to \'%(save_directory)s\'" % {"save_directory":save_directory}
    #
    JUNIPER_DEVICELIST_DBFILE = USER_VAR_POLICIES + filename_string
    # connect to tranfer the command to save              
-   hold_timeout = 180
+   #hold_timeout = 180
    remote_conn_pre = paramiko.SSHClient()
    remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
    remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
    remote_conn = remote_conn_pre.invoke_shell()
+   remote_conn.settimeout(0.1)
    remote_conn.send(save_command_string)
-   time.sleep(hold_timeout)
+   string_comb_list = []
+   while True:
+      try:
+         output = remote_conn.recv(2097152)
+         if output:
+           string_comb_list.append(str(output))
+         stringcombination = str("".join(string_comb_list))
+         if re.search(filesave_pattern, stringcombination, re.I):
+           string_comb_list = []
+           break
+      except:
+         continue
+   #time.sleep(hold_timeout)
    remote_conn.send("exit\n")
-   time.sleep(10)
+   time.sleep(5)
    remote_conn_pre.close()
-   print "%(_hostname_)s, %(_command_)s ... saved" % {"_command_":str(_command_),"_hostname_":str(_hostname_)}
+   print "file save %(save_directory)s ... saved" % {"save_directory":save_directory}
+   #
    # connect to tranfer the saved file
-   hold_timeout = 60
+   #hold_timeout = 60
    remote_conn_pre = paramiko.SSHClient()
    remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
    remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
    remote_conn_sftp = remote_conn_pre.open_sftp()
    remote_conn_sftp.get(save_directory, JUNIPER_DEVICELIST_DBFILE)
-   time.sleep(hold_timeout)
+   #time.sleep(hold_timeout)
    remote_conn_sftp.close()
    remote_conn_pre.close()
-   print "%(_hostname_)s, %(_command_)s ... obtained into remote server!" % {"_command_":str(_command_),"_hostname_":str(_hostname_)}
+   print "file downloaded %(JUNIPER_DEVICELIST_DBFILE)s ... downloaded" % {"JUNIPER_DEVICELIST_DBFILE":JUNIPER_DEVICELIST_DBFILE}
 
    # 2017.01.03 removed...
    #hold_timeout = 200
@@ -109,7 +124,7 @@ def run_command(_command_,fromtozone_pair,_ipaddress_,_hostname_):
    #print "%(_hostname_)s, %(_command_)s ... done/completed." % {"_command_":str(_command_),"_hostname_":str(_hostname_)}
 
    #
-   time.sleep(0)
+   #time.sleep(0)
 
 
 def regroup_by_number(origin_list, divinterger):
@@ -187,59 +202,30 @@ def export_policy(_each_processorData_, ip_device_dict):
               _command_ = "show security policies from-zone %(_from_)s to-zone %(_to_)s count %(_maxcount_)s start %(_start_)s detail | no-more\n" % {"_from_":_from_zone_,"_to_":_to_zone_,"_maxcount_":str(POLICY_FILE_MAX),"_start_":str(start_value)}
               export_command_list.append(_command_)
 
-      # depend on the device performace you can adjust this number below : SRX 1400 : MAX 3     
-      #multi_access_ssh_usernumber = int(3)     
-      (_values_, _last_) = divmod(len(export_command_list),multi_access_ssh_usernumber)
-      login_number = 0
-      if int(_last_) == int(0):
-        login_number = int(_values_)
-      else:
-        login_number = int(_values_) + 1
-      _splited_export_command_list_ = regroup_by_number(export_command_list, login_number)
+      for _command_ in export_command_list:
+         run_command(_command_, fromtozone_pair, _ipaddress_, _hostname_)
 
-      for _command_group_ in _splited_export_command_list_:
-         threadlist = []
-         for _command_ in _command_group_:
-            _thread_ = threading.Thread(target=run_command, args=(_command_,fromtozone_pair,_ipaddress_,_hostname_,))
-            _thread_.start()
-            threadlist.append(_thread_)
-         for _thread_ in threadlist:
-            _thread_.join()
+      ## 2017.01.14 Code revision : SRX has some issue when multi users save the file in the device at the same time.
+      ## depend on the device performace you can adjust this number below : SRX 1400 : MAX 3     
+      #(_values_, _last_) = divmod(len(export_command_list),multi_access_ssh_usernumber)
+      #login_number = 0
+      #if int(_last_) == int(0):
+      #  login_number = int(_values_)
+      #else:
+      #  login_number = int(_values_) + 1
+      #_splited_export_command_list_ = regroup_by_number(export_command_list, login_number)
+
+      #for _command_group_ in _splited_export_command_list_:
+      #   threadlist = []
+      #   for _command_ in _command_group_:
+      #      _thread_ = threading.Thread(target=run_command, args=(_command_,fromtozone_pair,_ipaddress_,_hostname_,))
+      #      _thread_.start()
+      #      threadlist.append(_thread_)
+      #   for _thread_ in threadlist:
+      #      _thread_.join()
 
    # thread timeout 
    time.sleep(0)
-
-def run_exportnat_command(_keyname_,command_nat_values,_ipaddress_,_hostname_):
-   default_filename = command_nat_values[_keyname_]["filename"] % {"_hostname_":str(_hostname_).strip(), "_ipaddress_":str(_ipaddress_).strip()}
-   savefilename_in_device = "/var/tmp/%(default_filename)s" % {"default_filename":str(default_filename)}
-   savefilename_in_remote = USER_VAR_NAT + default_filename
-   # connect to tranfer the command to save              
-   save_command_string = "%(_default_cli_)s %(savefilename_in_device)s\n" % {"savefilename_in_device":savefilename_in_device, "_default_cli_":command_nat_values[_keyname_]["clicommand"]}
-   print "%(save_command_string)s ... start" % {"save_command_string":save_command_string}
-   hold_timeout = 60
-   remote_conn_pre = paramiko.SSHClient()
-   remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-   remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
-   remote_conn = remote_conn_pre.invoke_shell()
-   remote_conn.send(save_command_string)
-   time.sleep(hold_timeout)
-   remote_conn.send("exit\n")
-   time.sleep(10)
-   remote_conn_pre.close()
-   print "%(save_command_string)s ... done" % {"save_command_string":save_command_string}
-   # connect to tranfer the saved file
-   hold_timeout = 60
-   remote_conn_pre = paramiko.SSHClient()
-   remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-   remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
-   remote_conn_sftp = remote_conn_pre.open_sftp()
-   remote_conn_sftp.get(savefilename_in_device, savefilename_in_remote)
-   time.sleep(hold_timeout)
-   remote_conn_sftp.close()
-   remote_conn_pre.close()
-   # thread timeout 
-   time.sleep(0)
-   print "%(save_command_string)s ... downloaded" % {"save_command_string":save_command_string}
 
 
 def export_nat_information(_each_processorData_, ip_device_dict):
@@ -247,15 +233,15 @@ def export_nat_information(_each_processorData_, ip_device_dict):
    command_nat_values = {
                           "sourcenatrule" : {
                                                "filename" : "%(_hostname_)s@%(_ipaddress_)s.nat.source.rule",
-                                               "clicommand" : "show security nat source rule all node primary | no-more | save"
+                                               "clicommand" : "show security nat source rule all node primary | save"
                                             },
                           "sourcenatpool" : {
                                                "filename" : "%(_hostname_)s@%(_ipaddress_)s.nat.source.pool",
-                                               "clicommand" : "show security nat source pool all node primary | no-more | save"
+                                               "clicommand" : "show security nat source pool all node primary | save"
                                             },
                           "staticnatrule" : {
                                                "filename" : "%(_hostname_)s@%(_ipaddress_)s.nat.static.rule",
-                                               "clicommand" : "show security nat static rule all node primary | no-more | save"
+                                               "clicommand" : "show security nat static rule all node primary | save"
                                             }
                         }
    #
@@ -263,22 +249,49 @@ def export_nat_information(_each_processorData_, ip_device_dict):
       _hostname_ = ip_device_dict[_ipaddress_]
       #
       command_nat_values_keyname = command_nat_values.keys()
-      (_values_, _last_) = divmod(len(command_nat_values_keyname),multi_access_ssh_usernumber)
-      login_number = 0
-      if int(_last_) == int(0):
-        login_number = int(_values_)
-      else:
-        login_number = int(_values_) + 1
-      _splited_command_nat_values_keyname_ = regroup_by_number(command_nat_values_keyname, login_number)
-      # run thread
-      for _command_group_ in _splited_command_nat_values_keyname_:
-         threadlist = []
-         for _keyname_ in _command_group_:
-            _thread_ = threading.Thread(target= run_exportnat_command, args=(_keyname_,command_nat_values,_ipaddress_,_hostname_,))
-            _thread_.start()
-            threadlist.append(_thread_)
-         for _thread_ in threadlist:
-            _thread_.join()
+      for _keyname_ in command_nat_values_keyname:
+         default_filename = command_nat_values[_keyname_]["filename"] % {"_hostname_":str(_hostname_).strip(), "_ipaddress_":str(_ipaddress_).strip()}
+         savefilename_in_device = "/var/tmp/%(default_filename)s" % {"default_filename":str(default_filename)}
+         savefilename_in_remote = USER_VAR_NAT + default_filename
+         # after file save, the pattern displayed
+         filesave_pattern = "Wrote [0-9]+ lines of output to \'%(savefilename_in_device)s\'" % {"savefilename_in_device":savefilename_in_device}
+         # connect to tranfer the command to save  
+         save_command_string = "%(_default_cli_)s %(savefilename_in_device)s\n" % {"savefilename_in_device":savefilename_in_device, "_default_cli_":command_nat_values[_keyname_]["clicommand"]}
+         remote_conn_pre = paramiko.SSHClient()
+         remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+         remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
+         remote_conn = remote_conn_pre.invoke_shell()
+         remote_conn.settimeout(0.1)
+         remote_conn.send(save_command_string)
+         string_comb_list = []
+         while True:
+            try:
+               output = remote_conn.recv(2097152)
+               if output:
+                 string_comb_list.append(str(output))
+               stringcombination = str("".join(string_comb_list))
+               if re.search(filesave_pattern, stringcombination, re.I):
+                 string_comb_list = []
+                 break
+            except:
+               continue
+         remote_conn.send("exit\n")
+         time.sleep(5)
+         remote_conn_pre.close()
+         print "file saved %(savefilename_in_device)s ... completed" % {"savefilename_in_device":savefilename_in_device}
+         #
+         # connect to tranfer the saved file
+         #hold_timeout = 60
+         remote_conn_pre = paramiko.SSHClient()
+         remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+         remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
+         remote_conn_sftp = remote_conn_pre.open_sftp()
+         remote_conn_sftp.get(savefilename_in_device, savefilename_in_remote)
+         #time.sleep(hold_timeout)
+         remote_conn_sftp.close()
+         remote_conn_pre.close()
+         print "file downloaded %(savefilename_in_remote)s ... downloaded" % {"savefilename_in_remote":savefilename_in_remote}
+
    # thread timeout 
    time.sleep(0)
 
