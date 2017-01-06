@@ -41,47 +41,76 @@ def start_end_parse_from_string(return_lines_string,pattern_start,pattern_end):
       line_index_count = line_index_count + 1
    return start_end_linenumber_list
     
+def runssh_clicommand(_ipaddress_, laststring_pattern, runcli_command):
+   remote_conn_pre = paramiko.SSHClient()
+   remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+   remote_conn_pre.connect(_ipaddress_, username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
+   remote_conn = remote_conn_pre.invoke_shell()
+   remote_conn.settimeout(0.1)
+   remote_conn.send(runcli_command)
+   string_comb_list = []
+   interface_information = []
+   while True:
+      try:
+         output = remote_conn.recv(2097152)
+         if output:
+           string_comb_list.append(str(output))
+         stringcombination = str("".join(string_comb_list))
+         if re.search(laststring_pattern, stringcombination, re.I):
+           interface_information = copy.copy(stringcombination.split("\r\n"))
+           string_comb_list = []
+           break
+      except:
+         continue
+   #time.sleep(hold_timeout)
+   remote_conn.send("exit\n")
+   time.sleep(5)
+   remote_conn_pre.close()
+   return interface_information
 
 def obtain_deviceinfo(dataDict_value):
    dictBox = {}
    # necessary parameter
    dictBox[u'apiaccessip'] = dataDict_value[u'apiaccessip']
    dictBox[u'mgmtip'] = dataDict_value[u'mgmtip']
-   # connect              
-   remote_conn_pre = paramiko.SSHClient()
-   remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-   remote_conn_pre.connect(dictBox[u'apiaccessip'], username=USER_NAME, password=USER_PASSWORD, look_for_keys=False, allow_agent=False)
-   remote_conn = remote_conn_pre.invoke_shell()
-   remote_conn.send("show configuration groups | display set | match fxp\n")
-   remote_conn.send("show configuration interfaces | no-more\n")
-   remote_conn.send("show configuration security zones | display set | match interface | no-more\n")
-   remote_conn.send("exit\n")
-   time.sleep(PARAMIKO_DEFAULT_TIMEWAIT)
-   output = remote_conn.recv(20000)
-   remote_conn_pre.close()
+
+   ## updated at 2017.01.05
+   laststring_pattern = r"\}[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+"
+   interface_information = runssh_clicommand(dictBox[u'apiaccessip'], laststring_pattern, "show configuration interfaces | no-more\n")
+
+   laststring_pattern = r"Security zone:[ \t\n\r\f\v]+[ \t\n\r\f\va-zA-Z0-9\-\./_]+[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+"
+   securityzone_information = runssh_clicommand(dictBox[u'apiaccessip'], laststring_pattern, "show security zones detail | match Security | no-more\n")
+
+   laststring_pattern = r"[0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+"
+   nodegroup_information = runssh_clicommand(dictBox[u'apiaccessip'], laststring_pattern, "show configuration groups | display set | match node | match interface | match fxp | match address\n")
+
    # active standby
-   return_lines_string = output.split("\r\n")
+   #return_lines_string = output.split("\r\n")
+   return_lines_string = nodegroup_information
+
    pattern_active_node = "{(\w+):(\w+)}"
    for _line_string_ in return_lines_string:
       searched_element = re.search(pattern_active_node,_line_string_,re.I)
       if searched_element:
-        dictBox[u'failover'] = searched_element.group(1)
-        dictBox[u'nodeid'] = searched_element.group(2)
+        dictBox[u'failover'] = searched_element.group(1).strip()
+        dictBox[u'nodeid'] = searched_element.group(2).strip()
         break
+
    # ******@KRIS10-DBF02-3400FW> device name finder
-   pattern_devicename = "\w+\@([a-zA-Z0-9-_]+)\>"
+   pattern_devicename = "\w+\@([a-zA-Z0-9\-\./_]+)\>"
    for _line_string_ in return_lines_string:
       searched_element = re.search(pattern_devicename,_line_string_,re.I)
       if searched_element:
-        dictBox[u'devicehostname'] = searched_element.group(1)
+        dictBox[u'devicehostname'] = searched_element.group(1).strip()
         break 
+
    # find cluster device
    pattern_devicename = "interfaces fxp"
    hadevicesip = []
    for _line_string_ in return_lines_string:
       searched_element = re.search(pattern_devicename,_line_string_,re.I)
       if searched_element:
-        match_nodename_group = re.search("(node[0-9]+)",str(_line_string_),re.I)
+        match_nodename_group = re.search("set groups (node[0-9]+) interfaces",str(_line_string_),re.I)
         match_nodename = match_nodename_group.group(1)
         if not re.match(str(match_nodename).strip(),str(dictBox[u'nodeid']).strip(),re.I):
           match_ip_group = re.search("([0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+)",_line_string_,re.I)
@@ -89,65 +118,108 @@ def obtain_deviceinfo(dataDict_value):
           if str(match_ip) not in hadevicesip:
             hadevicesip.append(str(match_ip))
    dictBox[u'hadevicesip'] = hadevicesip           
-   # interface information (string parsing should be)
+
+   #
+   return_lines_string = securityzone_information
+   belongzonename_list = []
+   for _string_ in return_lines_string:
+      cmp_string = _string_.strip()
+      if re.search(r"Security zone:", cmp_string, re.I):
+        foundzonename = cmp_string.split()[-1] 
+        if str(foundzonename) not in belongzonename_list:
+          belongzonename_list.append(str(foundzonename))
+   dictBox[u'zonesname'] = belongzonename_list 
+   dictBox[u'interfaces'] = {}
+   for _zonename_ in dictBox[u'zonesname']:
+      laststring_pattern = r"Interfaces:[ \t\n\r\f\v]+[ \t\n\r\f\va-zA-Z0-9\-\./_]+[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+"
+      clicommand_string = "show security zones detail %(_zonename_)s | no-more\n" % {"_zonename_":_zonename_}
+      indiviualsecurity_information = runssh_clicommand(dictBox[u'apiaccessip'], laststring_pattern, clicommand_string)
+      pattern_start = "[ \t\n\r\f\v]+Interfaces:"
+      pattern_end = "\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}"
+      start_end_linenumber_list = start_end_parse_from_string(indiviualsecurity_information, pattern_start, pattern_end)
+      for index_list in start_end_linenumber_list:
+         if len(index_list) == int(2):
+           selective_list = indiviualsecurity_information[index_list[0]+int(1):index_list[1]-int(1)]
+           for _msg_string_ in selective_list:
+              if len(str(_msg_string_).strip()) != int(0):
+                if unicode(str(_msg_string_)) not in dictBox[u'interfaces'].keys():
+                  dictBox[u'interfaces'][unicode(str(_msg_string_).strip())] = {}
+                  dictBox[u'interfaces'][unicode(str(_msg_string_).strip())][u"zonename"] = _zonename_
+   #
+   return_lines_string = interface_information
+   for _interfacename_ in dictBox[u'interfaces'].keys():
+      pattern_start = "^([a-zA-Z0-9-/]+) {"
+      pattern_end = "}"
+      start_end_linenumber_list = start_end_parse_from_string(return_lines_string, pattern_start, pattern_end)
+      for index_list in start_end_linenumber_list:
+         selective_list = return_lines_string[index_list[0]:index_list[1]]
+         interface_searchstatus = str(re.search(pattern_start, selective_list[0].strip(), re.I).group(1))
+         if re.search(_interfacename_, interface_searchstatus, re.I) or re.search(interface_searchstatus, _interfacename_, re.I):
+           addressip_value = []
+           addressip_status = False
+           for _msg_string_ in selective_list:
+              addresspattern = r"[ \t\n\r\f\v]+address[ \t\n\r\f\v]+([0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+);"
+              searched_status = re.search(addresspattern, _msg_string_, re.I)
+              if searched_status:
+                addressip_status = True
+                if str(searched_status.group(1).strip()) not in addressip_value:
+                  addressip_value.append(str(searched_status.group(1).strip()))
+           if addressip_status:
+             operation_mode = "routedmode"
+           else:
+             operation_mode = "transparentmode"
+           dictBox[u'interfaces'][unicode(_interfacename_.strip())][u'operatingmode'] = operation_mode
+           dictBox[u'interfaces'][unicode(_interfacename_.strip())][u"interfaceip"] = addressip_value
+           #
+           if dictBox[u'interfaces'][unicode(_interfacename_.strip())][u'operatingmode'] == "transparentmode":
+             for _msg_string_ in selective_list:
+                accesstrunk_modepattern = "interface-mode [0-9a-zA-Z]+;"
+                vlanid_pattern = "vlan-id"
+                if re.search(accesstrunk_modepattern, _msg_string_.strip(), re.I):
+                  dictBox[u'interfaces'][unicode(_interfacename_.strip())][u'accesstrunkstatus'] = str(_msg_string_.strip().split()[-1]).split(";")[0]
+                if re.search(vlanid_pattern, _msg_string_.strip(), re.I):
+                  dictBox[u'interfaces'][unicode(_interfacename_.strip())][u'vlans'] = str(_msg_string_.strip().split()[-1]).split(";")[0]
+       
+   # device working mode detection
+   return_lines_string = interface_information
    pattern_start = "^[a-zA-Z0-9-/]+ {"
-   pattern_end = "^}"
+   pattern_end = "}"
    start_end_linenumber_list = start_end_parse_from_string(return_lines_string,pattern_start,pattern_end)
-   # interface information only
-   start_end_string_list = []
+   dictBox[u'failovermode'] = "notdefined"
+   failover_mode_status = False
    for index_list in start_end_linenumber_list:
       selective_list = return_lines_string[index_list[0]:index_list[1]]
       for _msg_string_ in selective_list:
-         if re.search(str("redundant-parent"),str(_msg_string_),re.I) or re.search(str("redundant-ether-options"),str(_msg_string_),re.I):
-           start_end_string_list.append(selective_list)
+         if re.search(str("redundancy-group"),str(_msg_string_),re.I):
+           failover_mode_status = True
+           dictBox[u'failovermode'] = "active_standby"
            break
-   # interface name with redenent group
-   interface_group_by_redundant = {}
-   for index_list in start_end_string_list:
-      _interfacename_ = str(index_list[0].strip().split()[0]).strip()
-      for _line_string_ in index_list:
-         searched_element = re.search("redundant-parent",_line_string_,re.I)
-         if searched_element:
-           _rp_name_ = str(str(_line_string_.strip().split()[-1]).strip().split(";")[0])
-           if _rp_name_ not in interface_group_by_redundant.keys():
-             interface_group_by_redundant[_rp_name_] = []
-           interface_group_by_redundant[_rp_name_].append(_interfacename_)
-           break 
-   # redenent group with ip
-   redundant_group_with_ip = {}
-   for index_list in start_end_string_list:
-      _interfacename_ = str(index_list[0].strip().split()[0]).strip()
-      match_count = 0
-      for _line_string_ in index_list:
-         if re.search("redundant-ether-options",_line_string_,re.I) or re.search("address",_line_string_,re.I):
-           match_count = match_count + 1
-      if match_count == 2:
-        for _line_string_ in index_list:
-           searched_element = re.search("address",_line_string_,re.I)
-           if searched_element:
-             _if_address_ = str(str(_line_string_.strip().split()[-1]).strip().split(";")[0])
-             if _interfacename_ not in redundant_group_with_ip.keys():
-               redundant_group_with_ip[_interfacename_] = []
-             redundant_group_with_ip[_interfacename_].append(_if_address_)
-             break
-   # findout zone name
-   redundant_values = interface_group_by_redundant.keys()
-   pattern_string = "^set security zones security-zone ([a-zA-Z0-9\_\-]+) interfaces %(_redundant_)s"
-   interface_information = {}
-   for _redundant_value_ in redundant_values:
-      _redundant_ = str(_redundant_value_)
-      # basic information
-      interface_information[_redundant_] = {}
-      interface_information[_redundant_][str("phy")] = []
-      interface_information[_redundant_][str("phy")] = interface_group_by_redundant[_redundant_]
-      interface_information[_redundant_][str("interfaceip")] = []
-      interface_information[_redundant_][str("interfaceip")] = redundant_group_with_ip[_redundant_]  
-      pattern_zone = pattern_string % {"_redundant_":_redundant_}
-      for _line_string_ in return_lines_string:
-         searched_element = re.search(pattern_zone,str(_line_string_),re.I)
-         if searched_element:
-           interface_information[_redundant_][str("zonename")] = str(searched_element.group(1))
-   dictBox[u'interfaces'] = interface_information
+      if failover_mode_status:
+        break
+   if not failover_mode_status:
+     dictBox[u'failovermode'] = "active_active"
+ 
+   # optional value
+   if dictBox[u'failovermode'] == "active_standby":
+     return_lines_string = interface_information
+     for _interfacename_ in dictBox[u'interfaces'].keys():
+        pattern_start = "^([a-zA-Z0-9-/]+) {"
+        pattern_end = "}"
+        start_end_linenumber_list = start_end_parse_from_string(return_lines_string, pattern_start, pattern_end)
+        phyinf_list = []
+        for index_list in start_end_linenumber_list:
+           selective_list = return_lines_string[index_list[0]:index_list[1]]
+           interface_searchstatus = str(re.search(pattern_start, selective_list[0].strip(), re.I).group(1))
+           redundantparent_pattern = "redundant-parent %(_interfacename_)s" % {"_interfacename_":_interfacename_}
+           redundant_mode_status = False
+           for _msg_string_ in selective_list:
+              cmp_string = str(_msg_string_.split(";")[0].strip())
+              if re.search(cmp_string, redundantparent_pattern.strip(), re.I) or re.search(redundantparent_pattern.strip(), cmp_string, re.I):
+                redundant_mode_status = True
+                if interface_searchstatus not in phyinf_list:
+                  phyinf_list.append(interface_searchstatus)
+        dictBox[u'interfaces'][_interfacename_][u'redundantmembers'] = phyinf_list
+
    # file write
    filename_string = "deviceinfo_%(_ipaddr_)s.txt" % {"_ipaddr_":str(dataDict_value[u'mgmtip'])} 
    JUNIPER_DEVICELIST_DBFILE = USER_DATABASES_DIR + filename_string
