@@ -64,7 +64,7 @@ def obtain_showroute(apiaccessip,device_information_values):
    remote_conn.send("show route | no-more\n")
    remote_conn.send("exit\n")
    time.sleep(PARAMIKO_DEFAULT_TIMEWAIT)
-   output = remote_conn.recv(40000)
+   output = remote_conn.recv(2097152)
    remote_conn_pre.close()
 
    # 
@@ -79,35 +79,50 @@ def obtain_showroute(apiaccessip,device_information_values):
       _string_ = str(return_lines_string[index_list[0]]).strip()
       routing_table = str(_string_.split()[0]).strip()
 
-      pattern_route = "\[([a-zA-Z0-9]+)/[a-zA-Z0-9]+\]"
-      route_status = re.search(pattern_route,_string_,re.I).group(1)
+      #pattern_route = "\[([a-zA-Z0-9]+)/[a-zA-Z0-9]+\]"
+      #route_status = re.search(pattern_route,_string_,re.I).group(1)
 
       _string_ = str(return_lines_string[index_list[-1]]).strip()
-      pattern_route = "> to ([0-9]+.[0-9]+.[0-9]+.[0-9]+)"
+      #pattern_route = "> to ([0-9]+.[0-9]+.[0-9]+.[0-9]+) via ([a-zA-Z0-9\.]+)"
+      pattern_route = "via ([a-zA-Z0-9\.]+)"
       
+      dictBox = {}
       searched_element = re.search(pattern_route,_string_,re.I)
       if searched_element:
-        nexthop_ip = str(searched_element.group(1)).strip()
-      else:
-        nexthop_ip = "none"
+        #nexthop_ip = str(searched_element.group(1)).strip()
+        nexthop_int = str(searched_element.group(1)).strip() 
+
+        if unicode(nexthop_int) in interface_zone_dict.keys():
+          zone_name = interface_zone_dict[str(nexthop_int)]
+
+          if routing_table not in dictBox.keys():
+            dictBox[routing_table] = {}
+            #dictBox[routing_table]["routeproperty"] = route_status
+            #dictBox[routing_table]["nexthopip"] = nexthop_ip
+            dictBox[routing_table]["nexthopinterface"] = nexthop_int
+            dictBox[routing_table]["zonename"] = zone_name
+            return_all.append(dictBox) 
+
+      #else:
+      #  nexthop_ip = "none"
    
-      pattern_route = "via ([a-zA-Z0-9\.]+)$"
-      nexthop_int = re.search(pattern_route,_string_,re.I).group(1)      
+      #pattern_route = "via ([a-zA-Z0-9\.]+)$"
+      #nexthop_int = re.search(pattern_route,_string_,re.I).group(1)      
  
-      zone_name = "none"
-      for _keyname_ in interface_zone_dict.keys():
-         if re.search(str(_keyname_),str(nexthop_int),re.I):
-           zone_name = interface_zone_dict[_keyname_]
-           break
+      #zone_name = "none"
+      #for _keyname_ in interface_zone_dict.keys():
+      #   if re.search(str(_keyname_),str(nexthop_int),re.I):
+      #     zone_name = interface_zone_dict[_keyname_]
+      #     break
       #
-      dictBox = {}
-      if routing_table not in dictBox.keys():
-        dictBox[routing_table] = {}
-        dictBox[routing_table]["routeproperty"] = route_status
-        dictBox[routing_table]["nexthopip"] = nexthop_ip
-        dictBox[routing_table]["nexthopinterface"] = nexthop_int
-        dictBox[routing_table]["zonename"] = zone_name
-        return_all.append(dictBox)
+      #dictBox = {}
+      #if routing_table not in dictBox.keys():
+      #  dictBox[routing_table] = {}
+      #  dictBox[routing_table]["routeproperty"] = route_status
+      #  dictBox[routing_table]["nexthopip"] = nexthop_ip
+      #  dictBox[routing_table]["nexthopinterface"] = nexthop_int
+      #  dictBox[routing_table]["zonename"] = zone_name
+      #  return_all.append(dictBox)
          
    # file write
    filename_string = "routingtable_%(_ipaddr_)s.txt" % {"_ipaddr_":devicemgmtip} 

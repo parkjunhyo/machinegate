@@ -84,10 +84,8 @@ def obtain_deviceinfo(dataDict_value):
    laststring_pattern = r"[0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+"
    nodegroup_information = runssh_clicommand(dictBox[u'apiaccessip'], laststring_pattern, "show configuration groups | display set | match node | match interface | match fxp | match address\n")
 
-   # active standby
-   #return_lines_string = output.split("\r\n")
+   # active standby : node name and failover name 
    return_lines_string = nodegroup_information
-
    pattern_active_node = "{(\w+):(\w+)}"
    for _line_string_ in return_lines_string:
       searched_element = re.search(pattern_active_node,_line_string_,re.I)
@@ -97,6 +95,7 @@ def obtain_deviceinfo(dataDict_value):
         break
 
    # ******@KRIS10-DBF02-3400FW> device name finder
+   return_lines_string = nodegroup_information
    pattern_devicename = "\w+\@([a-zA-Z0-9\-\./_]+)\>"
    for _line_string_ in return_lines_string:
       searched_element = re.search(pattern_devicename,_line_string_,re.I)
@@ -105,6 +104,7 @@ def obtain_deviceinfo(dataDict_value):
         break 
 
    # find cluster device
+   return_lines_string = nodegroup_information
    pattern_devicename = "interfaces fxp"
    hadevicesip = []
    for _line_string_ in return_lines_string:
@@ -119,7 +119,7 @@ def obtain_deviceinfo(dataDict_value):
             hadevicesip.append(str(match_ip))
    dictBox[u'hadevicesip'] = hadevicesip           
 
-   #
+   # find out the what zone does this device has and the interface name belonged to the zone.
    return_lines_string = securityzone_information
    belongzonename_list = []
    for _string_ in return_lines_string:
@@ -145,8 +145,10 @@ def obtain_deviceinfo(dataDict_value):
                 if unicode(str(_msg_string_)) not in dictBox[u'interfaces'].keys():
                   dictBox[u'interfaces'][unicode(str(_msg_string_).strip())] = {}
                   dictBox[u'interfaces'][unicode(str(_msg_string_).strip())][u"zonename"] = _zonename_
-   #
+
+   # find out the device mode : routed mode and transparent mode
    return_lines_string = interface_information
+   addresspattern = r"[ \t\n\r\f\v]+address[ \t\n\r\f\v]+([0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+);"
    for _interfacename_ in dictBox[u'interfaces'].keys():
       pattern_start = "^([a-zA-Z0-9-/]+) {"
       pattern_end = "}"
@@ -154,24 +156,32 @@ def obtain_deviceinfo(dataDict_value):
       for index_list in start_end_linenumber_list:
          selective_list = return_lines_string[index_list[0]:index_list[1]]
          interface_searchstatus = str(re.search(pattern_start, selective_list[0].strip(), re.I).group(1))
+
+         addressip_value = []
+         addressip_status = False
+
          if re.search(_interfacename_, interface_searchstatus, re.I) or re.search(interface_searchstatus, _interfacename_, re.I):
-           addressip_value = []
-           addressip_status = False
+           #addressip_value = []
+           #addressip_status = False
+
            for _msg_string_ in selective_list:
-              addresspattern = r"[ \t\n\r\f\v]+address[ \t\n\r\f\v]+([0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+);"
+              #addresspattern = r"[ \t\n\r\f\v]+address[ \t\n\r\f\v]+([0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+);"
               searched_status = re.search(addresspattern, _msg_string_, re.I)
               if searched_status:
                 addressip_status = True
                 if str(searched_status.group(1).strip()) not in addressip_value:
                   addressip_value.append(str(searched_status.group(1).strip()))
+
+           # interface mode check
            if addressip_status:
              operation_mode = "routedmode"
            else:
-             operation_mode = "transparentmode"
-           dictBox[u'interfaces'][unicode(_interfacename_.strip())][u'operatingmode'] = operation_mode
+             operation_mode = "bridgemode"
+
+           dictBox[u'interfaces'][unicode(_interfacename_.strip())][u'interfacemode'] = operation_mode
            dictBox[u'interfaces'][unicode(_interfacename_.strip())][u"interfaceip"] = addressip_value
            #
-           if dictBox[u'interfaces'][unicode(_interfacename_.strip())][u'operatingmode'] == "transparentmode":
+           if dictBox[u'interfaces'][unicode(_interfacename_.strip())][u'interfacemode'] == "bridgemode":
              for _msg_string_ in selective_list:
                 accesstrunk_modepattern = "interface-mode [0-9a-zA-Z]+;"
                 vlanid_pattern = "vlan-id"
@@ -185,39 +195,47 @@ def obtain_deviceinfo(dataDict_value):
    pattern_start = "^[a-zA-Z0-9-/]+ {"
    pattern_end = "}"
    start_end_linenumber_list = start_end_parse_from_string(return_lines_string,pattern_start,pattern_end)
-   dictBox[u'failovermode'] = "notdefined"
+   dictBox[u'failovermode'] = "active_active"
    failover_mode_status = False
    for index_list in start_end_linenumber_list:
       selective_list = return_lines_string[index_list[0]:index_list[1]]
-      for _msg_string_ in selective_list:
-         if re.search(str("redundancy-group"),str(_msg_string_),re.I):
-           failover_mode_status = True
-           dictBox[u'failovermode'] = "active_standby"
-           break
-      if failover_mode_status:
-        break
-   if not failover_mode_status:
-     dictBox[u'failovermode'] = "active_active"
+      if not failover_mode_status:
+         for _msg_string_ in selective_list:
+            if re.search(str("redundancy-group"),str(_msg_string_),re.I):
+              failover_mode_status = True
+              dictBox[u'failovermode'] = "active_standby"
+              break
+         #if failover_mode_status:
+         #  break
+   #if not failover_mode_status:
+   #  dictBox[u'failovermode'] = "active_active"
  
-   # optional value
+   # optional value when mode active_standby
    if dictBox[u'failovermode'] == "active_standby":
      return_lines_string = interface_information
+     pattern_start = "^([a-zA-Z0-9-/]+) {"
+     pattern_end = "}"
      for _interfacename_ in dictBox[u'interfaces'].keys():
-        pattern_start = "^([a-zA-Z0-9-/]+) {"
-        pattern_end = "}"
+        #pattern_start = "^([a-zA-Z0-9-/]+) {"
+        #pattern_end = "}"
         start_end_linenumber_list = start_end_parse_from_string(return_lines_string, pattern_start, pattern_end)
         phyinf_list = []
+
+        redundantparent_pattern = "redundant-parent %(_interfacename_)s" % {"_interfacename_":_interfacename_}
         for index_list in start_end_linenumber_list:
            selective_list = return_lines_string[index_list[0]:index_list[1]]
            interface_searchstatus = str(re.search(pattern_start, selective_list[0].strip(), re.I).group(1))
-           redundantparent_pattern = "redundant-parent %(_interfacename_)s" % {"_interfacename_":_interfacename_}
-           redundant_mode_status = False
+           #redundantparent_pattern = "redundant-parent %(_interfacename_)s" % {"_interfacename_":_interfacename_}
+           #redundant_mode_status = False
+
            for _msg_string_ in selective_list:
               cmp_string = str(_msg_string_.split(";")[0].strip())
               if re.search(cmp_string, redundantparent_pattern.strip(), re.I) or re.search(redundantparent_pattern.strip(), cmp_string, re.I):
-                redundant_mode_status = True
+
+                #redundant_mode_status = True
                 if interface_searchstatus not in phyinf_list:
                   phyinf_list.append(interface_searchstatus)
+
         dictBox[u'interfaces'][_interfacename_][u'redundantmembers'] = phyinf_list
 
    # file write
