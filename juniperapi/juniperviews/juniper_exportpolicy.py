@@ -20,6 +20,7 @@ from juniperapi.setting import POLICY_FILE_MAX
 from juniperapi.setting import PYTHON_MULTI_PROCESS
 
 import os,re,copy,json,time,threading,sys
+import os.path
 import paramiko
 from multiprocessing import Process, Queue, Lock
 
@@ -360,6 +361,7 @@ def juniper_exportpolicy(request,format=None):
            processing_combination = []
            processing_combination = regroup_by_number(valid_access_ip, PYTHON_MULTI_PROCESS)
            # 
+           start_time = time.time()
            #count = 0
            _processor_list_ = []
            for _each_processorData_ in processing_combination:
@@ -379,6 +381,19 @@ def juniper_exportpolicy(request,format=None):
            for _processor_ in _processor_list_:
               _processor_.join()
            print "nat export processors are completed..!"
+
+           finish_time = time.time()
+           spentabs_time = abs(float(finish_time) - float(start_time))
+           # delete and remove old export and cache
+           for _dirctname_ in [USER_VAR_POLICIES, USER_VAR_NAT]:
+              for _filename_ in os.listdir(_dirctname_):
+                 filename_direct = str(_dirctname_.strip() + _filename_.strip())
+                 timeabs_value = abs(float(finish_time) - float(os.path.getctime(filename_direct)))
+                 if timeabs_value > spentabs_time:
+                   remove_cmd = "rm -rf %(filename_direct)s" % {"filename_direct":filename_direct}
+                   os.popen(remove_cmd)
+
+           
 
            # return
            return Response(viewer_information())
