@@ -126,8 +126,9 @@ def obtain_deviceinfo(dataDict_value):
       cmp_string = _string_.strip()
       if re.search(r"Security zone:", cmp_string, re.I):
         foundzonename = cmp_string.split()[-1] 
-        if str(foundzonename) not in belongzonename_list:
-          belongzonename_list.append(str(foundzonename))
+        if not re.search("junos-host", foundzonename, re.I):
+          if str(foundzonename) not in belongzonename_list:
+            belongzonename_list.append(str(foundzonename))
    dictBox[u'zonesname'] = belongzonename_list 
    dictBox[u'interfaces'] = {}
    for _zonename_ in dictBox[u'zonesname']:
