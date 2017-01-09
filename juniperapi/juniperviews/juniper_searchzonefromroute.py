@@ -89,32 +89,32 @@ def source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,
               interface_property.append(_property_)
          #
          _devicename_ = primarysecondary_devicename[_deviceip_]
-         if (str("bridgemode") in interface_property) or (unicode("bridgemode") in interface_property):
-           for _zonename_ in primarysecondary_zonesname[_deviceip_]:
-              _instring_ = "%(_network_)s:0.0.0.0/0@%(_devicename_)s:%(_deviceip_)s:%(_zone_)s" % {"_network_":str(_source_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_)}
-              if str(_instring_) not in possible_sourceip_list:
-                possible_sourceip_list.append(str(_instring_))
-         else:
-           #
+         if (str("routedmode") in interface_property) or (unicode("routedmode") in interface_property):
            routingtable_matched = routingtable_inmemory[_deviceip_]
            routingtable_netvalues = proper_routingtable(routingtable_matched)
            routingtable_network_values = routingtable_netvalues.keys()
            for _network_value_ in routingtable_network_values:
-              #
               _route_net_ = IPNetwork(unicode(_network_value_))
               _route_subnet_ = str(str(_route_net_).strip().split("/")[-1])
-              #
               _zonename_ = routingtable_netvalues[_network_value_][u'zonename']
+              _routenet_zone_string_pattern = "%(_network_)s:%(_route_)s@%(_devicename_)s:%(_deviceip_)s:%(_zone_)s"
               if int(_route_subnet_) <= int(_source_subnet_):
                 if _source_net_ in _route_net_:
-                  _instring_ = "%(_network_)s:%(_route_)s@%(_devicename_)s:%(_deviceip_)s:%(_zone_)s" % {"_network_":str(_source_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_),"_route_":str(_route_net_)}
+                  _instring_ = _routenet_zone_string_pattern % {"_network_":str(_source_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_),"_route_":str(_route_net_)}
                   if str(_instring_) not in possible_sourceip_list:
                     possible_sourceip_list.append(str(_instring_))
               else:
                 if _route_net_ in _source_net_:
-                  _instring_ = "%(_network_)s:%(_route_)s@%(_devicename_)s:%(_deviceip_)s:%(_zone_)s" % {"_network_":str(_route_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_),"_route_":str(_source_net_)}
+                  _instring_ = _routenet_zone_string_pattern % {"_network_":str(_route_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_),"_route_":str(_source_net_)}
                   if str(_instring_) not in possible_sourceip_list:
                     possible_sourceip_list.append(str(_instring_))
+         #
+         else:
+           for _zonename_ in primarysecondary_zonesname[_deviceip_]:
+              _instring_ = "%(_network_)s:0.0.0.0/0@%(_devicename_)s:%(_deviceip_)s:%(_zone_)s" % {"_network_":str(_source_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_)}
+              if str(_instring_) not in possible_sourceip_list:
+                possible_sourceip_list.append(str(_instring_))
+
    return possible_sourceip_list 
 
 def devicename_from_ipaddress(_datalist_):
@@ -191,6 +191,11 @@ def remove_same_zonetozone_values(_rewriting_by_device_):
               #
               uniqued_list.append(tempdict_box)
    return uniqued_list
+
+def allservice_redefine(_srcportrange_):
+   if re.search(str("0-0"),str(_srcportrange_),re.I) or re.search(str("0-65535"),str(_srcportrange_),re.I):
+     _srcportrange_ = str("0-65535")
+   return _srcportrange_
 
 
 @api_view(['GET','POST'])
@@ -346,24 +351,29 @@ def juniper_searchzonefromroute(request,format=None):
            for _expected_ipvalue_ in _dictData_[u'application']:
 
               _splited_prototype_portrange_ = str(_expected_ipvalue_).strip().split("/")
+              expected_zero_searched = re.search(r"0", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
               expected_any_searched = re.search(r"any", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
               expected_udp_searched = re.search(r"tcp", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
               expected_tcp_searched = re.search(r"udp", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
               expected_icmp_searched = re.search(r"icmp", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
 
-              if expected_udp_searched or expected_tcp_searched or expected_any_searched:
+              if expected_udp_searched or expected_tcp_searched or expected_any_searched or expected_zero_searched:
                 [ _app_proto_, _app_portrange_ ] = _splited_prototype_portrange_
                 [ _srcportrange_, _dstportrange_ ] = str(_app_portrange_).strip().split(":")
                 # source port range re-define
-                if re.search(str("0-0"),str(_srcportrange_),re.I) or re.search(str("0-65535"),str(_srcportrange_),re.I):
-                  _srcportrange_ = str("0-65535")
-                # destination port range re-define
-                if re.search(str("0-0"),str(_dstportrange_),re.I) or re.search(str("0-65535"),str(_dstportrange_),re.I):
-                  _dstportrange_ = str("0-65535")
+                _srcportrange_ = allservice_redefine(_srcportrange_)
+                _dstportrange_ = allservice_redefine(_dstportrange_)
+
+                #if re.search(str("0-0"),str(_srcportrange_),re.I) or re.search(str("0-65535"),str(_srcportrange_),re.I):
+                #  _srcportrange_ = str("0-65535")
+                ## destination port range re-define
+                #if re.search(str("0-0"),str(_dstportrange_),re.I) or re.search(str("0-65535"),str(_dstportrange_),re.I):
+                #  _dstportrange_ = str("0-65535")
+
                 redefined_srcdstportrange_ = str(":".join([ _srcportrange_, _dstportrange_ ]))
                 # protocol redefine
-                if re.search("any",str(_app_proto_).lower(),re.I):
-                  redefined_application = "0/%(_prange_)s;tcp/%(_prange_)s;udp/%(_prange_)s" % {"_prange_":redefined_srcdstportrange_}
+                if re.search("any",str(_app_proto_).lower(),re.I) or re.search("0",str(_app_proto_).lower(),re.I):
+                  redefined_application = "0/%(_prange_)s;tcp/%(_prange_)s;udp/%(_prange_)s;icmp" % {"_prange_":redefined_srcdstportrange_}
                 else:
                   redefined_application = "%(_proto_)s/%(_prange_)s" % {"_proto_":str(_app_proto_).lower(),"_prange_":redefined_srcdstportrange_}
                 for _redef_app_ in redefined_application.split(";"):
@@ -374,24 +384,6 @@ def juniper_searchzonefromroute(request,format=None):
                   if str("icmp") not in changed_application:
                     changed_application.append(str("icmp"))
 
-              #[ _app_proto_, _app_portrange_ ] = str(_expected_ipvalue_).strip().split("/")
-              #[ _srcportrange_, _dstportrange_ ] = str(_app_portrange_).strip().split(":")
-              ## source port range re-define
-              #if re.search(str("0-0"),str(_srcportrange_),re.I) or re.search(str("0-65535"),str(_srcportrange_),re.I):
-              #  _srcportrange_ = str("0-65535")
-              ## destination port range re-define
-              #if re.search(str("0-0"),str(_dstportrange_),re.I) or re.search(str("0-65535"),str(_dstportrange_),re.I):
-              #  _dstportrange_ = str("0-65535")      
-              #redefined_srcdstportrange_ = str(":".join([ _srcportrange_, _dstportrange_ ]))                
-              #if re.search("any",str(_app_proto_).lower(),re.I):
-              #  redefined_application = "0/%(_prange_)s;tcp/%(_prange_)s;udp/%(_prange_)s" % {"_prange_":redefined_srcdstportrange_}
-              #  for _redef_app_ in redefined_application.split(";"):
-              #     if _redef_app_ not in changed_application:
-              #       changed_application.append(_redef_app_)
-              #else:
-              #  redefined_application = "%(_proto_)s/%(_prange_)s" % {"_proto_":str(_app_proto_).lower(),"_prange_":redefined_srcdstportrange_}
-              #  if redefined_application not in changed_application:
-              #    changed_application.append(redefined_application)
            traybox_dict[u'application'] = changed_application
            # 
            full_searched_devicelist.append(traybox_dict)
