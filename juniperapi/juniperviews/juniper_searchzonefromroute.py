@@ -73,34 +73,48 @@ def logest_matching(possible_sourceip_list):
    return return_list
 
 
-def source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,primarysecondary_devicename,routingtable_inmemory):
-   # source processing
+def source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,primarysecondary_devicename,primarysecondary_interfaces,primarysecondary_zonesname,routingtable_inmemory):
    possible_sourceip_list = []
    for _sourceip_ in source_ip_list:
+      #
       _source_net_ = IPNetwork(unicode(_sourceip_))
       _source_subnet_ = str(str(_source_net_).strip().split("/")[-1])
+      #
       for _deviceip_ in primarysecondary_devicelist:
          #
-         _devicename_ = primarysecondary_devicename[_deviceip_]
+         interface_property = []
+         for _interfacename_ in primarysecondary_interfaces[_deviceip_].keys():
+            _property_ = primarysecondary_interfaces[_deviceip_][_interfacename_][u"interfacemode"]
+            if _property_ not in interface_property:
+              interface_property.append(_property_)
          #
-         routingtable_matched = routingtable_inmemory[_deviceip_]
-         routingtable_netvalues = proper_routingtable(routingtable_matched)
-         routingtable_network_values = routingtable_netvalues.keys()
-         for _network_value_ in routingtable_network_values:
-            _route_net_ = IPNetwork(unicode(_network_value_))
-            _route_subnet_ = str(str(_route_net_).strip().split("/")[-1])
-            #
-            _zonename_ = routingtable_netvalues[_network_value_][u'zonename']
-            if int(_route_subnet_) <= int(_source_subnet_):
-              if _source_net_ in _route_net_:
-                _instring_ = "%(_network_)s:%(_route_)s@%(_devicename_)s:%(_deviceip_)s:%(_zone_)s" % {"_network_":str(_source_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_),"_route_":str(_route_net_)}
-                if str(_instring_) not in possible_sourceip_list:
-                  possible_sourceip_list.append(str(_instring_))
-            else:
-              if _route_net_ in _source_net_:
-                _instring_ = "%(_network_)s:%(_route_)s@%(_devicename_)s:%(_deviceip_)s:%(_zone_)s" % {"_network_":str(_route_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_),"_route_":str(_source_net_)}
-                if str(_instring_) not in possible_sourceip_list:
-                  possible_sourceip_list.append(str(_instring_))
+         _devicename_ = primarysecondary_devicename[_deviceip_]
+         if (str("bridgemode") in interface_property) or (unicode("bridgemode") in interface_property):
+           for _zonename_ in primarysecondary_zonesname[_deviceip_]:
+              _instring_ = "%(_network_)s:0.0.0.0/0@%(_devicename_)s:%(_deviceip_)s:%(_zone_)s" % {"_network_":str(_source_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_)}
+              if str(_instring_) not in possible_sourceip_list:
+                possible_sourceip_list.append(str(_instring_))
+         else:
+           #
+           routingtable_matched = routingtable_inmemory[_deviceip_]
+           routingtable_netvalues = proper_routingtable(routingtable_matched)
+           routingtable_network_values = routingtable_netvalues.keys()
+           for _network_value_ in routingtable_network_values:
+              #
+              _route_net_ = IPNetwork(unicode(_network_value_))
+              _route_subnet_ = str(str(_route_net_).strip().split("/")[-1])
+              #
+              _zonename_ = routingtable_netvalues[_network_value_][u'zonename']
+              if int(_route_subnet_) <= int(_source_subnet_):
+                if _source_net_ in _route_net_:
+                  _instring_ = "%(_network_)s:%(_route_)s@%(_devicename_)s:%(_deviceip_)s:%(_zone_)s" % {"_network_":str(_source_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_),"_route_":str(_route_net_)}
+                  if str(_instring_) not in possible_sourceip_list:
+                    possible_sourceip_list.append(str(_instring_))
+              else:
+                if _route_net_ in _source_net_:
+                  _instring_ = "%(_network_)s:%(_route_)s@%(_devicename_)s:%(_deviceip_)s:%(_zone_)s" % {"_network_":str(_route_net_),"_deviceip_":str(_deviceip_),"_devicename_":str(_devicename_),"_zone_":str(_zonename_),"_route_":str(_source_net_)}
+                  if str(_instring_) not in possible_sourceip_list:
+                    possible_sourceip_list.append(str(_instring_))
    return possible_sourceip_list 
 
 def devicename_from_ipaddress(_datalist_):
@@ -222,11 +236,13 @@ def juniper_searchzonefromroute(request,format=None):
         # validation check
         ipaddr_pattern = "[0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+"
         _confirmed_input_list_ = []
+
         # application correct matching
         _tcpudp_portmatching_ = r"[a-zA-Z0-9]+/[0-9]+-[0-9]+:[0-9]+-[0-9]+"
         _icmp_appmatching_ = r"icmp"
         for _dictData_ in _input_:
            dictBox_temp = {} 
+
            dictBox_temp[u'sourceip'] = []
            for _expected_ipvalue_ in str(_dictData_[u'sourceip']).strip().split(";"):
               if re.search(ipaddr_pattern,str(_expected_ipvalue_),re.I):
@@ -234,6 +250,7 @@ def juniper_searchzonefromroute(request,format=None):
                   dictBox_temp[u'sourceip'].append(str(_expected_ipvalue_))
               else:
                 return Response(["error, source ip address format has problem!"], status=status.HTTP_400_BAD_REQUEST)
+
            dictBox_temp[u'destinationip'] = []
            for _expected_ipvalue_ in str(_dictData_[u'destinationip']).strip().split(";"):
               if re.search(ipaddr_pattern,str(_expected_ipvalue_),re.I):
@@ -241,6 +258,7 @@ def juniper_searchzonefromroute(request,format=None):
                   dictBox_temp[u'destinationip'].append(str(_expected_ipvalue_))
               else:
                 return Response(["error, desination ip address format has problem!"], status=status.HTTP_400_BAD_REQUEST)
+
            dictBox_temp[u'application'] = []
            for _expected_ipvalue_ in str(_dictData_[u'application']).strip().split(";"):
               tcpudp_search_element = re.search(_tcpudp_portmatching_, str(_expected_ipvalue_).lower(), re.I)
@@ -257,18 +275,42 @@ def juniper_searchzonefromroute(request,format=None):
         get_info = os.popen(CURL_command).read().strip()
         stream = BytesIO(get_info)
         data_from_CURL_command = JSONParser().parse(stream)
-        #
+        # 
         primarysecondary_devicelist = []
         primarysecondary_devicename = {}
+        primarysecondary_interfaces = {}
+        primarysecondary_zonesname = {}
         for _dataDict_ in data_from_CURL_command:
            _keyname_ = _dataDict_.keys()
-           if (u'apiaccessip' in _keyname_) and (u'failover' in _keyname_):
-             pattern_string = str(_dataDict_[u'failover']).strip()
-             if re.match(pattern_string,'primary',re.I):
+           if (u'apiaccessip' in _keyname_) and (u'failover' in _keyname_) and (u'failovermode' in _keyname_):
+             device_add_status = False
+             if _dataDict_[u'failovermode'] == "active_active":
+               device_add_status = True
+             else:
+               pattern_string = str(_dataDict_[u'failover']).strip()
+               if re.match(pattern_string,'primary',re.I):
+                 device_add_status = True
+             #
+             if device_add_status:
                _apiaccessip_ = _dataDict_[u'apiaccessip']
                if _apiaccessip_ not in primarysecondary_devicelist:
                  primarysecondary_devicelist.append(_apiaccessip_)
                  primarysecondary_devicename[_apiaccessip_] = _dataDict_[u"devicehostname"]
+                 primarysecondary_interfaces[_apiaccessip_] = _dataDict_[u"interfaces"]
+                 primarysecondary_zonesname[_apiaccessip_] = _dataDict_[u"zonesname"]
+        #
+        #primarysecondary_devicelist = []
+        #primarysecondary_devicename = {}
+        #for _dataDict_ in data_from_CURL_command:
+        #   _keyname_ = _dataDict_.keys()
+        #   if (u'apiaccessip' in _keyname_) and (u'failover' in _keyname_):
+        #     pattern_string = str(_dataDict_[u'failover']).strip()
+        #     if re.match(pattern_string,'primary',re.I):
+        #       _apiaccessip_ = _dataDict_[u'apiaccessip']
+        #       if _apiaccessip_ not in primarysecondary_devicelist:
+        #         primarysecondary_devicelist.append(_apiaccessip_)
+        #         primarysecondary_devicename[_apiaccessip_] = _dataDict_[u"devicehostname"]
+
 
         # get route table information : routingtable_inmemory
         CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/juniper/showroute/"
@@ -279,11 +321,11 @@ def juniper_searchzonefromroute(request,format=None):
         for _dataDict_ in data_from_CURL_command:
            _keyname_ = _dataDict_.keys()
            for _key_value_ in _keyname_:
+              # only get the routing information 'primary on active-statndby' and 'primary and secondary on active-active'
               if (unicode(_key_value_) in primarysecondary_devicelist) or (str(_key_value_) in primarysecondary_devicelist):
                 routingtable_inmemory[_key_value_] = _dataDict_[_key_value_]
 
-        # IPNetwork('192.0.2.0/25') in IPNetwork('192.0.2.0/23')
-
+        #
         full_searched_devicelist = []
         for _dictData_ in _confirmed_input_list_:
            source_ip_list = _dictData_[u'sourceip']
@@ -294,10 +336,10 @@ def juniper_searchzonefromroute(request,format=None):
            traybox_dict[u'destinationip'] = []
            traybox_dict[u'application'] = []
            # source process and after logest match
-           possible_sourceip_list = source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,primarysecondary_devicename,routingtable_inmemory)
+           possible_sourceip_list = source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,primarysecondary_devicename,primarysecondary_interfaces,primarysecondary_zonesname,routingtable_inmemory)
            traybox_dict[u'sourceip'] = logest_matching(possible_sourceip_list)
            # destination processing
-           possible_destination_list = source_destination_routinglookup(destination_ip_list,primarysecondary_devicelist,primarysecondary_devicename,routingtable_inmemory)
+           possible_destination_list = source_destination_routinglookup(destination_ip_list,primarysecondary_devicelist,primarysecondary_devicename,primarysecondary_interfaces,primarysecondary_zonesname,routingtable_inmemory)
            traybox_dict[u'destinationip'] = logest_matching(possible_destination_list)
            # application processing
            changed_application = []
