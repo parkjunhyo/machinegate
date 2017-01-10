@@ -117,6 +117,7 @@ def f5_devicelist(request,format=None):
                    if _target_[u"enabled"] or re.search("true", str(_target_[u"enabled"]).strip(), re.I):
                      if _interfacename_ not in cache_interface.keys():
                        cache_interface[_interfacename_] = {}
+                       cache_interface[_interfacename_][u"name"] = _interfacename_
                        cache_interface[_interfacename_][u"portstatus"] = "enable"
                        cache_interface[_interfacename_][u"macAddress"] = _target_[u"macAddress"]
                        cache_interface[_interfacename_][u"mediaMax"]= _target_[u"mediaMax"] 
@@ -135,6 +136,7 @@ def f5_devicelist(request,format=None):
                       temp_listbox.append(cache_interface[_interfacename_])
                  if len(temp_listbox):
                    cache_trunk[_trunkname_] = {}
+                   cache_trunk[_trunkname_][u"name"] = _trunkname_
                    cache_trunk[_trunkname_][u"macAddress"] = _target_[u"macAddress"]
                    cache_trunk[_trunkname_][u"lacp"] = _target_[u"lacp"]
                    cache_trunk[_trunkname_][u"lacpMode"] = _target_[u"lacpMode"]
@@ -160,6 +162,7 @@ def f5_devicelist(request,format=None):
                       temp_listbox.append(cache_interface[_values_inner_dict_[u"name"]])
                  if len(temp_listbox):
                    cache_vlan[_vlanname_] = {}
+                   cache_vlan[_vlanname_][u"name"] = _vlanname_
                    cache_vlan[_vlanname_][u"interfaces"] = temp_listbox
                    cache_vlan[_vlanname_][u"tag"] = _target_[u"tag"]
  
