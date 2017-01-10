@@ -136,7 +136,7 @@ def f5_devicelist(request,format=None):
                       temp_listbox.append(cache_interface[_interfacename_])
                  if len(temp_listbox):
                    cache_trunk[_trunkname_] = {}
-                   cache_trunk[_trunkname_][u"name"] = _trunkname_
+                   #cache_trunk[_trunkname_][u"name"] = _trunkname_
                    cache_trunk[_trunkname_][u"macAddress"] = _target_[u"macAddress"]
                    cache_trunk[_trunkname_][u"lacp"] = _target_[u"lacp"]
                    cache_trunk[_trunkname_][u"lacpMode"] = _target_[u"lacpMode"]
