@@ -104,8 +104,81 @@ def f5_devicelist(request,format=None):
                     _result_dict_["ip"] = str(_param_['ip']).strip()
                     _result_dict_["mgmtip"] = str(_dictData_[u'managementIp']) 
      
-              # curl message command
-              #curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+str(_param_['ip']).strip()+"/mgmt/tm/sys/failover -H 'Content-Type: application/json'"
+
+              # interface information
+              curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_result_dict_["ip"].strip()+"/mgmt/tm/net/interface -H 'Content-Type: application/json'"
+              raw_data= os.popen(curl_command).read().strip()
+              stream = BytesIO(raw_data)
+              data_forinterface_from_request = JSONParser().parse(stream)
+              cache_interface = {}
+              for _target_ in data_forinterface_from_request[u'items']:
+                 _interfacename_ = _target_[u"name"]
+                 if (u"enabled" in _target_.keys()) or ("enabled" in _target_.keys()):
+                   if _target_[u"enabled"] or re.search("true", str(_target_[u"enabled"]).strip(), re.I):
+                     if _interfacename_ not in cache_interface.keys():
+                       cache_interface[_interfacename_] = {}
+                       cache_interface[_interfacename_][u"portstatus"] = "enable"
+                       cache_interface[_interfacename_][u"macAddress"] = _target_[u"macAddress"]
+                       cache_interface[_interfacename_][u"mediaMax"]= _target_[u"mediaMax"] 
+               
+              # trunk information
+              curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_result_dict_["ip"].strip()+"/mgmt/tm/net/trunk -H 'Content-Type: application/json'"
+              raw_data= os.popen(curl_command).read().strip()
+              stream = BytesIO(raw_data)
+              data_fortrunk_from_request = JSONParser().parse(stream)
+              cache_trunk = {}
+              for _target_ in data_fortrunk_from_request[u'items']:
+                 _trunkname_ = _target_[u"name"]
+                 temp_listbox = []
+                 for _interfacename_ in _target_[u"interfaces"]:
+                    if _interfacename_ in cache_interface.keys():
+                      temp_listbox.append(cache_interface[_interfacename_])
+                 if len(temp_listbox):
+                   cache_trunk[_trunkname_] = {}
+                   cache_trunk[_trunkname_][u"macAddress"] = _target_[u"macAddress"]
+                   cache_trunk[_trunkname_][u"lacp"] = _target_[u"lacp"]
+                   cache_trunk[_trunkname_][u"lacpMode"] = _target_[u"lacpMode"]
+                   cache_trunk[_trunkname_][u"interfaces"] = temp_listbox  
+                
+              # vlan information
+              curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_result_dict_["ip"].strip()+"/mgmt/tm/net/vlan -H 'Content-Type: application/json'"
+              raw_data= os.popen(curl_command).read().strip()
+              stream = BytesIO(raw_data)
+              data_forvlan_from_request = JSONParser().parse(stream)
+              cache_vlan = {}
+              for _target_ in data_forvlan_from_request[u'items']:
+                 _vlanname_ = _target_[u"name"]
+                 curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_result_dict_["ip"].strip()+"/mgmt/tm/net/vlan/~Common~"+str(_vlanname_)+"/interfaces -H 'Content-Type: application/json'"
+                 raw_data= os.popen(curl_command).read().strip()
+                 stream = BytesIO(raw_data)
+                 vlaninterface_data = JSONParser().parse(stream)
+                 temp_listbox = []
+                 for _values_inner_dict_ in vlaninterface_data[u'items']:
+                    if _values_inner_dict_[u"name"] in cache_trunk.keys():
+                      temp_listbox.append(cache_trunk[_values_inner_dict_[u"name"]])
+                    if _values_inner_dict_[u"name"] in cache_interface.keys():
+                      temp_listbox.append(cache_interface[_values_inner_dict_[u"name"]])
+                 if len(temp_listbox):
+                   cache_vlan[_vlanname_] = {}
+                   cache_vlan[_vlanname_][u"interfaces"] = temp_listbox
+                   cache_vlan[_vlanname_][u"tag"] = _target_[u"tag"]
+ 
+                    
+              # self information
+              curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_result_dict_["ip"].strip()+"/mgmt/tm/net/self -H 'Content-Type: application/json'"
+              raw_data= os.popen(curl_command).read().strip()
+              stream = BytesIO(raw_data)
+              data_forself_from_request = JSONParser().parse(stream)
+              temp_listbox = {}
+              for _target_ in data_forself_from_request[u'items']:
+                 _vlanstring_ = str(str(_target_[u"vlan"]).strip().split("/")[-1])
+                 if (unicode(_vlanstring_) in cache_vlan.keys()) or (_vlanstring_ in cache_vlan.keys()):
+                   _ipvalues_ = _target_[u"address"] 
+                   if _ipvalues_ not in temp_listbox.keys():
+                     temp_listbox[_ipvalues_] = {}
+                   temp_listbox[_ipvalues_][u"floating"] = _target_[u"floating"]
+                   temp_listbox[_ipvalues_][u"vlan"] = cache_vlan[unicode(_vlanstring_)]
+              _result_dict_["ipaddress"] = temp_listbox
 
               # cluster information 
               curl_command = "curl -sk -u "+USER_NAME+":"+USER_PASSWORD+" https://"+_result_dict_["ip"].strip()+"/mgmt/tm/cm/trust-domain -H 'Content-Type: application/json'"
