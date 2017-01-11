@@ -14,12 +14,13 @@ from juniperapi.setting import USER_PASSWORD
 from juniperapi.setting import ENCAP_PASSWORD
 from juniperapi.setting import RUNSERVER_PORT
 from juniperapi.setting import PARAMIKO_DEFAULT_TIMEWAIT
-from juniperapi.setting import USER_VAR_POLICIES
+from juniperapi.setting import USER_VAR_NAT 
 from juniperapi.setting import USER_VAR_CHCHES
 
 
 import os,re,copy,json,time,threading,sys
 import paramiko
+from multiprocessing import Process, Queue, Lock
 
 class JSONResponse(HttpResponse):
     """
@@ -99,294 +100,102 @@ def findout_policyname_sequence(everypolicy_group):
    # return
    return (searched_policyname, _policyaction_status_, searched_sequencenumber, searched_from, searched_to)
 
-def run_caching(_filename_pattern_):
-   matched_filenames_list = []
-   filenames_list_indirectory = os.listdir(USER_VAR_POLICIES)
+
+
+def cachingnat_processing(_accessip_, _hostname_):
+   #
+   filestring_pattern = "%(_hostname_)s@%(_ipaddress_)s" % {"_ipaddress_":_accessip_, "_hostname_":_hostname_}
+   filenames_list_indirectory = os.listdir(USER_VAR_NAT)
+   valied_filename = []
    for _filename_ in filenames_list_indirectory:
-      if re.search(_filename_pattern_,str(_filename_),re.I):
-        if str(_filename_) not in matched_filenames_list:
-          matched_filenames_list.append(str(_filename_))
+      if re.search(filestring_pattern, str(_filename_), re.I):
+        searched_filename = USER_VAR_NAT + _filename_
+        if searched_filename not in valied_filename:
+          valied_filename.append(searched_filename)
 
-   string_sum_content = []
-   for _matched_filename_ in matched_filenames_list:
-      _filepath_ = USER_VAR_POLICIES + _matched_filename_
-      f = open(_filepath_,"r")
-      string_content = f.readlines()
-      f.close()
-      string_sum_content = string_sum_content + string_content
-   
-   # the reason why network_pattern like this, IPv6 ::/0 or :/0   
-   network_pattern = r"[0-9:]+/[0-9]+"
-   pattern_start = r"^Policy: "
-   pattern_end = r"Session log:"
-   policy_group_start_end_list = start_end_parse_from_string(string_sum_content,pattern_start,pattern_end)
-   #
-   source_cache_dict = {}
-   destination_cache_dict = {}
-   service_src_cache_dict = {}
-   service_dst_cache_dict = {}
-   policy_detail_cache_dict = {}
-   #
-   #policy_counter = 1
-   #policy_total_count = len(policy_group_start_end_list)
+   for _filename_ in valied_filename:
+      if re.search(".nat.static.rule", _filename_, re.I):
 
-   for _policy_start_end_ in policy_group_start_end_list:
-
-      # this is policy info in the group
-      _policy_info_list_ = string_sum_content[_policy_start_end_[0]:_policy_start_end_[-1]]
-
-      # policy name searching (searched_policyname, _policyaction_status_, searched_sequencenumber, searched_from, searched_to)
-      ( _policyname_, _policyaction_status_, _sequence_number_, _policyfromzone_, _policytozone_ ) = findout_policyname_sequence(_policy_info_list_) 
-
-      #_policyname_ = str(str(str(string_sum_content[_policy_start_end_[0]]).strip().split("Policy: ")[1]).strip().split(",")[0])
-      ## sequence number : Sequence number:
-      #_sequence_number_ = "none"
-      #for _eachline_ in _policy_info_list_:
-      #   if re.search(r"Sequence number:",str(_eachline_),re.I):
-      #     _sequence_number_ = str(_eachline_.strip().split()[-1])
-      #     break
-
-      _mylocation_ = "%(_policyname_)s:%(_sequence_number_)s" % {"_sequence_number_":_sequence_number_,"_policyname_":_policyname_}
-      policy_unique_name = "%(_mylocation_)s@%(_filename_pattern_)s" % {"_mylocation_":str(_mylocation_),"_filename_pattern_":str(_filename_pattern_)}
-      policy_detail_cache_dict[unicode(policy_unique_name)] = {}
-      policy_detail_cache_dict[unicode(policy_unique_name)][unicode("source")] = []
-      policy_detail_cache_dict[unicode(policy_unique_name)][unicode("destination")] = []
-      policy_detail_cache_dict[unicode(policy_unique_name)][unicode("source_application")] = []
-      policy_detail_cache_dict[unicode(policy_unique_name)][unicode("destination_application")] = []
-
-      # source
-      _sourcenetip_inthis_policy_ = []
-      _start_pattern_ = "Source addresses:"
-      _end_pattern_ = "Destination addresses:"
-      _searched_startend_ = start_end_parse_from_string(_policy_info_list_,_start_pattern_,_end_pattern_)
-      for _start_end_ in _searched_startend_:
-         _searched_linelist_ = _policy_info_list_[_start_end_[0]:_start_end_[-1]]
-         for _eachline_ in _searched_linelist_:
-            _expected_value_ = str(_eachline_.strip().split()[-1])
-            if re.search(network_pattern,_expected_value_,re.I):
-              if str(_expected_value_) not in source_cache_dict.keys():
-                source_cache_dict[str(_expected_value_)] = []
-              source_cache_dict[str(_expected_value_)].append(_mylocation_)
-              if unicode(_expected_value_) not in _sourcenetip_inthis_policy_:
-                _sourcenetip_inthis_policy_.append(unicode(_expected_value_))
-      policy_detail_cache_dict[unicode(policy_unique_name)][unicode("source")] = _sourcenetip_inthis_policy_
-
-      # destination
-      _destinationnetip_inthis_policy_ = []
-      _start_pattern_ = "Destination addresses:" 
-      _end_pattern_ = "Application:"
-      _searched_startend_ = start_end_parse_from_string(_policy_info_list_,_start_pattern_,_end_pattern_)
-      for _start_end_ in _searched_startend_:
-         _searched_linelist_ = _policy_info_list_[_start_end_[0]:_start_end_[-1]]
-         for _eachline_ in _searched_linelist_:
-            _expected_value_ = str(_eachline_.strip().split()[-1])
-            if re.search(network_pattern,_expected_value_,re.I):
-              if str(_expected_value_) not in destination_cache_dict.keys():
-                destination_cache_dict[str(_expected_value_)] = []
-              destination_cache_dict[str(_expected_value_)].append(_mylocation_)
-              if unicode(_expected_value_) not in _destinationnetip_inthis_policy_:
-                _destinationnetip_inthis_policy_.append(unicode(_expected_value_))
-      policy_detail_cache_dict[unicode(policy_unique_name)][unicode("destination")] = _destinationnetip_inthis_policy_
-
-
-      # application service_cache_dict = {}
-      _srcapplication_inthis_policy_ = []
-      _dstapplication_inthis_policy_ = []
-      _start_pattern_ = "Application:"
-      _end_pattern_ = ["Destination port range:","code="]
-
-      _searched_startend_ = start_end_parse_from_string_endlist(_policy_info_list_,_start_pattern_,_end_pattern_)
-      for _start_end_ in _searched_startend_:
-
-         _searched_linelist_ = _policy_info_list_[_start_end_[0]:_start_end_[-1]+int(1)]
-         # protocol infomation
-         # there is three type of any 
-         # 1. 0/0-0     : any/0-0 or any/0-65535
-         # 2. tcp/0-0   : tcp/0-0 or tcp/0-65535
-         # 3. udp/0-0   : udp/0-0 or udp/0-65535
-         # protocol, alg, timeout
-         _ipprotocol_ = "0"
-         _algvalue_ = "0"
-         _prototimeout_ = "3600"
-         _protoalgtimeout_string_ = "%(_ipprotocol_)s:%(_algvalue_)s:%(_prototimeout_)s" % {"_ipprotocol_":_ipprotocol_, "_algvalue_":_algvalue_, "_prototimeout_":_prototimeout_}
-
-         for _eachline_ in _searched_linelist_:
-            # protocol, alg, timeout  
-            protocolstatus_pattern = r"IP protocol: ([a-zA-Z0-9_\-:;\.]+)[,] ALG: ([a-zA-Z0-9_\-:;\.]+)[,] Inactivity timeout: ([a-zA-Z0-9_\-:;\.]+)"
-            searching_content = re.search(protocolstatus_pattern, str(_eachline_), re.I)
-            if searching_content:
-              _ipprotocol_ = searching_content.group(1).lower()
-              _algvalue_ = searching_content.group(2).lower()
-              _prototimeout_ = searching_content.group(3).lower()
-              # proto alg time name
-              _protoalgtimeout_string_ = "%(_ipprotocol_)s:%(_algvalue_)s:%(_prototimeout_)s" % {"_ipprotocol_":_ipprotocol_, "_algvalue_":_algvalue_, "_prototimeout_":_prototimeout_}
-
-            # source application
-            sourceport_pattern = r"Source port range: \[([0-9]+\-[0-9]+)\]"
-            searching_content = re.search(sourceport_pattern, str(_eachline_), re.I)
-            if searching_content:
-              _port_range_value_ = searching_content.group(1)
-              any_application_pattern = r"0-0"
-              anysearching_content = re.search(any_application_pattern, _port_range_value_, re.I)
-              if anysearching_content:
-                _port_range_value_ = str("0-65535")
-              _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str(_port_range_value_)}
-              if str(_application_string_) not in service_src_cache_dict.keys():
-                service_src_cache_dict[str(_application_string_)] = []
-              if _mylocation_ not in service_src_cache_dict[str(_application_string_)]:
-                service_src_cache_dict[str(_application_string_)].append(_mylocation_)
-              _policyapp_unique_keyname_ = "%(_protoalgtimeout_string_)s:%(_port_range_value_)s" % {"_protoalgtimeout_string_":_protoalgtimeout_string_,"_port_range_value_":_port_range_value_}
-              if unicode(_policyapp_unique_keyname_) not in _srcapplication_inthis_policy_:
-                _srcapplication_inthis_policy_.append(unicode(_policyapp_unique_keyname_))
-
-            # destination application
-            destination_pattern = "Destination port range: \[([0-9]+\-[0-9]+)\]"
-            searching_content = re.search(destination_pattern, str(_eachline_), re.I)
-            if searching_content:
-              _port_range_value_ = searching_content.group(1)
-              any_application_pattern = r"0-0"
-              anysearching_content = re.search(any_application_pattern, _port_range_value_, re.I)
-              if anysearching_content:
-                _port_range_value_ = str("0-65535")  
-              _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str(_port_range_value_)}
-              if str(_application_string_) not in service_dst_cache_dict.keys():
-                service_dst_cache_dict[str(_application_string_)] = []
-              if _mylocation_ not in service_dst_cache_dict[str(_application_string_)]:              
-                service_dst_cache_dict[str(_application_string_)].append(_mylocation_)
-              _policyapp_unique_keyname_ = "%(_protoalgtimeout_string_)s:%(_port_range_value_)s" % {"_protoalgtimeout_string_":_protoalgtimeout_string_,"_port_range_value_":_port_range_value_}
-              if unicode(_policyapp_unique_keyname_) not in _dstapplication_inthis_policy_:
-                _dstapplication_inthis_policy_.append(unicode(_policyapp_unique_keyname_))
-
-            # icmp case : source and destination
-            icmp_string_pattern = r"ICMP Information: type=([a-zA-Z0-9_\-:;\.]+)[,] code=([a-zA-Z0-9_\-:;\.]+)"
-            searching_content = re.search(icmp_string_pattern, str(_eachline_), re.I)
-            if searching_content:
-              #_application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str("0-65535")}
-              _application_string_ = "%(_proto_)s" % {"_proto_":str(_ipprotocol_)}
-              _icmptype_ = searching_content.group(1)
-              _icmpcode_ = searching_content.group(2)
-              icmp_unique_keyname = "%(_protoalgtimeout_string_)s:%(_icmptype_)s:%(_icmpcode_)s" % {"_protoalgtimeout_string_":_protoalgtimeout_string_,"_icmptype_":_icmptype_,"_icmpcode_":_icmpcode_}
-              # source add
-              if str(_application_string_) not in service_src_cache_dict.keys():
-                service_src_cache_dict[str(_application_string_)] = []
-              if _mylocation_ not in service_src_cache_dict[str(_application_string_)]:
-                service_src_cache_dict[str(_application_string_)].append(_mylocation_)
-              if unicode(icmp_unique_keyname) not in _srcapplication_inthis_policy_:
-                _srcapplication_inthis_policy_.append(unicode(icmp_unique_keyname))
-              # destination add 
-              if str(_application_string_) not in service_dst_cache_dict.keys():
-                service_dst_cache_dict[str(_application_string_)] = []
-              if _mylocation_ not in service_dst_cache_dict[str(_application_string_)]:
-                service_dst_cache_dict[str(_application_string_)].append(_mylocation_)
-              if unicode(icmp_unique_keyname) not in _dstapplication_inthis_policy_:
-                _dstapplication_inthis_policy_.append(unicode(icmp_unique_keyname))
+        pattern_start = "Static NAT rule:"
+        pattern_end = "Number of sessions[ \t\n\r\f\v]+:"
       #
-      policy_detail_cache_dict[unicode(policy_unique_name)][unicode("source_application")] = _srcapplication_inthis_policy_
-      policy_detail_cache_dict[unicode(policy_unique_name)][unicode("destination_application")] = _dstapplication_inthis_policy_
+        f = open(_filename_, "r")
+        read_contents = f.readlines()
+        f.close()
+        start_end_linenumber_list = start_end_parse_from_string(read_contents, pattern_start, pattern_end)
 
-         #_ipprotocol_ = "0"
-         #for _eachline_ in _searched_linelist_:
-         #   if re.search(r"IP protocol:",str(_eachline_),re.I):
-         #     _ipprotocol_string_ = str(str(str(_eachline_).strip().split(",")[0]).strip().split()[-1]).strip()
-         #     _ipprotocol_ = _ipprotocol_string_.lower()
-         #     break
+        static_cache_dict = {}
+        for index_list in start_end_linenumber_list:
+           selective_list = read_contents[index_list[0]:index_list[-1]+int(1)]
 
-         # source application
-         #for _eachline_ in _searched_linelist_:
-         #   if re.search(str("Source port range: "),str(_eachline_),re.I):
-         #     _expected_search_ = re.search("([0-9]+\-[0-9]+)",str(_eachline_))
-         #     _port_range_value_ = _expected_search_.group(1)
-         #     #if re.search("0-65535",_port_range_value_,re.I):
-         #     #  # any port range define
-         #     #  _port_range_value_ = "0-0"
-         #     if re.search("0-0",_port_range_value_,re.I):
-         #       _port_range_value_ = "0-65535"
-         #     _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str(_port_range_value_)}
-         #     if str(_application_string_) not in service_src_cache_dict.keys():      
-         #       service_src_cache_dict[str(_application_string_)] = []
-         #     if _mylocation_ not in service_src_cache_dict[str(_application_string_)]:
-         #       service_src_cache_dict[str(_application_string_)].append(_mylocation_)
-         #     break
-            
-         # destination application
-         #for _eachline_ in _searched_linelist_:
-         #   # process by pattern 
-         #   if re.search(str("Destination port range: "),str(_eachline_),re.I):
-         #     _expected_search_ = re.search("([0-9]+\-[0-9]+)",str(_eachline_))
-         #     _port_range_value_ = _expected_search_.group(1)
-         #     #if re.search("0-65535",_port_range_value_,re.I):
-         #     #  # any port range define
-         #     #  _port_range_value_ = "0-0"
-         #     if re.search("0-0",_port_range_value_,re.I):
-         #       _port_range_value_ = "0-65535"
-         #     _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str(_port_range_value_)}
-         #     if str(_application_string_) not in service_dst_cache_dict.keys():
-         #       service_dst_cache_dict[str(_application_string_)] = []
-         #     if _mylocation_ not in service_dst_cache_dict[str(_application_string_)]:
-         #       service_dst_cache_dict[str(_application_string_)].append(_mylocation_)
-         #     break
+           #
+           _natrulename_ = "unknown"
+           _natrulesetname_ = "unknown"
+           _fromzonename_ = "unknown"
+           _destaddress_ = "unknown"
+           _hostaddress_ = "unknown"
+           _netmask_ = "unknown"
+           #
+           
+           for _msg_string_ in selective_list:
+              compare_string = _msg_string_.strip()
+              splited_compare_string = compare_string.split()
 
-         # icmp application
-         #for _eachline_ in _searched_linelist_:
-         #   if re.search(str("code="),str(_eachline_),re.I):
-         #     #_application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str("0-0")}
-         #     _application_string_ = "%(_proto_)s/%(_srv_number_)s" % {"_proto_":str(_ipprotocol_),"_srv_number_":str("0-65535")}            
+              if re.search("Static NAT rule:", compare_string, re.I):
+                _natrulename_ = splited_compare_string[3] 
+                _natrulesetname_ = splited_compare_string[-1]
 
-         #     if str(_application_string_) not in service_src_cache_dict.keys():
-         #       service_src_cache_dict[str(_application_string_)] = []
+              if re.search("From zone", compare_string, re.I):
+                _fromzonename_ = splited_compare_string[-1]
 
-         #     service_src_cache_dict[str(_application_string_)].append(_mylocation_)
+              if re.search("Destination addresses", compare_string, re.I):
+                _destaddress_ = splited_compare_string[-1]
 
-         #     if str(_application_string_) not in service_dst_cache_dict.keys():
-         #       service_dst_cache_dict[str(_application_string_)] = []
+              if re.search("Host addresses", compare_string, re.I):
+                _hostaddress_ = splited_compare_string[-1]
 
-         #     if _mylocation_ not in service_dst_cache_dict[str(_application_string_)]:
-         #       service_dst_cache_dict[str(_application_string_)].append(_mylocation_)
-         #     break
-      # processing counter
-      #print "processing %(_counter_)s/%(_total_)s completed!" % {"_counter_":str(int(policy_counter)),"_total_":str(int(policy_total_count))}
-      #policy_counter = policy_counter + 1
+              if re.search("Netmask", compare_string, re.I):
+                _netmask_ = splited_compare_string[-1]
 
-   cache_dictbox = {}
-   cache_dictbox["source"] = source_cache_dict
-   cache_dictbox["destination"] = destination_cache_dict
-   cache_dictbox["source_application"] = service_src_cache_dict
-   cache_dictbox["destination_application"] = service_dst_cache_dict 
-   cache_dictbox["policydetail"] = policy_detail_cache_dict
+           #  
+           _destaddress_string_ = "%(_destaddress_)s/%(_netmask_)s@%(_hostname_)s:static_from_%(_fromzonename_)s" % {"_destaddress_":_destaddress_, "_hostname_":_hostname_, "_fromzonename_":_fromzonename_, "_netmask_":_netmask_}
+           _hostaddress_string_ = "%(_hostaddress_)s/%(_netmask_)s@%(_hostname_)s:static_from_%(_fromzonename_)s" % {"_hostaddress_":_hostaddress_, "_hostname_":_hostname_, "_fromzonename_":_fromzonename_, "_netmask_":_netmask_}
 
-   # file write
-   filename_string = "cachepolicy_%(_filename_pattern_)s.txt" % {"_filename_pattern_":str(_filename_pattern_).strip()} 
-   JUNIPER_DEVICELIST_DBFILE = USER_VAR_CHCHES + filename_string
-   f = open(JUNIPER_DEVICELIST_DBFILE,"w")
-   f.write(json.dumps(cache_dictbox))
-   f.close()
-   #print "processing %(_counter_)s completed!" % {"_counter_":str(filename_string)}  
-   # timeout 
-   time.sleep(1)
-      
+           #
+           _keyname_ = "%(_destaddress_)s/%(_netmask_)s" % {"_destaddress_":_destaddress_, "_netmask_":_netmask_}
+           if _keyname_ not in static_cache_dict.keys():
+             static_cache_dict[_keyname_] = {}
+             static_cache_dict[_keyname_][u"rulename"] = []
+             static_cache_dict[_keyname_][u"rulesetname"] = []
+             static_cache_dict[_keyname_][u"changeto"] = []
 
-def caching_policy(_ipaddress_,_hostname_):
-   # 
-   filestring_pattern = "%(_hostname_)s@%(_ipaddress_)s" % {"_ipaddress_":_ipaddress_,"_hostname_":_hostname_}
-   pattern_fromtozone = "from_([a-zA-Z0-9\_\-]+)_to_([a-zA-Z0-9\_\-]+)_start"
-   filenames_list_indirectory = os.listdir(USER_VAR_POLICIES)
-   filename_category_toread = []
-   for _filename_ in filenames_list_indirectory:
-      if re.search(filestring_pattern,str(_filename_),re.I):
-        searched_string = re.search(pattern_fromtozone,str(_filename_),re.I)
-        _from_zonename_ = searched_string.group(1)
-        _to_zonename_ = searched_string.group(2)
-        pattern_readstring = "%(_hostname_)s@%(_ipaddress_)s_from_%(_from_zonename_)s_to_%(_to_zonename_)s" % {"_to_zonename_":_to_zonename_,"_from_zonename_":_from_zonename_,"_ipaddress_":_ipaddress_,"_hostname_":_hostname_}
-        if pattern_readstring not in filename_category_toread:
-          filename_category_toread.append(pattern_readstring)
-   # caching 
-   _threads_ = []
-   for _filename_pattern_ in filename_category_toread:      
-      th = threading.Thread(target=run_caching, args=(_filename_pattern_,))
-      th.start()
-      _threads_.append(th)
-   for th in _threads_:
-      th.join()   
+           if _natrulename_ not in static_cache_dict[_keyname_][u"rulename"]:
+             static_cache_dict[_keyname_][u"rulename"].append(_natrulename_)
+ 
+           if _natrulesetname_ not in static_cache_dict[_keyname_][u"rulesetname"]:
+             static_cache_dict[_keyname_][u"rulesetname"].append(_natrulesetname_)
+
+           if _hostaddress_string_ not in static_cache_dict[_keyname_][u"changeto"]:
+             static_cache_dict[_keyname_][u"changeto"].append(_hostaddress_string_)
+
+
+           _keyname_ = "%(_hostaddress_)s/%(_netmask_)s" % {"_hostaddress_":_hostaddress_, "_netmask_":_netmask_}
+           if _keyname_ not in static_cache_dict.keys():
+             static_cache_dict[_keyname_] = {}
+             static_cache_dict[_keyname_][u"rulename"] = []
+             static_cache_dict[_keyname_][u"rulesetname"] = []
+             static_cache_dict[_keyname_][u"changeto"] = []
+
+           if _natrulename_ not in static_cache_dict[_keyname_][u"rulename"]:
+             static_cache_dict[_keyname_][u"rulename"].append(_natrulename_)
+
+           if _natrulesetname_ not in static_cache_dict[_keyname_][u"rulesetname"]:
+             static_cache_dict[_keyname_][u"rulesetname"].append(_natrulesetname_)
+
+           if _destaddress_string_ not in static_cache_dict[_keyname_][u"changeto"]:
+             static_cache_dict[_keyname_][u"changeto"].append(_destaddress_string_)
+
+        print static_cache_dict
 
    # thread timeout 
    time.sleep(1)
@@ -462,13 +271,21 @@ def juniper_cachingnat(request,format=None):
                     ip_device_dict[_ipaddress_] = str(dataDict_value[u"devicehostname"])
                     valid_access_ip.append(_ipaddress_)
 
-           _threads_ = []
-           for _ipaddress_ in valid_access_ip:
-              th = threading.Thread(target=caching_policy, args=(_ipaddress_,ip_device_dict[_ipaddress_],))
-              th.start()
-              _threads_.append(th)
-           for th in _threads_:
-              th.join()
+           _processor_list_ = []
+           for _accessip_ in valid_access_ip:
+              _processor_ = Process(target = cachingnat_processing, args = (_accessip_, ip_device_dict[_accessip_],))
+              _processor_.start()
+              _processor_list_.append(_processor_) 
+           for _processor_ in _processor_list_:
+              _processor_.join()
+
+           #_threads_ = []
+           #for _ipaddress_ in valid_access_ip:
+           #   th = threading.Thread(target=caching_policy, args=(_ipaddress_,ip_device_dict[_ipaddress_],))
+           #   th.start()
+           #   _threads_.append(th)
+           #for th in _threads_:
+           #   th.join()
 
            # return
            return Response(viewer_information())
