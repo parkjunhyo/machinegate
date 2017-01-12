@@ -143,8 +143,8 @@ def compare_including_application(file_database,input_application):
      [ _start_port_, _end_port_ ] = portrange_split 
    else:
      if icmp_app_matching:
-     #if re.search(r"icmp", application_split[0].strip().lower(), re.I):
-       return file_database[unicode(r"icmp")]
+       if unicode(r"icmp") in file_database.keys():
+         return file_database[unicode(r"icmp")]
    # tcp udp processing
    return_matched_list = [] 
    _keyname_database_ = file_database.keys()
