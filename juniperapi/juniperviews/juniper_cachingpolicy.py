@@ -46,21 +46,21 @@ def start_end_parse_from_string(return_lines_string,pattern_start,pattern_end):
       line_index_count = line_index_count + 1
    return start_end_linenumber_list
 
-def start_end_parse_from_string_endlist(return_lines_string,pattern_start,pattern_end_list):
-   start_end_linenumber_list = []
-   line_index_count = 0
-   temp_list_box = []
-   for _line_string_ in return_lines_string:
-      if re.search(pattern_start,_line_string_,re.I):
-        temp_list_box.append(line_index_count)
-      for pattern_end in pattern_end_list:
-         if re.search(str(pattern_end),str(_line_string_),re.I):
-           temp_list_box.append(line_index_count)
-           start_end_linenumber_list.append(temp_list_box)
-           temp_list_box = []
-           break
-      line_index_count = line_index_count + 1
-   return start_end_linenumber_list
+#def start_end_parse_from_string_endlist(return_lines_string,pattern_start,pattern_end_list):
+#   start_end_linenumber_list = []
+#   line_index_count = 0
+#   temp_list_box = []
+#   for _line_string_ in return_lines_string:
+#      if re.search(pattern_start,_line_string_,re.I):
+#        temp_list_box.append(line_index_count)
+#      for pattern_end in pattern_end_list:
+#         if re.search(str(pattern_end),str(_line_string_),re.I):
+#           temp_list_box.append(line_index_count)
+#           start_end_linenumber_list.append(temp_list_box)
+#           temp_list_box = []
+#           break
+#      line_index_count = line_index_count + 1
+#   return start_end_linenumber_list
 
 def findout_policyname_sequence(everypolicy_group):
    [searched_policyname, searched_policyaction, searched_sequencenumber, searched_fromzone, searched_tozone] = ["unknown", "unknown", "unknown", "unknown", "unknown"]
@@ -106,7 +106,7 @@ def getipnetvalues_from_paragraph(_policy_info_list_, _start_pattern_, _end_patt
 
 
 def zerozero_serviceport(sourceportvalue):
-   if re.match("0-0", sourceportvalue, re.I):
+   if re.match("0-0", sourceportvalue, re.I) or re.match("1-65535", sourceportvalue, re.I):
      sourceportvalue = "0-65535"
    return sourceportvalue
 
@@ -190,16 +190,14 @@ def run_caching(_filename_pattern_):
       policy_detail_cache_dict, service_src_cache_dict, service_dst_cache_dict = gettcpudpvalues_from_paragraph(_policy_info_list_,"Source port range:[ \t\n\r\f\v]+\[([a-zA-Z0-9]+\-[a-zA-Z0-9]+)\]","Destination port range:[ \t\n\r\f\v]+\[([a-zA-Z0-9]+\-[a-zA-Z0-9]+)\]",service_src_cache_dict,service_dst_cache_dict,policy_detail_cache_dict,policy_unique_name,_mylocation_)
 
 
-      # extra application protocol
+      # 2017.01.13. updated : extra application protocol
       for _string_inside_ in _policy_info_list_:
          # icmp
          if re.search("IP protocol: icmp", _string_inside_.strip(), re.I):
-
            service_src_cache_dict, policy_detail_cache_dict[unicode(policy_unique_name)][unicode("source_application")] = insertcache_withkeyname("icmp", service_src_cache_dict, _mylocation_, policy_detail_cache_dict[unicode(policy_unique_name)][unicode("source_application")])
            service_dst_cache_dict, policy_detail_cache_dict[unicode(policy_unique_name)][unicode("destination_application")] = insertcache_withkeyname("icmp", service_dst_cache_dict, _mylocation_, policy_detail_cache_dict[unicode(policy_unique_name)][unicode("destination_application")])
 
       
-
  
       # application service_cache_dict = {}
       #_srcapplication_inthis_policy_ = []
@@ -312,7 +310,7 @@ def run_caching(_filename_pattern_):
    f.close()
    #print "processing %(_counter_)s completed!" % {"_counter_":str(filename_string)}  
    # timeout 
-   time.sleep(1)
+   #time.sleep(1)
       
 
 def caching_policy(_ipaddress_,_hostname_):
