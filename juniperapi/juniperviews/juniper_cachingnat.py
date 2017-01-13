@@ -83,6 +83,63 @@ def findout_iplist_from_range(selective_list, inner_pattern_start, inner_pattern
          searched_ip_list = searched_ip_pattern(inner_msg_string_, searched_ip_list)
    return searched_ip_list
 
+def lineanaysis_getlast_value(_pattern_string_, compare_string, last_string):
+   splited_compare_string = compare_string.split()
+   if re.search(_pattern_string_, compare_string, re.I):
+     last_string = splited_compare_string[-1]
+   return last_string
+
+def rule_information(_pattern_string_, compare_string, _natrulename_, _natrulesetname_):
+   if re.search(_pattern_string_, compare_string, re.I):
+     spliated_pattern_string_ = compare_string.strip().split(":")
+     _natrulename_ = str(spliated_pattern_string_[1].strip().split()[0]).strip()
+     _natrulesetname_ = spliated_pattern_string_[-1].strip()
+   return [_natrulename_, _natrulesetname_]  
+
+def fillvalues_withkeyname(keyname_string, natcache_memory, insert_values):
+   if keyname_string  not in natcache_memory.keys():
+     natcache_memory[keyname_string] = []
+   if insert_values not in natcache_memory[keyname_string]:
+     natcache_memory[keyname_string].append(insert_values)
+   return natcache_memory
+
+def fillvalues_sourceinfo_withkeyname(_firstloop_, _secondloop_, natcache_memory, _netmask_, _hostname_, _fromzonename_, _tozonename_, _ruleunique_, source_unique_string):
+   for _srcip_ in _firstloop_:
+      keyname_string = "%(_ipaddress_)s/%(_netmask_)s" % {"_ipaddress_":str(_srcip_).strip(),"_netmask_":_netmask_}
+      for _ipaddress_ in _secondloop_:
+         insert_values = source_unique_string % {"_ipaddress_":_ipaddress_, "_netmask_":_netmask_,  "_hostname_":_hostname_, "_fromzonename_":_fromzonename_, "_tozonename_":_tozonename_, "_ruleunique_":_ruleunique_}
+         natcache_memory = fillvalues_withkeyname(keyname_string, natcache_memory, insert_values)
+   return natcache_memory
+
+def savethefile_dictvalueinput(_filename_, natcache_memory):
+   saved_filename = _filename_.strip().split("/")[-1]
+   filename_string = "cachenat_%(saved_filename)s.txt" % {"saved_filename":str(saved_filename)}
+   JUNIPER_DEVICELIST_DBFILE = USER_VAR_CHCHES + filename_string
+   f = open(JUNIPER_DEVICELIST_DBFILE,"w")
+   f.write(json.dumps(natcache_memory))
+   f.close()
+
+def readfile_getcontents(_filename_):
+   f = open(_filename_, "r")
+   read_contents = f.readlines()
+   f.close()
+   return read_contents
+
+def getsourcepoolmember_info(start_end_linenumber_list, read_contents):
+   sourcepool_memory = {}
+   for index_list in start_end_linenumber_list:
+      selective_list = read_contents[index_list[0]:index_list[-1]+int(2)]
+      _poolname_ = "unknown"
+      _sourceip_ = []
+      for _msg_string_ in selective_list:
+         compare_string = _msg_string_.strip()
+         _poolname_ = lineanaysis_getlast_value("Pool name[ \t\n\r\f\v]+:", compare_string, _poolname_)
+         _sourceip_ = searched_ip_pattern(compare_string, _sourceip_)
+      for _ip_ in _sourceip_:
+         sourcepool_memory = fillvalues_withkeyname(_poolname_, sourcepool_memory, _ip_)
+   return sourcepool_memory
+
+
 def cachingnat_processing(_accessip_, _hostname_):
    #
    filestring_pattern = "%(_hostname_)s@%(_ipaddress_)s" % {"_ipaddress_":_accessip_, "_hostname_":_hostname_}
@@ -94,166 +151,80 @@ def cachingnat_processing(_accessip_, _hostname_):
         if searched_filename not in valied_filename:
           valied_filename.append(searched_filename)
 
-
    for _filename_ in valied_filename:
-
       if re.search(".nat.static.rule", _filename_, re.I):
+        read_contents = readfile_getcontents(_filename_)
+        #
         natcache_memory = {}
-        #
-        f = open(_filename_, "r")
-        read_contents = f.readlines()
-        f.close()
-        #
         pattern_start = "Static NAT rule:"
         pattern_end = "Number of sessions[ \t\n\r\f\v]+:"
         start_end_linenumber_list = start_end_parse_from_string(read_contents, pattern_start, pattern_end)
         for index_list in start_end_linenumber_list:
            # range to items
            selective_list = read_contents[index_list[0]:index_list[-1]+int(1)]
-           # default init
-           _natrulename_ = "unknown"
-           _natrulesetname_ = "unknown"
-           _fromzonename_ = "unknown"
-           _destaddress_ = "unknown"
-           _hostaddress_ = "unknown"
-           _netmask_ = "unknown"
+           # init values
+           [_natrulename_, _natrulesetname_, _fromzonename_, _destaddress_, _hostaddress_, _netmask_] = ["unknown", "unknown", "unknown", "unknown", "unknown", "unknown"]
            # analysis each line of the one items
            for _msg_string_ in selective_list:
               compare_string = _msg_string_.strip()
-              splited_compare_string = compare_string.split()
-              if re.search("Static NAT rule:", compare_string, re.I):
-                _natrulename_ = splited_compare_string[3] 
-                _natrulesetname_ = splited_compare_string[-1]
-              if re.search("From zone", compare_string, re.I):
-                _fromzonename_ = splited_compare_string[-1]
-              if re.search("Destination addresses", compare_string, re.I):
-                _destaddress_ = splited_compare_string[-1]
-              if re.search("Host addresses", compare_string, re.I):
-                _hostaddress_ = splited_compare_string[-1]
-              if re.search("Netmask", compare_string, re.I):
-                _netmask_ = splited_compare_string[-1]
+              [_natrulename_, _natrulesetname_] = rule_information("Static NAT rule:", compare_string, _natrulename_, _natrulesetname_)
+              _fromzonename_ = lineanaysis_getlast_value("From zone", compare_string, _fromzonename_)
+              _destaddress_ = lineanaysis_getlast_value("Destination addresses", compare_string, _destaddress_)
+              _hostaddress_ = lineanaysis_getlast_value("Host addresses", compare_string, _hostaddress_)
+              _netmask_ = lineanaysis_getlast_value("Netmask", compare_string, _netmask_)
            # change to values 
+           static_unique_string = "%(_ipaddress_)s/%(_netmask_)s@%(_hostname_)s:static_from_%(_fromzonename_)s@%(_ruleunique_)s"
            _ruleunique_ = "%(_natrulename_)s:%(_natrulesetname_)s" % {"_natrulename_":_natrulename_, "_natrulesetname_":_natrulesetname_}
-           _destaddress_string_ = "%(_destaddress_)s/%(_netmask_)s@%(_hostname_)s:static_from_%(_fromzonename_)s@%(_ruleunique_)s" % {"_destaddress_":_destaddress_, "_hostname_":_hostname_, "_fromzonename_":_fromzonename_, "_netmask_":_netmask_, "_ruleunique_":_ruleunique_}
-           _hostaddress_string_ = "%(_hostaddress_)s/%(_netmask_)s@%(_hostname_)s:static_from_%(_fromzonename_)s@%(_ruleunique_)s" % {"_hostaddress_":_hostaddress_, "_hostname_":_hostname_, "_fromzonename_":_fromzonename_, "_netmask_":_netmask_, "_ruleunique_":_ruleunique_}
+           _destaddress_string_ = static_unique_string % {"_ipaddress_":_destaddress_, "_hostname_":_hostname_, "_fromzonename_":_fromzonename_, "_netmask_":_netmask_, "_ruleunique_":_ruleunique_}
+           _hostaddress_string_ = static_unique_string % {"_ipaddress_":_hostaddress_, "_hostname_":_hostname_, "_fromzonename_":_fromzonename_, "_netmask_":_netmask_, "_ruleunique_":_ruleunique_}
            # 
-           keyname_string = "%(_ipaddrvalue_)s/%(_netmask_)s" % {"_netmask_":_netmask_,"_ipaddrvalue_":_destaddress_}
-           if keyname_string  not in natcache_memory.keys():
-             natcache_memory[keyname_string] = []
-           natcache_memory[keyname_string].append(_hostaddress_string_)
-
-           keyname_string = "%(_ipaddrvalue_)s/%(_netmask_)s" % {"_netmask_":_netmask_,"_ipaddrvalue_":_hostaddress_}
-           if keyname_string not in natcache_memory.keys():
-             natcache_memory[keyname_string] = []           
-           natcache_memory[keyname_string].append(_destaddress_string_)
-        #
-        saved_filename = _filename_.strip().split("/")[-1]
-        filename_string = "cachenat_%(saved_filename)s.txt" % {"saved_filename":str(saved_filename)}
-        JUNIPER_DEVICELIST_DBFILE = USER_VAR_CHCHES + filename_string
-        f = open(JUNIPER_DEVICELIST_DBFILE,"w")
-        f.write(json.dumps(natcache_memory))
-        f.close() 
-
+           keyname_string_pattern = "%(_ipaddrvalue_)s/%(_netmask_)s"
+           keyname_string = keyname_string_pattern % {"_netmask_":_netmask_,"_ipaddrvalue_":_destaddress_}
+           insert_values = _hostaddress_string_
+           natcache_memory = fillvalues_withkeyname(keyname_string, natcache_memory, insert_values)
+           #
+           keyname_string = keyname_string_pattern % {"_netmask_":_netmask_,"_ipaddrvalue_":_hostaddress_}
+           insert_values = _destaddress_string_
+           natcache_memory = fillvalues_withkeyname(keyname_string, natcache_memory, insert_values)
+        # save cache file
+        savethefile_dictvalueinput(_filename_, natcache_memory)
       if re.search(".nat.source.rule", _filename_, re.I):
-        natcache_memory = {}
-        #
         sourcepool_filename = _filename_.strip().split(".nat.source.rule")[0] + ".nat.source.pool"
-        f = open(sourcepool_filename, "r")
-        read_contents = f.readlines()
-        f.close()
+        read_contents = readfile_getcontents(sourcepool_filename)
         #
+        natcache_memory = {}
         pattern_start = "Pool name[ \t\n\r\f\v]+:"
         pattern_end = "Address range"
         start_end_linenumber_list = start_end_parse_from_string(read_contents, pattern_start, pattern_end)
-        sourcepool_memory = {}
-        for index_list in start_end_linenumber_list:
-           # range to items
-           selective_list = read_contents[index_list[0]:index_list[-1]+int(2)]
-           # default init
-           _poolname_ = "unknown"
-           _sourceport_ = "unknown"
-           _sourceip_ = []
-           for _msg_string_ in selective_list:
-              compare_string = _msg_string_.strip()
-              if re.search("Pool name[ \t\n\r\f\v]+:", compare_string, re.I):
-                _poolname_ = compare_string.split()[-1]
-              searched_portstatus = re.search("^Port[ \t\n\r\f\v]+:[ \t\n\r\f\v]+\[([0-9]+),[ \t\n\r\f\v]+([0-9]+)\]", compare_string, re.I)
-              if searched_portstatus:
-                _sourceport_ = "%(_start_)s:%(_finish_)s" % {"_start_":str(searched_portstatus.group(1)), "_finish_":str(searched_portstatus.group(2))} 
-              _sourceip_ = searched_ip_pattern(compare_string, _sourceip_) 
-           #  
-           if _poolname_ not in sourcepool_memory.keys():
-             sourcepool_memory[_poolname_] = []
-           for _ip_ in _sourceip_:
-              member_string = "%(_ip_)s_%(_sourceport_)s" % {"_ip_":_ip_, "_sourceport_":_sourceport_}
-              if member_string not in sourcepool_memory[_poolname_]:
-                sourcepool_memory[_poolname_].append(member_string)
-
-        #_filename_
-        f = open(_filename_, "r")
-        read_contents = f.readlines()
-        f.close()
+        sourcepool_memory = getsourcepoolmember_info(start_end_linenumber_list, read_contents)
+        # start processing source rule
+        read_contents = readfile_getcontents(_filename_)
         #
         pattern_start = "source NAT rule:"
         pattern_end = "Number of sessions[ \t\n\r\f\v]+:"
         start_end_linenumber_list = start_end_parse_from_string(read_contents, pattern_start, pattern_end)
-
         for index_list in start_end_linenumber_list:
            # range to items
            selective_list = read_contents[index_list[0]:index_list[-1]+int(1)]
            # source and destination address
            _sourceipvaluelist_ = findout_iplist_from_range(selective_list, "Source addresses[ \t\n\r\f\v]+:", "Destination addresses[ \t\n\r\f\v]+:")
            # init value
-           _natrulename_ = "unknown"
-           _natrulesetname_ = "unknown"
-           _fromzonename_ = "unknown"
-           _tozonename_ = "unknown"
-           _action_ = "unknown"
+           [_natrulename_, _natrulesetname_, _fromzonename_, _tozonename_, _action_] = ["unknown", "unknown", "unknown", "unknown", "unknown"]
            # analysis each line of the one items
            for _msg_string_ in selective_list:
               compare_string = _msg_string_.strip()
-              splited_compare_string = compare_string.split()
-              if re.search("source NAT rule:", compare_string, re.I):
-                _natrulename_ = splited_compare_string[3]
-                _natrulesetname_ = splited_compare_string[-1]
-              if re.search("From zone[ \t\n\r\f\v]+:", compare_string, re.I):
-                _fromzonename_ = splited_compare_string[-1]
-              if re.search("To zone[ \t\n\r\f\v]+:", compare_string, re.I):
-                _tozonename_ = splited_compare_string[-1]
-              if re.search("Action[ \t\n\r\f\v]+:", compare_string, re.I):
-                _action_ = splited_compare_string[-1]
+              [_natrulename_, _natrulesetname_] = rule_information("source NAT rule:", compare_string, _natrulename_, _natrulesetname_)
+              _fromzonename_ = lineanaysis_getlast_value("From zone[ \t\n\r\f\v]+:", compare_string, _fromzonename_)
+              _tozonename_ = lineanaysis_getlast_value("To zone[ \t\n\r\f\v]+:", compare_string, _tozonename_)
+              _action_ = lineanaysis_getlast_value("Action[ \t\n\r\f\v]+:", compare_string, _action_)
            # 
-           _ruleunique_ = "%(_natrulename_)s:%(_natrulesetname_)s" % {"_natrulename_":_natrulename_, "_natrulesetname_":_natrulesetname_} 
-           for _srcip_ in _sourceipvaluelist_:
-              _srcip_string_ = "%(_srcip_)s/32" % {"_srcip_":_srcip_}
-              if _srcip_string_ not in natcache_memory.keys():
-                natcache_memory[_srcip_string_] = []
-              for _targetip_ in sourcepool_memory[_action_]:
-                 _targetip_value_ = str(_targetip_.strip().split("_")[0])
-                 _targetip_string_ = "%(_targetip_value_)s/32@%(_hostname_)s:source_from_%(_fromzonename_)s_to_%(_tozonename_)s@%(_ruleunique_)s" % {"_targetip_value_":_targetip_value_, "_hostname_":_hostname_, "_fromzonename_":_fromzonename_, "_tozonename_":_tozonename_, "_ruleunique_":_ruleunique_}
-                 if _targetip_string_ not in natcache_memory[_srcip_string_]:
-                   natcache_memory[_srcip_string_].append(_targetip_string_) 
-           # 
-           for _targetip_ in sourcepool_memory[_action_]:
-              _targetip_value_ = str(_targetip_.strip().split("_")[0])
-              _targetip_string_ = "%(_targetip_value_)s/32" % {"_targetip_value_":_srcip_}
-              if _targetip_string_ not in natcache_memory.keys():
-                natcache_memory[_targetip_string_] = []
-              for _srcip_ in _sourceipvaluelist_:
-                 _srcip_string_ = "%(_srcip_)s/32@%(_hostname_)s:source_from_%(_fromzonename_)s_to_%(_tozonename_)s@%(_ruleunique_)s" % {"_srcip_":_srcip_, "_hostname_":_hostname_, "_fromzonename_":_fromzonename_, "_tozonename_":_tozonename_, "_ruleunique_":_ruleunique_}
-                 if _srcip_string_ not in natcache_memory[_targetip_string_]:
-                   natcache_memory[_targetip_string_].append(_srcip_string_)
-
+           _ruleunique_ = "%(_natrulename_)s:%(_natrulesetname_)s" % {"_natrulename_":_natrulename_, "_natrulesetname_":_natrulesetname_}
+           source_unique_string = "%(_ipaddress_)s/%(_netmask_)s@%(_hostname_)s:source_from_%(_fromzonename_)s_to_%(_tozonename_)s@%(_ruleunique_)s"
+           #
+           natcache_memory = fillvalues_sourceinfo_withkeyname(_sourceipvaluelist_, sourcepool_memory[_action_], natcache_memory, str("32"), _hostname_, _fromzonename_, _tozonename_, _ruleunique_, source_unique_string)
+           natcache_memory = fillvalues_sourceinfo_withkeyname(sourcepool_memory[_action_], _sourceipvaluelist_, natcache_memory, str("32"), _hostname_, _fromzonename_, _tozonename_, _ruleunique_, source_unique_string)
         #
-        saved_filename = _filename_.strip().split("/")[-1]
-        filename_string = "cachenat_%(saved_filename)s.txt" % {"saved_filename":str(saved_filename)}
-        JUNIPER_DEVICELIST_DBFILE = USER_VAR_CHCHES + filename_string
-        f = open(JUNIPER_DEVICELIST_DBFILE,"w")
-        f.write(json.dumps(natcache_memory))
-        f.close()
-        #
-
-
+        savethefile_dictvalueinput(_filename_, natcache_memory)
    # thread timeout 
    time.sleep(1)
 
@@ -263,7 +234,7 @@ def viewer_information():
    updated_filestatus = {}
    filestatus = False
    for _filename_ in filenames_list:
-      searched_element = re.search("cachepolicy_",_filename_,re.I)
+      searched_element = re.search("cachenat_",_filename_,re.I)
       if searched_element:
         filepath = USER_VAR_CHCHES + _filename_
         updated_filestatus[str(_filename_)] = str(time.ctime(os.path.getmtime(filepath)))
@@ -299,6 +270,8 @@ def juniper_cachingnat(request,format=None):
 
         if re.match(ENCAP_PASSWORD,str(_input_[0]['auth_key'])):
 
+
+           start_time = time.time()
            # log message
            #f = open(LOG_FILE,"a")
            #_date_ = os.popen("date").read().strip()
@@ -336,6 +309,17 @@ def juniper_cachingnat(request,format=None):
            for _processor_ in _processor_list_:
               _processor_.join()
 
+           # delete file which name is cachenat_
+           finish_time = time.time()
+           spentabs_time = abs(float(finish_time) - float(start_time))
+           for _dirctname_ in [USER_VAR_CHCHES]:
+              for _filename_ in os.listdir(_dirctname_):
+                 filename_direct = str(_dirctname_.strip() + _filename_.strip())
+                 if re.search("cachenat_", filename_direct, re.I):
+                   timeabs_value = abs(float(finish_time) - float(os.path.getctime(filename_direct)))
+                   if timeabs_value > spentabs_time:
+                     remove_cmd = "rm -rf %(filename_direct)s" % {"filename_direct":filename_direct}
+                     os.popen(remove_cmd)
 
            # return
            return Response(viewer_information())
