@@ -39,22 +39,20 @@ def proper_routingtable(routingtable_matched):
    return routingtable_netvalues
    
 def logest_matching(possible_sourceip_list):
-   # device name findout
+   # find the device name from the input format! 
    valid_devicelist = []
+   return_list = []
+   anyinvalue_pattern = "0.0.0.0/0:0.0.0.0/0"
    for _ippattern_ in possible_sourceip_list:
       _devicename_ = str(str(str(_ippattern_).strip().split("@")[1]).strip().split(":")[0])
       if _devicename_ not in valid_devicelist:
         valid_devicelist.append(_devicename_)
-   # get init value 
-   return_list = []
-   anyinvalue_pattern = "0.0.0.0/0:0.0.0.0/0"
-   for _devicename_ in valid_devicelist:
-      for _ippattern_ in possible_sourceip_list:
-         if re.search(anyinvalue_pattern, str(_ippattern_).strip(), re.I):
-           if _ippattern_ not in return_list:
-             return_list.append(_ippattern_)
+      if re.search(anyinvalue_pattern, str(_ippattern_).strip(), re.I):
+        if _ippattern_ not in return_list:
+          return_list.append(_ippattern_)
    #       
    for _devicename_ in valid_devicelist:
+      #
       _network_values_list_ = []
       for _ippattern_ in possible_sourceip_list:
          if re.search(str(_devicename_), str(_ippattern_), re.I):
@@ -65,11 +63,12 @@ def logest_matching(possible_sourceip_list):
       #
       for _valid_network_ in _network_values_list_:
          dictbox_temp = {}
-         myinput_netvalue = "(%(_network_)s):([0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+)@%(_devicename_)s" % {"_network_":str(_valid_network_), "_devicename_":str(_devicename_)}
-         if not re.search(anyinvalue_pattern, myinput_netvalue, re.I):
-           #
-           for _ippattern_ in possible_sourceip_list:
-              searched_status = re.search(myinput_netvalue, str(_ippattern_), re.I)
+         #
+         for _ippattern_ in possible_sourceip_list:
+            #
+            if not re.search(anyinvalue_pattern, str(_ippattern_).strip(), re.I):
+              _searching_string_ = "(%(_valid_network_)s):([0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+)@%(_devicename_)s" % {"_devicename_":_devicename_, "_valid_network_":_valid_network_} 
+              searched_status = re.search(_searching_string_, str(_ippattern_).strip(), re.I)
               if searched_status:
                 network_value = str(searched_status.group(2))
                 network_subnet = int(network_value.strip().split("/")[-1])
@@ -77,11 +76,13 @@ def logest_matching(possible_sourceip_list):
                   dictbox_temp[network_subnet] = []
                 if _ippattern_ not in dictbox_temp[network_subnet]:
                   dictbox_temp[network_subnet].append(_ippattern_)
-           # max find
-           _keyname_ = dictbox_temp.keys()
+         # max number mean : longest matching routing values
+         _keyname_ = dictbox_temp.keys()
+         if len(_keyname_):
            _keyname_.sort()
            max_value = _keyname_[-1]
            return_list = return_list + dictbox_temp[max_value]
+   #
    return return_list
 
 
@@ -96,6 +97,7 @@ def source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,
       _source_subnet_ = str(str(_source_net_).strip().split("/")[-1])
       #
       for _deviceip_ in primarysecondary_devicelist:
+
          ## 2017.01.16. Any (0.0.0.0/0) case update! 
          _devicename_ = primarysecondary_devicename[_deviceip_]
          if default_routing_network == _source_net_:
@@ -104,6 +106,7 @@ def source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,
               if str(_instring_) not in possible_sourceip_list:
                 possible_sourceip_list.append(str(_instring_))
            continue
+
          ## 2017.01. Birdge mode Routing Search updated!
          interface_property = []
          for _interfacename_ in primarysecondary_interfaces[_deviceip_].keys():
@@ -111,7 +114,7 @@ def source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,
             if _property_ not in interface_property:
               interface_property.append(_property_)
          #
-         _devicename_ = primarysecondary_devicename[_deviceip_]
+         #_devicename_ = primarysecondary_devicename[_deviceip_]
          #
          if (str("routedmode") in interface_property) or (unicode("routedmode") in interface_property):
            routingtable_matched = routingtable_inmemory[_deviceip_]
@@ -228,7 +231,20 @@ def _add_stringvalues_into_the_dictionary(_keyname_, dictBox_temp, _expected_net
      dictBox_temp[_keyname_].append(str(_expected_netip_value_))
    return dictBox_temp
 
-
+def _get_serviceproto_(_any_portmatching_, _expected_ipvalue_, _splited_prototype_portrange_):
+   expected_any_searched = re.search(_any_portmatching_, str(_expected_ipvalue_).strip(), re.I)
+   if expected_any_searched:
+     _splited_prototype_portrange_ = expected_any_searched.group(1)
+   return _splited_prototype_portrange_
+   
+def _redefine_servicerange_(_expected_proto_, _expected_ipvalue_):
+   splite_string = "%(_expected_proto_)s/" % {"_expected_proto_":_expected_proto_}
+   _app_portrange_ = _expected_ipvalue_.strip().split(splite_string)[-1]
+   [ _srcportrange_, _dstportrange_ ] = str(_app_portrange_).strip().split(":")
+   _srcportrange_ = allservice_redefine(_srcportrange_)
+   _dstportrange_ = allservice_redefine(_dstportrange_)
+   redefined_srcdstportrange_ = str(":".join([ _srcportrange_, _dstportrange_ ]))
+   return redefined_srcdstportrange_
 
 @api_view(['GET','POST'])
 @csrf_exempt
@@ -266,16 +282,16 @@ def juniper_searchzonefromroute(request,format=None):
         _input_ = JSONParser().parse(request)
         # input validation check ! before stating the processing
         ipaddr_pattern = "[0-9]+.[0-9]+.[0-9]+.[0-9]+/[0-9]+"
-        _any_portmatching_ = r"any/[0-9]+-[0-9]+:[0-9]+-[0-9]+"
-        _tcp_portmatching_ = r"tcp/[0-9]+-[0-9]+:[0-9]+-[0-9]+"
-        _udp_portmatching_ = r"udp/[0-9]+-[0-9]+:[0-9]+-[0-9]+"
+        _any_portmatching_ = r"(any)/[0-9]+-[0-9]+:[0-9]+-[0-9]+"
+        _zero_portmatching_ = r"(0)/[0-9]+-[0-9]+:[0-9]+-[0-9]+"
+        _tcp_portmatching_ = r"(tcp)/[0-9]+-[0-9]+:[0-9]+-[0-9]+"
+        _udp_portmatching_ = r"(udp)/[0-9]+-[0-9]+:[0-9]+-[0-9]+"
         _icmp_portmatching_ = r"(icmp)"
         _confirmed_input_list_ = []
         for _dictData_ in _input_:
-           _keynamelist_ = _dictData_.keys()
            #
            dictBox_temp = {}
-           #
+           _keynamelist_ = _dictData_.keys()
            if (u'destinationip' not in _keynamelist_) and (u'sourceip' not in _keynamelist_) and (u'application' not in _keynamelist_):
              return Response(["error, input data has missing information!"], status=status.HTTP_400_BAD_REQUEST)
            #
@@ -290,14 +306,17 @@ def juniper_searchzonefromroute(request,format=None):
            for _keyname_ in _keynamelist_:
               _items_value_ = _dictData_[_keyname_]
               _expected_netip_value_list_ = str(_items_value_).strip().split(";")
+              #
               if re.search('sourceip', str(_keyname_), re.I) or re.search('destinationip', str(_keyname_), re.I):
                 for _expected_netip_value_ in _expected_netip_value_list_:
                    if re.match(ipaddr_pattern, str(_expected_netip_value_), re.I):
                      dictBox_temp = _add_stringvalues_into_the_dictionary(_keyname_, dictBox_temp, _expected_netip_value_)
+              #
               if re.search('application', str(_keyname_), re.I):
                 for _expected_netip_value_ in _expected_netip_value_list_:
-                   if re.match(_tcp_portmatching_, str(_expected_netip_value_), re.I) or re.match(_udp_portmatching_, str(_expected_netip_value_), re.I) or re.match(_any_portmatching_, str(_expected_netip_value_), re.I):
+                   if re.match(_tcp_portmatching_, str(_expected_netip_value_), re.I) or re.match(_udp_portmatching_, str(_expected_netip_value_), re.I) or re.match(_any_portmatching_, str(_expected_netip_value_), re.I) or re.match(_zero_portmatching_, str(_expected_netip_value_), re.I):
                      dictBox_temp = _add_stringvalues_into_the_dictionary(_keyname_, dictBox_temp, _expected_netip_value_)
+                   #
                    searched_icmp_string = re.search(_icmp_portmatching_, str(_expected_netip_value_), re.I)
                    if searched_icmp_string:
                      _icmp_string_ = searched_icmp_string.group(1)
@@ -318,7 +337,7 @@ def juniper_searchzonefromroute(request,format=None):
         primarysecondary_zonesname = {}
         for _dataDict_ in data_from_CURL_command:
            _keyname_ = _dataDict_.keys()
-           if (u'apiaccessip' in _keyname_) and (u'failover' in _keyname_) and (u'failovermode' in _keyname_):
+           if (u'apiaccessip' in _keyname_) and (u'failover' in _keyname_) and (u'devicehostname' in _keyname_) or (u'interfaces' in _keyname_) or (u'zonesname' in _keyname_):
              pattern_string = str(_dataDict_[u'failover']).strip()
              if re.match(pattern_string, 'primary', re.I):
                _apiaccessip_ = _dataDict_[u'apiaccessip']
@@ -329,7 +348,7 @@ def juniper_searchzonefromroute(request,format=None):
                  primarysecondary_zonesname[_apiaccessip_] = _dataDict_[u"zonesname"]
                
 
-        # get route table information : routingtable_inmemory
+        # get route table information which matched 'primary device' 
         CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/juniper/showroute/"
         get_info = os.popen(CURL_command).read().strip()
         stream = BytesIO(get_info)
@@ -352,6 +371,7 @@ def juniper_searchzonefromroute(request,format=None):
            traybox_dict[u'sourceip'] = []
            traybox_dict[u'destinationip'] = []
            traybox_dict[u'application'] = []
+
            # source process and after logest match
            possible_sourceip_list = source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,primarysecondary_devicename,primarysecondary_interfaces,primarysecondary_zonesname,routingtable_inmemory)
            traybox_dict[u'sourceip'] = logest_matching(possible_sourceip_list)
@@ -362,36 +382,28 @@ def juniper_searchzonefromroute(request,format=None):
            # application processing
            changed_application = []
            for _expected_ipvalue_ in _dictData_[u'application']:
-
-              _splited_prototype_portrange_ = str(_expected_ipvalue_).strip().split("/")
-              expected_zero_searched = re.search(r"0", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
-              expected_any_searched = re.search(r"any", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
-              expected_udp_searched = re.search(r"tcp", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
-              expected_tcp_searched = re.search(r"udp", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
-              expected_icmp_searched = re.search(r"icmp", str(_splited_prototype_portrange_[0].strip().lower()), re.I)
-
-              if expected_udp_searched or expected_tcp_searched or expected_any_searched or expected_zero_searched:
-                [ _app_proto_, _app_portrange_ ] = _splited_prototype_portrange_
-                [ _srcportrange_, _dstportrange_ ] = str(_app_portrange_).strip().split(":")
-                # source port range re-define
-                _srcportrange_ = allservice_redefine(_srcportrange_)
-                _dstportrange_ = allservice_redefine(_dstportrange_)
-
-                redefined_srcdstportrange_ = str(":".join([ _srcportrange_, _dstportrange_ ]))
-                # protocol redefine
-                if re.search("any",str(_app_proto_).lower(),re.I) or re.search("0",str(_app_proto_).lower(),re.I):
+              #
+              _expected_proto_ = ""
+              _expected_proto_ = _get_serviceproto_(_any_portmatching_, _expected_ipvalue_, _expected_proto_)
+              _expected_proto_ = _get_serviceproto_(_zero_portmatching_, _expected_ipvalue_, _expected_proto_)
+              _expected_proto_ = _get_serviceproto_(_tcp_portmatching_, _expected_ipvalue_, _expected_proto_)
+              _expected_proto_ = _get_serviceproto_(_udp_portmatching_, _expected_ipvalue_, _expected_proto_)
+              _expected_proto_ = _get_serviceproto_(_icmp_portmatching_, _expected_ipvalue_, _expected_proto_)
+              #
+              if re.match(str("icmp"), _expected_proto_, re.I):
+                if str("icmp") not in changed_application:
+                  changed_application.append(str("icmp"))
+              else:
+                redefined_srcdstportrange_ = _redefine_servicerange_(_expected_proto_, _expected_ipvalue_)
+                if re.match(str("any"), _expected_proto_, re.I) or re.match(str("0"), _expected_proto_, re.I):
                   redefined_application = "0/%(_prange_)s;tcp/%(_prange_)s;udp/%(_prange_)s;icmp" % {"_prange_":redefined_srcdstportrange_}
                 else:
-                  redefined_application = "%(_proto_)s/%(_prange_)s" % {"_proto_":str(_app_proto_).lower(),"_prange_":redefined_srcdstportrange_}
-                # 
+                  redefined_application = "%(_proto_)s/%(_prange_)s" % {"_proto_":str(_expected_proto_).lower(),"_prange_":redefined_srcdstportrange_}
+                #
                 for _redef_app_ in redefined_application.split(";"):
                    if _redef_app_ not in changed_application:
                      changed_application.append(_redef_app_)
-              else:
-                if expected_icmp_searched:
-                  if str("icmp") not in changed_application:
-                    changed_application.append(str("icmp"))
-
+           # 
            traybox_dict[u'application'] = changed_application
            # 
            full_searched_devicelist.append(traybox_dict)
