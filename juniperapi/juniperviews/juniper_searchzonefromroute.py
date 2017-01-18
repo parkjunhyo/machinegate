@@ -246,6 +246,50 @@ def _redefine_servicerange_(_expected_proto_, _expected_ipvalue_):
    redefined_srcdstportrange_ = str(":".join([ _srcportrange_, _dstportrange_ ]))
    return redefined_srcdstportrange_
 
+def _remove_duplicate_networkvalues_(_netip_list_):
+   #
+   subnet_tempdict = {}
+   for _netip_ in _netip_list_:
+      netip_value = _netip_.strip().split(":")[0]
+      [ netipaddress, netipsubnet ] = netip_value.strip().split("/")
+      if int(netipsubnet) not in subnet_tempdict.keys():
+        subnet_tempdict[int(netipsubnet)] = []
+      if netip_value not in subnet_tempdict[int(netipsubnet)]:
+        subnet_tempdict[int(netipsubnet)].append(netip_value)
+   #
+   subnet_tempdict_keynames = subnet_tempdict.keys()
+   subnet_tempdict_keynames.sort()
+   #
+   removable_netip_list = []
+   #
+   listcount = int(0)
+   for _subnetvalue_ in subnet_tempdict_keynames:
+      for _netip_ in subnet_tempdict[int(_subnetvalue_)]:
+         for _bigger_subnetvalue_ in subnet_tempdict_keynames[int(listcount+int(1)):]:
+            subneted_netip = list(IPNetwork(_netip_).subnet(int(_bigger_subnetvalue_)))
+            for _bigger_netip_ in subnet_tempdict[int(_bigger_subnetvalue_)]:
+               if IPNetwork(_bigger_netip_) in subneted_netip:
+                 subneted_netip.remove(IPNetwork(_bigger_netip_))
+            if not len(subneted_netip):
+              if _netip_ not in removable_netip_list:
+                removable_netip_list.append(_netip_)
+      listcount = listcount + int(1)
+   #
+   uniqued_netip_list = []
+   for _netip_ in _netip_list_:
+      remove_status = False
+      for rm_netip in removable_netip_list:
+         rm_matched_pattern = "^%(rm_netip)s:" % {"rm_netip":rm_netip}
+         if re.search(rm_matched_pattern, _netip_, re.I):
+           remove_status = True
+           break         
+      if not remove_status:
+        if _netip_ not in uniqued_netip_list:
+          uniqued_netip_list.append(_netip_)
+   #
+   return uniqued_netip_list
+
+
 @api_view(['GET','POST'])
 @csrf_exempt
 def juniper_searchzonefromroute(request,format=None):
@@ -374,10 +418,13 @@ def juniper_searchzonefromroute(request,format=None):
 
            # source process and after logest match
            possible_sourceip_list = source_destination_routinglookup(source_ip_list,primarysecondary_devicelist,primarysecondary_devicename,primarysecondary_interfaces,primarysecondary_zonesname,routingtable_inmemory)
-           traybox_dict[u'sourceip'] = logest_matching(possible_sourceip_list)
+           traybox_dict[u'sourceip'] = _remove_duplicate_networkvalues_(logest_matching(possible_sourceip_list))
+           #traybox_dict[u'sourceip'] = logest_matching(possible_sourceip_list)
+
            # destination processing
            possible_destination_list = source_destination_routinglookup(destination_ip_list,primarysecondary_devicelist,primarysecondary_devicename,primarysecondary_interfaces,primarysecondary_zonesname,routingtable_inmemory)
-           traybox_dict[u'destinationip'] = logest_matching(possible_destination_list)
+           traybox_dict[u'destinationip'] = _remove_duplicate_networkvalues_(logest_matching(possible_destination_list))
+           #traybox_dict[u'destinationip'] = logest_matching(possible_destination_list)
 
            # application processing
            changed_application = []
