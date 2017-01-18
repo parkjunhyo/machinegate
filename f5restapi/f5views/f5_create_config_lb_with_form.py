@@ -144,8 +144,11 @@ def f5_create_config_lb_with_form(request,format=None):
                  data_from_CURL_command = JSONParser().parse(stream)
 
                  # make list to command cli
-                 created_items_list.append(data_from_CURL_command[0])
-
+                 if type(data_from_CURL_command) == list:
+                   created_items_list.append(data_from_CURL_command[0])
+                 elif type(data_from_CURL_command) == unicode:
+                   created_items_list.append(data_from_CURL_command)
+                
            return Response(created_items_list)
 
 
