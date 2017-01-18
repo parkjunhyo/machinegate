@@ -374,7 +374,6 @@ def procesing_searchingmatching(_each_processorData_, this_processor_queue):
         if (str(policy_cache_filename) in cache_filename) or (unicode(policy_cache_filename) in cache_filename):
           #
           database_filefull = USER_VAR_CHCHES + policy_cache_filename
-          print database_filefull
           f = open(database_filefull,"r")
           string_contents = f.readlines()
           f.close()
@@ -492,8 +491,13 @@ def procesing_searchingmatching(_each_processorData_, this_processor_queue):
                  [ prototype, portrange ]  = searched_target_items[_policycache_file_keyname_].strip().split("/")
                  portrange_list = _getrangelist_from_range_(portrange)    
                  #
+                 remove_icmp_netip_list_from_database_ = copy.copy(_netip_list_from_database_)
+                 remove_icmp_netip_list_from_database_.remove(u"icmp")
+                 #
                  if re.search(str("0"), prototype, re.I) or re.search(str("any"), prototype, re.I):
-                   _temp_perfect_match_, _temp_include_match_, _temp_partial_match_ = _obtain_perfect_include_partial_application_(input_value, _netip_list_from_database_, file_database[unicode(_policycache_file_keyname_)], portrange_list, _temp_perfect_match_, _temp_include_match_, _temp_partial_match_)
+
+
+                   _temp_perfect_match_, _temp_include_match_, _temp_partial_match_ = _obtain_perfect_include_partial_application_(input_value, remove_icmp_netip_list_from_database_, file_database[unicode(_policycache_file_keyname_)], portrange_list, _temp_perfect_match_, _temp_include_match_, _temp_partial_match_)
                  elif re.search(str("tcp"), prototype, re.I) or re.search(str("udp"), prototype, re.I):
                    if re.search(any_application_pattern, portrange, re.I):
                      _allservice_keyname_ = "%(_policycache_file_keyname_)s_%(prototype)s" % {"_policycache_file_keyname_":_policycache_file_keyname_, "prototype":prototype}
@@ -502,7 +506,7 @@ def procesing_searchingmatching(_each_processorData_, this_processor_queue):
                      _temp_include_match_ = _allservice_id_list_
                      _temp_partial_match_ = _allservice_id_list_
                    else:
-                     _temp_perfect_match_, _temp_include_match_, _temp_partial_match_ = _obtain_perfect_include_partial_application_(input_value, _netip_list_from_database_, file_database[unicode(_policycache_file_keyname_)], portrange_list, _temp_perfect_match_, _temp_include_match_, _temp_partial_match_)
+                     _temp_perfect_match_, _temp_include_match_, _temp_partial_match_ = _obtain_perfect_include_partial_application_(input_value, remove_icmp_netip_list_from_database_, file_database[unicode(_policycache_file_keyname_)], portrange_list, _temp_perfect_match_, _temp_include_match_, _temp_partial_match_)
              #
              intercompare_perfect_match.append(_temp_perfect_match_)
              intercompare_include_match.append(_temp_include_match_)
