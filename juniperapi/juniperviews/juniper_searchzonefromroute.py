@@ -248,46 +248,63 @@ def _redefine_servicerange_(_expected_proto_, _expected_ipvalue_):
 
 def _remove_duplicate_networkvalues_(_netip_list_):
    #
-   subnet_tempdict = {}
+   netip_and_device_dict = {}
    for _netip_ in _netip_list_:
-      netip_value = _netip_.strip().split(":")[0]
-      [ netipaddress, netipsubnet ] = netip_value.strip().split("/")
-      if int(netipsubnet) not in subnet_tempdict.keys():
-        subnet_tempdict[int(netipsubnet)] = []
-      if netip_value not in subnet_tempdict[int(netipsubnet)]:
-        subnet_tempdict[int(netipsubnet)].append(netip_value)
+      [ _netip_group_, _deviceinfo_group_ ] = _netip_.strip().split("@")
+      _devicename_value_ = _deviceinfo_group_.strip().split(":")[0]
+      if _devicename_value_ not in netip_and_device_dict.keys():
+        netip_and_device_dict[_devicename_value_] = []
+      if _netip_ not in netip_and_device_dict[_devicename_value_]:
+        netip_and_device_dict[_devicename_value_].append(_netip_)
    #
-   subnet_tempdict_keynames = subnet_tempdict.keys()
-   subnet_tempdict_keynames.sort()
+   unique_list_values = []
+   for _netip_list_by_devicename_ in netip_and_device_dict.keys():
+      _this_netip_list_ = netip_and_device_dict[_netip_list_by_devicename_]
+      #
+      subnet_tempdict = {}
+      for _netip_ in _this_netip_list_:
+         netip_value = _netip_.strip().split(":")[0]
+         [ netipaddress, netipsubnet ] = netip_value.strip().split("/")
+         if int(netipsubnet) not in subnet_tempdict.keys():
+           subnet_tempdict[int(netipsubnet)] = []
+         if netip_value not in subnet_tempdict[int(netipsubnet)]:
+           subnet_tempdict[int(netipsubnet)].append(netip_value)
+      #
+      subnet_tempdict_keynames = subnet_tempdict.keys()
+      subnet_tempdict_keynames.sort()
+      #
+      removable_netip_list = []
+      #
+      listcount = int(0)
+      for _subnetvalue_ in subnet_tempdict_keynames:
+         for _netip_ in subnet_tempdict[int(_subnetvalue_)]:
+            for _bigger_subnetvalue_ in subnet_tempdict_keynames[int(listcount+int(1)):]:
+               subneted_netip = list(IPNetwork(_netip_).subnet(int(_bigger_subnetvalue_)))
+               for _bigger_netip_ in subnet_tempdict[int(_bigger_subnetvalue_)]:
+                  if IPNetwork(_bigger_netip_) in subneted_netip:
+                    subneted_netip.remove(IPNetwork(_bigger_netip_))
+               if not len(subneted_netip):
+                 if _netip_ not in removable_netip_list:
+                   removable_netip_list.append(_netip_)
+         listcount = listcount + int(1)
+      #
+      uniqued_netip_list = []
+      for _netip_ in _this_netip_list_:
+         remove_status = False
+         for rm_netip in removable_netip_list:
+            rm_matched_pattern = "^%(rm_netip)s:" % {"rm_netip":rm_netip}
+            if re.search(rm_matched_pattern, _netip_, re.I):
+              remove_status = True
+              break         
+         if not remove_status:
+           if _netip_ not in uniqued_netip_list:
+             uniqued_netip_list.append(_netip_)
+      #
+      for _netip_ in uniqued_netip_list:
+         if _netip_ not in unique_list_values:
+           unique_list_values.append(_netip_)
    #
-   removable_netip_list = []
-   #
-   listcount = int(0)
-   for _subnetvalue_ in subnet_tempdict_keynames:
-      for _netip_ in subnet_tempdict[int(_subnetvalue_)]:
-         for _bigger_subnetvalue_ in subnet_tempdict_keynames[int(listcount+int(1)):]:
-            subneted_netip = list(IPNetwork(_netip_).subnet(int(_bigger_subnetvalue_)))
-            for _bigger_netip_ in subnet_tempdict[int(_bigger_subnetvalue_)]:
-               if IPNetwork(_bigger_netip_) in subneted_netip:
-                 subneted_netip.remove(IPNetwork(_bigger_netip_))
-            if not len(subneted_netip):
-              if _netip_ not in removable_netip_list:
-                removable_netip_list.append(_netip_)
-      listcount = listcount + int(1)
-   #
-   uniqued_netip_list = []
-   for _netip_ in _netip_list_:
-      remove_status = False
-      for rm_netip in removable_netip_list:
-         rm_matched_pattern = "^%(rm_netip)s:" % {"rm_netip":rm_netip}
-         if re.search(rm_matched_pattern, _netip_, re.I):
-           remove_status = True
-           break         
-      if not remove_status:
-        if _netip_ not in uniqued_netip_list:
-          uniqued_netip_list.append(_netip_)
-   #
-   return uniqued_netip_list
+   return unique_list_values 
 
 
 @api_view(['GET','POST'])
