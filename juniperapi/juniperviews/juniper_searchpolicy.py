@@ -492,7 +492,8 @@ def procesing_searchingmatching(_each_processorData_, this_processor_queue):
                  portrange_list = _getrangelist_from_range_(portrange)    
                  #
                  remove_icmp_netip_list_from_database_ = copy.copy(_netip_list_from_database_)
-                 remove_icmp_netip_list_from_database_.remove(u"icmp")
+                 if u"icmp" in remove_icmp_netip_list_from_database_:
+                   remove_icmp_netip_list_from_database_.remove(u"icmp")
                  #
                  if re.search(str("0"), prototype, re.I) or re.search(str("any"), prototype, re.I):
 
