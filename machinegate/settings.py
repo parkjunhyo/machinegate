@@ -26,7 +26,7 @@ SECRET_KEY = '+xc(5*_rq8cc^5x$vsn))dr(-r&k32*ktzfj(@el7_f1=!ls&x'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [u'192.168.56.101',u'0.0.0.0',u'localhost']
+ALLOWED_HOSTS = [u'192.168.56.102',u'192.168.56.101']
 
 
 # Application definition
@@ -41,11 +41,13 @@ INSTALLED_APPS = [
     'rest_framework',
     'juniperapi.apps.JuniperapiConfig',
     'f5restapi.apps.F5RestapiConfig',
+    'corsheaders',
 ]
 
 MIDDLEWARE_CLASSES = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -124,3 +126,5 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 
 STATIC_URL = '/static/'
+
+CORS_ORIGIN_ALLOW_ALL = True

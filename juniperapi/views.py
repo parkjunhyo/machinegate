@@ -8,3 +8,5 @@ from juniperapi.juniperviews.juniper_cachingpolicy import juniper_cachingpolicy
 from juniperapi.juniperviews.juniper_cachingnat import juniper_cachingnat
 from juniperapi.juniperviews.juniper_searchzonefromroute import juniper_searchzonefromroute
 from juniperapi.juniperviews.juniper_searchpolicy import juniper_searchpolicy
+from juniperapi.juniperviews.juniper_device_regi import juniper_device_regi
+from juniperapi.juniperviews.juniper_showroute_static_update import juniper_showroute_static_update
