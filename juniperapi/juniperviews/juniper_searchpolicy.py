@@ -23,6 +23,9 @@ import paramiko
 from netaddr import *
 from multiprocessing import Process, Queue, Lock
 
+from shared_function import obtainjson_from_mongodb as obtainjson_from_mongodb
+from shared_function import exact_findout as exact_findout
+
 class JSONResponse(HttpResponse):
     """
     An HttpResponse that renders its content into JSON.
@@ -522,95 +525,6 @@ def procesing_searchingmatching(_each_processorData_, this_processor_queue):
 
            
 
-         
-          # initial valus
-          #tempdict_box[u'matchedpolicy'][u'perfectmatch'] = []
-          #tempdict_box[u'matchedpolicy'][u'includematch'] = []
-          #tempdict_box[u'matchedpolicy'][u'partialmatch'] = []
-          #tempdict_box[u'matchedpolicydetail'] = {}
-          #tempdict_box[u'matchedpolicydetail'][u'perfectmatch'] = {}
-          #tempdict_box[u'matchedpolicydetail'][u'includematch'] = {}
-          #tempdict_box[u'matchedpolicydetail'][u'partialmatch'] = {}
-          
-
-
-      #string_Dictvalues = {"inputsrc_netip":str(inputsrc_netip), "inputsrc_device":str(inputsrc_device), "inputsrc_zone":str(inputsrc_zone), "inputdst_netip":str(inputdst_netip), "inputdst_device":str(inputdst_device), "inputdst_zone":str(inputdst_zone)}
-
-      #if re.match(inputsrc_device, inputdst_device, re.I):
-      #  policy_cache_filename = "cachepolicy_%(inputsrc_device)s_from_%(inputsrc_zone)s_to_%(inputdst_zone)s.txt" % string_Dictvalues
-      #  device_fromtozone_string = "%(inputsrc_device)s_from_%(inputsrc_zone)s_to_%(inputdst_zone)s" % string_Dictvalues
-
-      #  if (str(policy_cache_filename) in cache_filename) or (unicode(policy_cache_filename) in cache_filename):
-      #    # database file read
-      #    database_filefull = USER_VAR_CHCHES + policy_cache_filename
-      #    f = open(database_filefull,"r")
-      #    string_contents = f.readlines()
-      #    f.close()
-      #    stream = BytesIO(string_contents[0])
-      #    file_database = JSONParser().parse(stream) 
-      #    #
-      #    tempdict_box = {}
-      #    tempdict_box[u'sourceip'] = str(inputsrc_netip)
-      #    tempdict_box[u'destinationip'] = str(inputdst_netip)
-      #    tempdict_box[u'devicename'] = str(inputsrc_device)
-      #    tempdict_box[u'fromzone'] = str(inputsrc_zone)
-      #    tempdict_box[u'tozone'] = str(inputdst_zone)
-      #    tempdict_box[u'matchedpolicy'] = {}
-      #    tempdict_box[u'matchedpolicy'][u'perfectmatch'] = []
-      #    tempdict_box[u'matchedpolicy'][u'includematch'] = []
-      #    tempdict_box[u'matchedpolicy'][u'partialmatch'] = []
-      #    tempdict_box[u'matchedpolicydetail'] = {}
-      #    tempdict_box[u'matchedpolicydetail'][u'perfectmatch'] = {}
-      #    tempdict_box[u'matchedpolicydetail'][u'includematch'] = {}
-      #    tempdict_box[u'matchedpolicydetail'][u'partialmatch'] = {}
-
-      #    # 
-      #    appvalue_string = _app_value_.strip().split("/")
-      #    # match the what kind of the protocol is required!
-      #    any_app_matching = re.search(r"any", str(appvalue_string[0].strip().lower()), re.I)
-      #    interger_any_app_matching = re.search(r"0", str(appvalue_string[0].strip().lower()), re.I)
-      #    tcp_app_matching = re.search(r"tcp", str(appvalue_string[0].strip().lower()), re.I)
-      #    udp_app_matching = re.search(r"udp", str(appvalue_string[0].strip().lower()), re.I)
-      #    icmp_app_matching = re.search(r"icmp", str(appvalue_string[0].strip().lower()), re.I)
-      #    # 
-      #    if tcp_app_matching or udp_app_matching or any_app_matching or interger_any_app_matching:
-      #      [ _app_proto_, _app_number_ ] = appvalue_string
-      #      [ _src_portrange_, _dst_portrange_ ] = _app_number_.strip().split(":")
-      #      tempdict_box[u'protocoltype'] = str(_app_proto_)
-      #      tempdict_box[u'sourceportrange'] = str(_src_portrange_)
-      #      tempdict_box[u'destinationportrange'] = str(_dst_portrange_)
-      #      src_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(tempdict_box[u'sourceportrange'])}
-      #      dst_proto_port_string = "%(_proto_)s/%(_portrange_)s" % {"_proto_":str(_app_proto_),"_portrange_":str(tempdict_box[u'destinationportrange'])}
-      #    else:
-      #      if icmp_app_matching:
-      #        _app_proto_  = appvalue_string[0]
-      #        tempdict_box[u'protocoltype'] = str(_app_proto_)
-      #        tempdict_box[u'sourceportrange'] = str("none")
-      #        tempdict_box[u'destinationportrange'] = str("none")
-      #        src_proto_port_string = "%(_proto_)s" % {"_proto_":str(_app_proto_)}
-      #        dst_proto_port_string = "%(_proto_)s" % {"_proto_":str(_app_proto_)}
-      #    # perfect matching processing
-      #    matched_policylist = perfect_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
-      #    #tempdict_box[u'matchedpolicy'][u'perfectmatch'] = tempdict_box[u'matchedpolicy'][u'perfectmatch'] + matched_policylist
-      #    tempdict_box[u'matchedpolicy'][u'perfectmatch'] = matched_policylist
-      #    tempdict_box[u'matchedpolicydetail'][u'perfectmatch'] = findout_policydetail_from_cache(tempdict_box[u'matchedpolicy'][u'perfectmatch'], device_fromtozone_string, file_database[u'policydetail'])
-      #    perfect_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'perfectmatch'])
-
-      #    # include matching processing
-      #    matched_policylist = include_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
-      #    for _matcheditem_ in matched_policylist:
-      #       if _matcheditem_ not in perfect_matched_policylist:
-      #         tempdict_box[u'matchedpolicy'][u'includematch'].append(_matcheditem_)
-      #    tempdict_box[u'matchedpolicydetail'][u'includematch'] = findout_policydetail_from_cache(tempdict_box[u'matchedpolicy'][u'includematch'], device_fromtozone_string, file_database[u'policydetail'])
-      #    included_matched_policylist = copy.copy(tempdict_box[u'matchedpolicy'][u'includematch'])
-
-      #    # patial matching processing
-      #    matched_policylist = patial_match_lookup_function(file_database[u'source'], file_database[u'destination'], file_database[u'source_application'], file_database[u'destination_application'], inputsrc_netip, inputdst_netip, src_proto_port_string, dst_proto_port_string)
-      #    for _matcheditem_ in matched_policylist:
-      #       if (_matcheditem_ not in perfect_matched_policylist) and (_matcheditem_ not in included_matched_policylist):
-      #         tempdict_box[u'matchedpolicy'][u'partialmatch'].append(_matcheditem_)
-      #    tempdict_box[u'matchedpolicydetail'][u'partialmatch'] = findout_policydetail_from_cache(tempdict_box[u'matchedpolicy'][u'partialmatch'], device_fromtozone_string, file_database[u'policydetail'])
-
           # insert the queue
           this_processor_queue.put(tempdict_box)
  
@@ -622,35 +536,33 @@ def procesing_searchingmatching(_each_processorData_, this_processor_queue):
 @csrf_exempt
 def juniper_searchpolicy(request,format=None):
 
-   # 
    #global tatalsearched_values, threadlock_key
    #threadlock_key = threading.Lock()
    #tatalsearched_values = []
 
+
+
    # get method
    if request.method == 'GET':
-      try:
-         get_message = [
-           {
-             "sourceip" : "172.22.113.10/32;172.22.113.11/32",
-             "destinationip" : "172.22.208.15/32",
-             "application" : "tcp/0-0:1700-1700;<protocol>/<souce port range>:<destination port range>"
-           },
-           {
-             "sourceip" : "172.22.0.0/16",
-             "destinationip" : "172.22.209.0/24",
-             "application" : "icmp"
-           },
-           {
-             "sourceip" : "172.22.112.0/23",
-             "destinationip" : "172.22.208.10/28",
-             "application" : "any/0-0:0-0;tcp/0-0:0-0;udp/0-65535:0-65535"
-           }
-         ]
-         return Response(get_message)
-      except:
-         message = ["device list database is not existed!"]
-         return Response(message, status=status.HTTP_400_BAD_REQUEST)
+     parameter_from = request.query_params.dict()
+     _keyname_pattern_ = "([a-zA-Z0-9\-\.\/\_\<\>\-\:\*]*)_from_([a-zA-Z0-9\-\.\/\_\<\>\-\:\*]*)_to_([a-zA-Z0-9\-\.\/\_\<\>\-\:\*]*)"
+     if u'devicehostname' not in parameter_from:
+       hostname_list = []
+       for _dictvalues_ in obtainjson_from_mongodb('juniper_srx_rule_table_cache'):       
+          _keyname_ = "%(_host_)s_from_%(_from_)s_to_%(_to_)s" % {'_host_':_dictvalues_[u'devicehostname'], '_from_':_dictvalues_[u'from_zone'], '_to_':_dictvalues_[u'to_zone']}
+          if _keyname_ not in hostname_list:
+            hostname_list.append(_keyname_) 
+       return Response(json.dumps({"items":hostname_list}))
+     else:
+       parameter_hostname = parameter_from[u'devicehostname'] 
+       searched_value = re.search(_keyname_pattern_, str(parameter_hostname))
+       if searched_value:
+         _target_ = {"devicehostname":searched_value.group(1).strip(),"from_zone":searched_value.group(2).strip(),"to_zone":searched_value.group(3).strip()}
+         _obtained_values_ = exact_findout('juniper_srx_rule_table_cache', _target_)
+         for _dictvalues_ in _obtained_values_:
+            del _dictvalues_[u'_id']
+         return Response(json.dumps({"items":_obtained_values_}))
+
 
 
    elif request.method == 'POST':

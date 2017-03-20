@@ -117,7 +117,19 @@ def juniper_exportpolicy(request,format=None):
        # end of if auth_matched:
          device_information_values = obtainjson_from_mongodb('juniper_srx_devices')
          primary_devices = findout_primary_devices(device_information_values)
-         # 
+
+         # delete old files : USER_VAR_POLICIES
+         except_filenames = ['readme.txt']
+         for _filename_ in os.listdir(USER_VAR_POLICIES):
+            if _filename_ not in except_filenames: 
+              _filefull_ = USER_VAR_POLICIES + _filename_
+              os.popen('rm -rf %(_filefull_)s' % {'_filefull_':_filefull_})
+         except_filenames = ['readme.txt']
+         for _filename_ in os.listdir(USER_VAR_NAT):
+            if _filename_ not in except_filenames:
+              _filefull_ = USER_VAR_NAT + _filename_
+              os.popen('rm -rf %(_filefull_)s' % {'_filefull_':_filefull_}) 
+
          # policy files will be created at the one of secondary devices. 
          # during, this processing runs save and sftp.
          secondary_devices = {}
@@ -153,11 +165,10 @@ def juniper_exportpolicy(request,format=None):
             while not _queue_.empty():
                  _get_values_ = _queue_.get()
                  search_result.append(_get_values_)
-         if len(search_result):
-           return Response(json.dumps({"items":search_result}))
-         else:
-           return_object = {"items":[{"message":"no registered device to export!","process_status":"error"}]}
-           return Response(json.dumps(return_object))
+         if not len(search_result):
+           search_result = [{"message":"no registered device to export!","process_status":"error"}]
+         return Response(json.dumps({"items":search_result}))
+
        else:
          return_object = {"items":[{"message":"no authorization!","process_status":"error"}]}
          return Response(json.dumps(return_object))

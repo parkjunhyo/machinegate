@@ -39,7 +39,7 @@ class JSONResponse(HttpResponse):
         kwargs['content_type'] = 'application/json'
         super(JSONResponse, self).__init__(content, **kwargs)
 
-def confirm_ip_reachable(_dictvalues_, this_processor_queue, registered_ip_string, registered_ip_unicode):
+def confirm_ip_reachable(_dictvalues_, this_processor_queue, registered_ip_string, registered_ip_unicode, mongo_db_collection_name):
    # parse values
    apiaccessip_from_in = str(_dictvalues_[u'apiaccessip'])
    location_from_in = str(_dictvalues_[u'location'])
@@ -68,16 +68,16 @@ def confirm_ip_reachable(_dictvalues_, this_processor_queue, registered_ip_strin
      if (_dictvalues_[u'apiaccessip'] not in registered_ip_string) or (_dictvalues_[u'apiaccessip'] not in registered_ip_unicode):
        ## input values for mongo database : 
        mongodb_input = {u'apiaccessip':apiaccessip_from_in, u'hostname':_hostname_, u'location':location_from_in, u'model':_hwmodel_, u'version':_hwversion_}
+       insert_dictvalues_into_mongodb(mongo_db_collection_name, mongodb_input)
+       ## return the queue
        done_msg = "%(apiaccessip_from_in)s device registered!" % {"apiaccessip_from_in":apiaccessip_from_in}
-       ## return the queue
-       this_processor_queue.put({"message":done_msg,"process_status":"done","process_done_items":mongodb_input})
+       this_processor_queue.put({"message":done_msg,"process_status":"done"})
      else:
-       error_msg = "%(apiaccessip_from_in)s already registered!" % {"apiaccessip_from_in":apiaccessip_from_in}
        ## return the queue
+       error_msg = "%(apiaccessip_from_in)s already registered!" % {"apiaccessip_from_in":apiaccessip_from_in}
        this_processor_queue.put({"message":error_msg,"process_status":"error"})
      # end of try:
    except:
-     print "-------10----------"
      remote_conn_pre.close()
      error_msg = "%(apiaccessip_from_in)s not reachable address!" % {"apiaccessip_from_in":apiaccessip_from_in}
      this_processor_queue.put({"message":error_msg,"process_status":"error"})
@@ -127,7 +127,7 @@ def juniper_device_regi(request,format=None):
             _processor_list_ = []
             for dataDict_value in _input_[u'items']:
                this_processor_queue = processing_queues_list[count]
-               _processor_ = Process(target = confirm_ip_reachable, args = (dataDict_value, this_processor_queue, registered_ip_string, registered_ip_unicode,))
+               _processor_ = Process(target = confirm_ip_reachable, args = (dataDict_value, this_processor_queue, registered_ip_string, registered_ip_unicode, mongo_db_collection_name,))
                _processor_.start()
                _processor_list_.append(_processor_)
                # for next queue
@@ -139,10 +139,8 @@ def juniper_device_regi(request,format=None):
             for _queue_ in processing_queues_list:
                while not _queue_.empty():
                     _get_values_ = _queue_.get()
-                    if re.search(str(_get_values_["process_status"]),"done",re.I) or re.search(str(_get_values_[u"process_status"]),"done",re.I):
-                      # expected value : {u'apiaccessip':, u'hostname':, u'location':, u'model':, u'version':} 
-                      insert_dictvalues_into_mongodb(mongo_db_collection_name, _get_values_["process_done_items"])
                     search_result.append(_get_values_)
+            #
             return Response(json.dumps({"items":search_result}))
           # end of if ('items' in _input_.keys()) and (u'items' in _input_.keys()):
           else:
@@ -194,9 +192,8 @@ def juniper_device_regi(request,format=None):
             for _queue_ in processing_queues_list:
                while not _queue_.empty():
                     _get_values_ = _queue_.get()
-                    if re.search(str(_get_values_["process_status"]),"done",re.I) or re.search(str(_get_values_[u"process_status"]),"done",re.I):
-                      remove_data_in_collection(mongo_db_collection_name, _get_values_["process_done_items"])
                     search_result.append(_get_values_)
+            # return
             return Response(json.dumps({"items":search_result}))
           # end of if ('items' in _input_.keys()) and (u'items' in _input_.keys()):
           else:

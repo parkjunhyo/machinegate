@@ -180,8 +180,8 @@ def info_iface_to_zonename(device_information_values):
 def remove_info_in_db(dataDict_value, this_processor_queue, mongo_db_collection_name):
    remove_status = exact_findout(mongo_db_collection_name, dataDict_value)
    if len(remove_status):
-     done_msg = "matched and deleted!"
-     this_processor_queue.put({"message":done_msg,"process_status":"done","process_done_items":dataDict_value})
+     remove_data_in_collection(mongo_db_collection_name, dataDict_value) 
+     this_processor_queue.put({"message":"matched and deleted!","process_status":"done"})
    else:
-     error_msg = "no matched in database!"
-     this_processor_queue.put({"message":error_msg,"process_status":"error"})
+     this_processor_queue.put({"message":"no matched in database!","process_status":"error"})
+

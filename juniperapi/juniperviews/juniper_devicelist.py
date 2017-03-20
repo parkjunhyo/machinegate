@@ -21,9 +21,9 @@ from multiprocessing import Process, Queue, Lock
 
 
 from shared_function import runssh_clicommand as runssh_clicommand
-from shared_function import update_dictvalues_into_mongodb as update_dictvalues_into_mongodb 
 from shared_function import obtainjson_from_mongodb as obtainjson_from_mongodb 
 from shared_function import remove_collection as remove_collection
+from shared_function import insert_dictvalues_into_mongodb as insert_dictvalues_into_mongodb
 
 class JSONResponse(HttpResponse):
     """
@@ -35,7 +35,7 @@ class JSONResponse(HttpResponse):
         super(JSONResponse, self).__init__(content, **kwargs)
 
 
-def obtain_deviceinfo(dataDict_value, this_processor_queue):
+def obtain_deviceinfo(dataDict_value, this_processor_queue, mongo_db_collection_name):
    # the box for the return
    dictBox = {}
    #  
@@ -114,11 +114,13 @@ def obtain_deviceinfo(dataDict_value, this_processor_queue):
    dictBox[u'zonesinfo'] = zone_info_dict 
 
    # result return using the queue
-   done_msg = "%(apiaccessip_from_in)s device information re-created!" % {"apiaccessip_from_in":dictBox[u'apiaccessip']}
-   this_processor_queue.put({"message":done_msg,"process_status":"done","process_done_items":dictBox})
+   insert_dictvalues_into_mongodb(mongo_db_collection_name, dictBox)
+   done_msg = "%(apiaccessip_from_in)s devices activated!" % {"apiaccessip_from_in":dictBox[u'apiaccessip']}
+   this_processor_queue.put({"message":done_msg,"process_status":"done"})
 
    # thread timeout 
    time.sleep(2)
+
 
 
 @api_view(['GET','POST'])
@@ -151,32 +153,36 @@ def juniper_devicelist(request,format=None):
           processing_queues_list = []
           for dataDict_value in data_from_databasefile:
              processing_queues_list.append(Queue(maxsize=0))
+ 
+          # remove collection
+          remove_collection(mongo_db_collection_name)
+
           # run processing to get information
           count = 0
           _processor_list_ = []
           for dataDict_value in data_from_databasefile:
              this_processor_queue = processing_queues_list[count]
-             _processor_ = Process(target = obtain_deviceinfo, args = (dataDict_value, this_processor_queue,))
+             _processor_ = Process(target = obtain_deviceinfo, args = (dataDict_value, this_processor_queue, mongo_db_collection_name))
              _processor_.start()
              _processor_list_.append(_processor_)
              count = count + 1
           for _processor_ in _processor_list_:
              _processor_.join()
+
+
           # get information from the queue
           search_result = []
-          return_values = []
           for _queue_ in processing_queues_list:
              while not _queue_.empty():
                   _get_values_ = _queue_.get()
-                  if re.search(str(_get_values_["process_status"]),"done",re.I) or re.search(str(_get_values_[u"process_status"]),"done",re.I):
-                    search_result.append(_get_values_["process_done_items"])
-                    return_values.append(_get_values_)
-          if len(search_result):
-            update_dictvalues_into_mongodb(mongo_db_collection_name, search_result)
-          else:
-            return_values = [{"message":"all of devices information cleared!", "process_status":"done"}]
+                  search_result.append(_get_values_)
+          # 
+          if not len(search_result):
             remove_collection(mongo_db_collection_name)
-          return Response(json.dumps({"items":return_values}))
+            search_result = [{"message":"all of devices information cleared!", "process_status":"error"}]
+          #
+          return Response(json.dumps({"items":search_result}))
+
         # end of if auth_matched:
         else:
           return_object = {"items":[{"message":"no authorization!","process_status":"error"}]}

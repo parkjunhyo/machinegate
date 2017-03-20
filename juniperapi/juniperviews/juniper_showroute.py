@@ -41,7 +41,7 @@ class JSONResponse(HttpResponse):
         super(JSONResponse, self).__init__(content, **kwargs)
 
 
-def obtain_showroute(_primaryip_, device_information_values, this_processor_queue):
+def obtain_showroute(_primaryip_, device_information_values, this_processor_queue, mongo_db_collection_name):
    #
    reversed_sorted_iface_to_zone = info_iface_to_zonename(device_information_values)
    laststring_pattern =  r"via[ \t\n\r\f\v]+([a-zA-Z0-9\-\.\/\_\<\>\-\:\*\[\]]*)[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+"
@@ -67,11 +67,12 @@ def obtain_showroute(_primaryip_, device_information_values, this_processor_queu
           routing_table_info['zonename'] = reversed_sorted_iface_to_zone[routing_nexthop_iface]
           routing_table_info['update_method'] = 'auto'  
           # return the queue
-          done_msg = "%(_this_hostname_)s routing updated!" % {"_this_hostname_":_this_hostname_}
-          this_processor_queue.put({"message":done_msg,"process_status":"done","process_done_items":routing_table_info})
-   # thread timeout 
-   time.sleep(1)
+          insert_dictvalues_into_mongodb(mongo_db_collection_name, routing_table_info)
 
+   # thread timeout 
+   done_msg = "%(_this_hostname_)s routing updated!" % {"_this_hostname_":_this_hostname_}
+   this_processor_queue.put({"message":done_msg,"process_status":"done"})
+   time.sleep(1)
 
 @api_view(['GET','POST'])
 @csrf_exempt
@@ -126,6 +127,10 @@ def juniper_showroute(request,format=None):
                   if _keyname_ != u'_id':
                     _temp_box_[str(_keyname_)] = str(_dictvalue_[_keyname_])
                renewed_static_routing.append(_temp_box_)
+
+         # remove collections
+         remove_collection(mongo_db_collection_name)
+        
          # queue generation
          processing_queues_list = []
          for _primaryip_ in primary_devices:
@@ -136,33 +141,25 @@ def juniper_showroute(request,format=None):
          for _primaryip_ in primary_devices:
             matched_info = search_items_matched_info_by_apiaccessip(device_information_values, _primaryip_)
             this_processor_queue = processing_queues_list[count]
-            _processor_ = Process(target = obtain_showroute, args = (_primaryip_, matched_info, this_processor_queue,))
+            _processor_ = Process(target = obtain_showroute, args = (_primaryip_, matched_info, this_processor_queue, mongo_db_collection_name))
             _processor_.start()
             _processor_list_.append(_processor_)
             # for next queue
             count = count + 1
          for _processor_ in _processor_list_:
             _processor_.join()
+
          # get information from the queue
          search_result = []
-         return_values = []
-         message_container = []
          for _queue_ in processing_queues_list:
             while not _queue_.empty():
                  _get_values_ = _queue_.get()
-                 if re.search(str(_get_values_["process_status"]),"done",re.I):
-                   search_result.append(_get_values_["process_done_items"])
-                   if _get_values_["message"] not in message_container:
-                     message_container.append(_get_values_["message"])
-                     return_values.append({'message':_get_values_["message"],'process_status': _get_values_["process_status"]})                   
-         if len(search_result):
-           update_dictvalues_into_mongodb(mongo_db_collection_name, search_result)
-           for _manual_static_ in renewed_static_routing:
-              insert_dictvalues_into_mongodb(mongo_db_collection_name, _manual_static_)
-         else:
-           return_values = [{"message":"all of routing table cleared!", "process_status":"done"}]
+                 search_result.append(_get_values_)
+
+         if not len(search_result):
            remove_collection(mongo_db_collection_name)
-         return Response(json.dumps({"items":return_values}))
+           search_result = [{"message":"all of routing table cleared!", "process_status":"done"}]
+         return Response(json.dumps({"items":search_result}))
 
        # end of if auth_matched:
        else:

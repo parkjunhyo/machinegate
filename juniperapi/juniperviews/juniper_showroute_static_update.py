@@ -44,15 +44,18 @@ def confirm_adding_static_route(_input_dict_value_, this_processor_queue, mongo_
 
    perfect_parameter = {"devicehostname":str(_devicehostname_), "routing_address":str(_routing_address_) , "zonename":str(_zonenae_)}
    perfect_matched = exact_findout(mongo_db_collection_name, perfect_parameter)
+
    if len(perfect_matched):
      _msg_ = "already routing infomation existed!"
      this_processor_queue.put({"message":_msg_,"process_status":"error"})
    else:
      partial_parameter = {"devicehostname":str(_devicehostname_), "routing_address":str(_routing_address_)}
      partial_matched = exact_findout(mongo_db_collection_name, partial_parameter)
+
      if len(partial_matched):
-       _msg_ = "routing info duplicated! - other zone"
-       this_processor_queue.put({"message":_msg_,"process_status":"done","process_done_items":_done_items_})
+       _msg_ = "routing info other zone duplicated!"
+       insert_dictvalues_into_mongodb(mongo_db_collection_name, _done_items_)
+       this_processor_queue.put({"message":_msg_,"process_status":"done"})
      else:
        _this_net_ = IPNetwork(_routing_address_)
        searched_values = exact_findout(mongo_db_collection_name, {"devicehostname":str(_devicehostname_)})
@@ -63,11 +66,14 @@ def confirm_adding_static_route(_input_dict_value_, this_processor_queue, mongo_
             duplicated_status = True
             break
        if duplicated_status:
-         _msg_ = "routing info duplicated! - network included!"
-         this_processor_queue.put({"message":_msg_,"process_status":"done","process_done_items":_done_items_})
+         _msg_ = "routing info network duplicated!"
+         insert_dictvalues_into_mongodb(mongo_db_collection_name, _done_items_)
+         this_processor_queue.put({"message":_msg_,"process_status":"done"})
        else:
          _msg_ = "static routing updated!"
-         this_processor_queue.put({"message":_msg_,"process_status":"done","process_done_items":_done_items_})
+         insert_dictvalues_into_mongodb(mongo_db_collection_name, _done_items_)
+         this_processor_queue.put({"message":_msg_,"process_status":"done"})
+
    # thread timeout 
    time.sleep(1)
 
@@ -124,8 +130,6 @@ def juniper_showroute_static_update(request,format=None):
            for _queue_ in processing_queues_list:
               while not _queue_.empty():
                    _get_values_ = _queue_.get()
-                   if re.search(str(_get_values_["process_status"]),"done",re.I) or re.search(str(_get_values_[u"process_status"]),"done",re.I):
-                     insert_dictvalues_into_mongodb(mongo_db_collection_name, _get_values_["process_done_items"])
                    search_result.append(_get_values_)
            return Response(json.dumps({"items":search_result}))
          # end of if ('items' in _input_.keys()) and (u'items' in _input_.keys()):
@@ -177,10 +181,7 @@ def juniper_showroute_static_update(request,format=None):
            for _queue_ in processing_queues_list:
               while not _queue_.empty():
                    _get_values_ = _queue_.get()
-                   if re.search(str(_get_values_["process_status"]),"done",re.I) or re.search(str(_get_values_[u"process_status"]),"done",re.I):
-                     remove_data_in_collection(mongo_db_collection_name, _get_values_["process_done_items"])
                    search_result.append(_get_values_)
-           print search_result
            return Response(json.dumps({"items":search_result}))
          # end of if ('items' in _input_.keys()) and (u'items' in _input_.keys()):
          else:
