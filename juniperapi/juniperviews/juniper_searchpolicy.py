@@ -17,6 +17,7 @@ from juniperapi.setting import PARAMIKO_DEFAULT_TIMEWAIT
 from juniperapi.setting import USER_VAR_CHCHES
 from juniperapi.setting import PYTHON_MULTI_PROCESS
 from juniperapi.setting import PYTHON_MULTI_THREAD
+from juniperapi.setting import system_property
 
 import os,re,copy,json,time,threading,sys,random
 import paramiko
@@ -25,6 +26,7 @@ from multiprocessing import Process, Queue, Lock
 
 from shared_function import obtainjson_from_mongodb as obtainjson_from_mongodb
 from shared_function import exact_findout as exact_findout
+
 
 class JSONResponse(HttpResponse):
     """
@@ -352,6 +354,115 @@ def _multiple_intersection_(_list_in_lists_):
       intersection_value = set(intersection_value).intersection(_listvalue_)
    return list(intersection_value)
 
+def procesing_searchingzone(_netip_, routing_info_per_devicehost, this_processor_queue):
+   #
+   _this_subnet_ = int(str(_netip_).split('/')[-1])
+   _this_IPNetwork = IPNetwork(str(_netip_))
+
+   # search and find default routing and zone 
+   _default_gateway_zone_ = ''
+   for _dictvalues_ in routing_info_per_devicehost:
+      if re.search('0.0.0.0/0', _dictvalues_[u'routing_address'], re.I):
+        _default_gateway_zone_ = _dictvalues_[u'zonename']
+        break
+   #
+   logested_matched_routing = []
+   #
+   matched_routing = {}
+   for _dictvalues_ in routing_info_per_devicehost:
+      _in_subnet_ = int(str(_dictvalues_[u'routing_address']).split('/')[-1])
+      if not re.search('0.0.0.0/0', str(_dictvalues_[u'routing_address'])):
+        if _this_IPNetwork in IPNetwork(str(_dictvalues_[u'routing_address'])):
+          if _in_subnet_ not in matched_routing.keys():
+            matched_routing[_in_subnet_] = []
+          matched_routing[_in_subnet_].append(_dictvalues_)
+   #
+   _subnets_list_ = matched_routing.keys()
+   _subnets_list_.sort()
+   if len(_subnets_list_):
+     _subnet_max_ = _subnets_list_[-1]
+     for _dictvalues_ in matched_routing[_subnet_max_]:
+        _unique_string_ = '#unique#'.join([str(_netip_), str(_dictvalues_[u'devicehostname']), str(_dictvalues_[u'apiaccessip']), str(_dictvalues_[u'zonename']), str(_dictvalues_[u'routing_address'])])
+        _selected_value_ = {'searching_netip':str(_netip_), 'devicehostname':str(_dictvalues_[u'devicehostname']), 'apiaccessip':str(_dictvalues_[u'apiaccessip']), 'zonename':str(_dictvalues_[u'zonename']), 'routing_address':str(_dictvalues_[u'routing_address']), 'unique_string':_unique_string_}
+        logested_matched_routing.append(_selected_value_)
+
+   #
+   matched_routing = {}
+   for _dictvalues_ in routing_info_per_devicehost:
+      _in_subnet_ = int(str(_dictvalues_[u'routing_address']).split('/')[-1])
+      if not re.search('0.0.0.0/0', str(_dictvalues_[u'routing_address'])):
+        if IPNetwork(str(_dictvalues_[u'routing_address'])) in _this_IPNetwork:
+          _unique_string_ = '#unique#'.join([str(_dictvalues_[u'routing_address']), str(_dictvalues_[u'devicehostname']), str(_dictvalues_[u'apiaccessip']), str(_dictvalues_[u'zonename']), str(_dictvalues_[u'routing_address'])])
+          _selected_value_ = {'searching_netip':str(_dictvalues_[u'routing_address']), 'devicehostname':str(_dictvalues_[u'devicehostname']), 'apiaccessip':str(_dictvalues_[u'apiaccessip']), 'zonename':str(_dictvalues_[u'zonename']), 'routing_address':str(_dictvalues_[u'routing_address']), 'unique_string':_unique_string_}
+          _added_status_ = True
+          for _dict_ in logested_matched_routing:
+             if re.search(_unique_string_, _dict_['unique_string']):
+               _added_status_ = False 
+          if _added_status_:
+            logested_matched_routing.append(_selected_value_)
+
+
+#          if _in_subnet_ not in matched_routing.keys():
+#            matched_routing[_in_subnet_] = []
+#          matched_routing[_in_subnet_].append(_dictvalues_)
+
+#   _subnets_list_ = matched_routing.keys()
+#   _subnets_list_.sort()
+#   if len(_subnets_list_):
+#     _subnet_max_ = _subnets_list_[-1]
+#     for _dictvalues_ in matched_routing[_subnet_max_]:
+#        _unique_string_ = '#unique#'.join([str(_dictvalues_[u'routing_address']), str(_dictvalues_[u'devicehostname']), str(_dictvalues_[u'apiaccessip']), str(_dictvalues_[u'zonename']), str(_dictvalues_[u'routing_address'])])
+#        _selected_value_ = {'searching_netip':str(_dictvalues_[u'routing_address']), 'devicehostname':str(_dictvalues_[u'devicehostname']), 'apiaccessip':str(_dictvalues_[u'apiaccessip']), 'zonename':str(_dictvalues_[u'zonename']), 'routing_address':str(_dictvalues_[u'routing_address']), 'unique_string':_unique_string_}
+#        _added_status_ = True
+#        for _dict_ in logested_matched_routing:
+#           if re.search(_unique_string_, _dict_['unique_string']):
+#             _added_status_ = False
+#        if _added_status_:
+#          logested_matched_routing.append(_selected_value_)
+   #
+   searched_routing_list = {}
+   for _dictvalues_ in logested_matched_routing:
+      _in_subnet_ = int(_dictvalues_['searching_netip'].split('/')[-1])
+      if _in_subnet_ not in searched_routing_list.keys():
+        searched_routing_list[_in_subnet_] = []
+      searched_routing_list[_in_subnet_].append(_dictvalues_)
+   _subnets_list_ = searched_routing_list.keys()
+   _subnets_list_.sort()
+
+
+   #count = 0
+
+
+   eleminated_routing_list = []
+   for _index_ in range(len(_subnets_list_)):
+      if _index_ < len(_subnets_list_) - 1: 
+        _subnet_max_ = _subnets_list_[_index_]
+        _subnet_min_list_ = _subnets_list_[_index_+1:]
+        for _dictvalues_ in searched_routing_list[_subnet_max_]:
+           _coverage_status_ = True
+           for _subnet_min_ in _subnet_min_list_:
+              _subneted_IPNetwork_ = list(IPNetwork(_dictvalues_['searching_netip']).subnet(_subnet_min_))
+              if len(_subneted_IPNetwork_) <= len(searched_routing_list[_subnet_min_]):
+                for _compdict_ in searched_routing_list[_subnet_min_]:
+                   if IPNetwork(_compdict_['searching_netip']) in _subneted_IPNetwork_:
+                     _subneted_IPNetwork_.remove(IPNetwork(_compdict_['searching_netip']))
+                if not len(_subneted_IPNetwork_):
+                  _coverage_status_ = False
+           if _coverage_status_:
+             eleminated_routing_list.append(_dictvalues_)
+      elif _index_ == len(_subnets_list_) - 1: 
+        _subnet_max_ = _subnets_list_[_index_]
+        for _dictvalues_ in searched_routing_list[_subnet_max_]:
+           eleminated_routing_list.append(_dictvalues_)
+
+   if len(eleminated_routing_list):
+     for _dictvalues_ in eleminated_routing_list:
+        this_processor_queue.put(_dictvalues_)
+   else:
+     if _default_gateway_zone_:
+       this_processor_queue.put({'searching_netip':str(_netip_), 'devicehostname':str(_dictvalues_[u'devicehostname']), 'apiaccessip':str(_dictvalues_[u'apiaccessip']), 'zonename':str(_default_gateway_zone_)}) 
+
+
 def procesing_searchingmatching(_each_processorData_, this_processor_queue):
 
    any_input_pattern = "0.0.0.0/0:0.0.0.0/0"
@@ -566,81 +677,156 @@ def juniper_searchpolicy(request,format=None):
 
 
    elif request.method == 'POST':
+       if re.search(r"system", system_property["role"], re.I):
+         _input_ = JSONParser().parse(request)
 
-      try:
+         # confirm input type 
+         if type(_input_) != type({}):
+           return_object = {"items":[{"message":"input should be object or dictionary!!","process_status":"error"}]}
+           return Response(json.dumps(return_object))
+         #
+         _searching_target_ = []
+         if not re.search('0.0.0.0/0', _input_[u'src_netip']):
+           _searching_target_.append(u'src_netip') 
+         if not re.search('0.0.0.0/0', _input_[u'dst_netip']):
+           _searching_target_.append(u'dst_netip')
+         if not re.search('0\/[0-9]+\-65535', _input_[u'src_port']) and not re.search('0\/[0-9]+\-0', _input_[u'src_port']):
+           _searching_target_.append(u'src_port')
+         if not re.search('0\/[0-9]+\-65535', _input_[u'dst_port']) and not re.search('0\/[0-9]+\-0', _input_[u'dst_port']):
+           _searching_target_.append(u'dst_port')
 
-        # input
-        _input_ = JSONParser().parse(request)
+         #
+         _routing_table_ = obtainjson_from_mongodb('juniper_srx_routingtable')
+         if not len(_routing_table_):
+           return_object = {"items":[{"message":"there is no routing table registered!!","process_status":"error"}]}
+           return Response(json.dumps(return_object))
+         #
+         routing_info_per_devicehost = {}
+         for _dictvalues_ in _routing_table_:
+            _devicehost_ = _dictvalues_[u'devicehostname']
+            if _devicehost_ not in routing_info_per_devicehost.keys():
+              routing_info_per_devicehost[_devicehost_] = []
+            routing_info_per_devicehost[_devicehost_].append(_dictvalues_)
+         #
+         if u'src_netip' in _searching_target_:
+           _netip_ = _input_[u'src_netip']
+           # queue generation
+           processing_queues_list = []
+           for _devicehost_ in routing_info_per_devicehost.keys():
+              processing_queues_list.append(Queue(maxsize=0))
+           # run processing to get zone based information
+           count = 0
+           _processor_list_ = []
+           for _devicehost_ in routing_info_per_devicehost.keys():
+              this_processor_queue = processing_queues_list[count]
+              _processor_ = Process(target = procesing_searchingzone, args = (_netip_, routing_info_per_devicehost[_devicehost_], this_processor_queue,))
+              _processor_.start()
+              _processor_list_.append(_processor_)
+              count = count + 1 
+           #
+           for _processor_ in _processor_list_:
+              _processor_.join()
+           #
+           search_result = []
+           for _queue_ in processing_queues_list:
+              while not _queue_.empty():
+                       _get_values_ = _queue_.get()
+                       search_result.append(_get_values_)
+           #
+           print search_result
 
-        # cache directory
-        cache_filename = []
-        for _fname_ in os.listdir(USER_VAR_CHCHES):
-           if re.search("cachepolicy_", _fname_.strip(), re.I):
-             if _fname_ not in cache_filename:
-               cache_filename.append(_fname_)
 
-        # get devicelist
-        CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/juniper/devicelist/"
-        get_info = os.popen(CURL_command).read().strip()
-        stream = BytesIO(get_info)
-        _routing_dict_ = JSONParser().parse(stream)
+         if u'dst_netip' in _searching_target_:
+           pass
+    
 
-        CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'"+json.dumps(_input_)+"\' http://0.0.0.0:"+RUNSERVER_PORT+"/juniper/searchzonefromroute/"
-        get_info = os.popen(CURL_command).read().strip()
-        stream = BytesIO(get_info)
-        data_from_CURL_command = JSONParser().parse(stream)
 
-        #
-        every_parameter_combination_list = []
-        for _dictData_ in data_from_CURL_command:
-           for _src_string_ in _dictData_[u"sourceip"]:
-              [ inputsrc_netip, inputsrc_device, inputsrc_zone ] = parsing_filename_to_data(_routing_dict_,_src_string_)
-              for _dst_value_ in _dictData_[u"destinationip"]:
-                 [ inputdst_netip, inputdst_device, inputdst_zone ] = parsing_filename_to_data(_routing_dict_,_dst_value_)
-                 if re.match(inputsrc_device, inputdst_device, re.I):
-                   for _app_value_ in _dictData_[u"application"]:
-                      parameter_combination = [ inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, _app_value_, cache_filename ]
-                      every_parameter_combination_list.append(parameter_combination)
+         #print routing_info_per_devicehost 
+         #print _input_
+         #
+         return Response(json.dumps({}))
+          
 
-        # init 
-        processing_combination = []
-        processing_queue = []
-        if len(every_parameter_combination_list) <= int(PYTHON_MULTI_PROCESS): 
-          for _i_ in range(len(every_parameter_combination_list)):
-             processing_combination.append([])
-             processing_queue.append(Queue(maxsize=0))
-        else:
-          for _i_ in range(int(PYTHON_MULTI_PROCESS)):
-             processing_combination.append([])
-             processing_queue.append(Queue(maxsize=0))
-        #
-        print "Total number of Data : %(_tnumber_)s.... planned with queues for the processing...." % {"_tnumber_":str(len(processing_combination))}
-        count = 0
-        for parameter_combination in every_parameter_combination_list:
-           (_values_, _last_) = divmod(count, int(int(PYTHON_MULTI_PROCESS)))
-           processing_combination[_last_].append(parameter_combination)
-           count = count + 1   
-        print "datas are divied..!"
-        #
-        count = 0
-        _processor_list_ = []
-        for _each_processorData_ in processing_combination:
-           this_processor_queue = processing_queue[count]
-           _processor_ = Process(target = procesing_searchingmatching, args = (_each_processorData_, this_processor_queue,)) 
-           _processor_.start()
-           _processor_list_.append(_processor_) 
-           count = count + 1 
-        for _processor_ in _processor_list_:
-           _processor_.join()
-        #
-        search_result = [] 
-        for _queue_ in processing_queue:
-           while not _queue_.empty():
-                search_result.append(_queue_.get())
-        #
-        return Response(search_result)
 
-      except:
-        message = "Post Algorithm has some problem!"
-        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+       # end of if re.search(r"system", system_property["role"], re.I):
+       else:
+         return_object = {"items":[{"message":"this host has no authorizaition!","process_status":"error"}]}
+         return Response(json.dumps(return_object))
 
+#      try:
+#
+#        # input
+#        _input_ = JSONParser().parse(request)
+#
+#        # cache directory
+#        cache_filename = []
+#        for _fname_ in os.listdir(USER_VAR_CHCHES):
+#           if re.search("cachepolicy_", _fname_.strip(), re.I):
+#             if _fname_ not in cache_filename:
+#               cache_filename.append(_fname_)
+#
+#        # get devicelist
+#        CURL_command = "curl http://0.0.0.0:"+RUNSERVER_PORT+"/juniper/devicelist/"
+#        get_info = os.popen(CURL_command).read().strip()
+#        stream = BytesIO(get_info)
+#        _routing_dict_ = JSONParser().parse(stream)
+#
+#        CURL_command = "curl -H \"Accept: application/json\" -X POST -d \'"+json.dumps(_input_)+"\' http://0.0.0.0:"+RUNSERVER_PORT+"/juniper/searchzonefromroute/"
+#        get_info = os.popen(CURL_command).read().strip()
+#        stream = BytesIO(get_info)
+#        data_from_CURL_command = JSONParser().parse(stream)
+#
+#        #
+#        every_parameter_combination_list = []
+#        for _dictData_ in data_from_CURL_command:
+#           for _src_string_ in _dictData_[u"sourceip"]:
+#              [ inputsrc_netip, inputsrc_device, inputsrc_zone ] = parsing_filename_to_data(_routing_dict_,_src_string_)
+#              for _dst_value_ in _dictData_[u"destinationip"]:
+#                 [ inputdst_netip, inputdst_device, inputdst_zone ] = parsing_filename_to_data(_routing_dict_,_dst_value_)
+#                 if re.match(inputsrc_device, inputdst_device, re.I):
+#                   for _app_value_ in _dictData_[u"application"]:
+#                      parameter_combination = [ inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, _app_value_, cache_filename ]
+#                      every_parameter_combination_list.append(parameter_combination)
+#
+#        # init 
+#        processing_combination = []
+#        processing_queue = []
+#        if len(every_parameter_combination_list) <= int(PYTHON_MULTI_PROCESS): 
+#          for _i_ in range(len(every_parameter_combination_list)):
+#             processing_combination.append([])
+#             processing_queue.append(Queue(maxsize=0))
+#        else:
+#          for _i_ in range(int(PYTHON_MULTI_PROCESS)):
+#             processing_combination.append([])
+#             processing_queue.append(Queue(maxsize=0))
+#        #
+#        print "Total number of Data : %(_tnumber_)s.... planned with queues for the processing...." % {"_tnumber_":str(len(processing_combination))}
+#        count = 0
+#        for parameter_combination in every_parameter_combination_list:
+#           (_values_, _last_) = divmod(count, int(int(PYTHON_MULTI_PROCESS)))
+#           processing_combination[_last_].append(parameter_combination)
+#           count = count + 1   
+#        print "datas are divied..!"
+#        #
+#        count = 0
+#        _processor_list_ = []
+#        for _each_processorData_ in processing_combination:
+#           this_processor_queue = processing_queue[count]
+#           _processor_ = Process(target = procesing_searchingmatching, args = (_each_processorData_, this_processor_queue,)) 
+#           _processor_.start()
+#           _processor_list_.append(_processor_) 
+#           count = count + 1 
+#        for _processor_ in _processor_list_:
+#           _processor_.join()
+#        #
+#        search_result = [] 
+#        for _queue_ in processing_queue:
+#           while not _queue_.empty():
+#                search_result.append(_queue_.get())
+#        #
+#        return Response(search_result)
+#
+#      except:
+#        message = "Post Algorithm has some problem!"
+#        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+#
