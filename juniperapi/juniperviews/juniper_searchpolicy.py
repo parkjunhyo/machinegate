@@ -26,6 +26,7 @@ from multiprocessing import Process, Queue, Lock
 
 from shared_function import obtainjson_from_mongodb as obtainjson_from_mongodb
 from shared_function import exact_findout as exact_findout
+from shared_function import findout_primary_devices as findout_primary_devices
 
 
 class JSONResponse(HttpResponse):
@@ -457,6 +458,8 @@ def procesing_searchingzone(_netip_, routing_info_per_devicehost, this_processor
 
    if len(eleminated_routing_list):
      for _dictvalues_ in eleminated_routing_list:
+        if 'unique_string' in _dictvalues_.keys():
+          del _dictvalues_['unique_string']
         this_processor_queue.put(_dictvalues_)
    else:
      if _default_gateway_zone_:
@@ -643,6 +646,32 @@ def procesing_searchingmatching(_each_processorData_, this_processor_queue):
    time.sleep(1)
 
 
+
+def _findout_matched_zone_(routing_info_per_devicehost, _netip_, _candi_src_netip_):
+   processing_queues_list = []
+   for _devicehost_ in routing_info_per_devicehost.keys():
+      processing_queues_list.append(Queue(maxsize=0))
+   # run processing to get zone based information
+   count = 0
+   _processor_list_ = []
+   for _devicehost_ in routing_info_per_devicehost.keys():
+      this_processor_queue = processing_queues_list[count]
+      _processor_ = Process(target = procesing_searchingzone, args = (_netip_, routing_info_per_devicehost[_devicehost_], this_processor_queue,))
+      _processor_.start()
+      _processor_list_.append(_processor_)
+      count = count + 1
+   #
+   for _processor_ in _processor_list_:
+      _processor_.join()
+   #
+   for _queue_ in processing_queues_list:
+      while not _queue_.empty():
+           _get_values_ = _queue_.get()
+           _candi_src_netip_.append(_get_values_)
+   return _candi_src_netip_
+
+
+
 @api_view(['GET','POST'])
 @csrf_exempt
 def juniper_searchpolicy(request,format=None):
@@ -680,6 +709,10 @@ def juniper_searchpolicy(request,format=None):
        if re.search(r"system", system_property["role"], re.I):
          _input_ = JSONParser().parse(request)
 
+         #
+         device_information_values = obtainjson_from_mongodb('juniper_srx_devices')
+         primary_devices = findout_primary_devices(device_information_values)
+
          # confirm input type 
          if type(_input_) != type({}):
            return_object = {"items":[{"message":"input should be object or dictionary!!","process_status":"error"}]}
@@ -703,42 +736,41 @@ def juniper_searchpolicy(request,format=None):
          #
          routing_info_per_devicehost = {}
          for _dictvalues_ in _routing_table_:
-            _devicehost_ = _dictvalues_[u'devicehostname']
-            if _devicehost_ not in routing_info_per_devicehost.keys():
-              routing_info_per_devicehost[_devicehost_] = []
-            routing_info_per_devicehost[_devicehost_].append(_dictvalues_)
-         #
+            if _dictvalues_[u"apiaccessip"] in primary_devices:
+              _devicehost_ = _dictvalues_[u'devicehostname']
+              if _devicehost_ not in routing_info_per_devicehost.keys():
+                routing_info_per_devicehost[_devicehost_] = []
+              routing_info_per_devicehost[_devicehost_].append(_dictvalues_)
+
+         # findout source zone
+         _candi_src_netip_ = []
          if u'src_netip' in _searching_target_:
            _netip_ = _input_[u'src_netip']
-           # queue generation
-           processing_queues_list = []
-           for _devicehost_ in routing_info_per_devicehost.keys():
-              processing_queues_list.append(Queue(maxsize=0))
-           # run processing to get zone based information
-           count = 0
-           _processor_list_ = []
-           for _devicehost_ in routing_info_per_devicehost.keys():
-              this_processor_queue = processing_queues_list[count]
-              _processor_ = Process(target = procesing_searchingzone, args = (_netip_, routing_info_per_devicehost[_devicehost_], this_processor_queue,))
-              _processor_.start()
-              _processor_list_.append(_processor_)
-              count = count + 1 
-           #
-           for _processor_ in _processor_list_:
-              _processor_.join()
-           #
-           search_result = []
-           for _queue_ in processing_queues_list:
-              while not _queue_.empty():
-                       _get_values_ = _queue_.get()
-                       search_result.append(_get_values_)
-           #
-           print search_result
+           _candi_src_netip_ = _findout_matched_zone_(routing_info_per_devicehost, _netip_, _candi_src_netip_)
 
-
+         # findout destination zone
+         _candi_dst_netip_ = []
          if u'dst_netip' in _searching_target_:
-           pass
-    
+           _netip_ = _input_[u'dst_netip']
+           _candi_dst_netip_ = _findout_matched_zone_(routing_info_per_devicehost, _netip_, _candi_dst_netip_)
+
+         # intersection
+         _candi_comb_ = []
+         for _src_dictvalue_ in _candi_src_netip_:
+            for _dst_dictvalue_ in _candi_dst_netip_:
+               if re.match(str(_src_dictvalue_['devicehostname']), str(_dst_dictvalue_['devicehostname'])):
+                 if not re.match(str(_src_dictvalue_['zonename']), str(_dst_dictvalue_['zonename'])):
+                   _candi_comb_.append({'src_netip':_src_dictvalue_ ,'dst_netip':_dst_dictvalue_})
+         # 
+         if u'src_port' in _searching_target_:
+           for _dictvalue_ in _candi_comb_:
+              _dictvalue_[u'src_port'] = _input_[u'src_port']
+         #
+         if u'dst_port' in _searching_target_:
+           for _dictvalue_ in _candi_comb_:
+              _dictvalue_[u'dst_port'] = _input_[u'dst_port']
+                     
+         print _candi_comb_ 
 
 
          #print routing_info_per_devicehost 

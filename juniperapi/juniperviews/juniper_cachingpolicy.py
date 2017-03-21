@@ -298,7 +298,7 @@ def caching_policy(_filename_, this_processor_queue):
 @csrf_exempt
 def juniper_cachingpolicy(request,format=None):
 
-   JUNIPER_DEVICELIST_DBFILE = USER_DATABASES_DIR + "devicelist.txt"
+   #JUNIPER_DEVICELIST_DBFILE = USER_DATABASES_DIR + "devicelist.txt"
 
    if request.method == 'POST':
      if re.search(r"system", system_property["role"], re.I):
