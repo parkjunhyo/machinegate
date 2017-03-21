@@ -36,12 +36,20 @@ class JSONResponse(HttpResponse):
         kwargs['content_type'] = 'application/json'
         super(JSONResponse, self).__init__(content, **kwargs)
 
-def confirm_adding_static_route(_input_dict_value_, this_processor_queue, mongo_db_collection_name, hostname_to_accessip_match):
+def _secondary_device_adding_static_route_(_apiaccessip_, _routing_address_, _zonenae_, apiaccessip_to_hadevicesip_match, accessip_to_hostname_match, mongo_db_collection_name):
+   for _hadeviceip_ in apiaccessip_to_hadevicesip_match[unicode(_apiaccessip_)]:
+      _hadevicehostname_ = accessip_to_hostname_match[_hadeviceip_]
+      _secondary_done_items_ = {"apiaccessip":str(_hadeviceip_), "devicehostname":str(_hadevicehostname_), "update_method":'manual', "routing_address":str(_routing_address_), "zonename":str(_zonenae_)}
+      insert_dictvalues_into_mongodb(mongo_db_collection_name, _secondary_done_items_)
+
+
+def confirm_adding_static_route(_input_dict_value_, this_processor_queue, mongo_db_collection_name, hostname_to_accessip_match, apiaccessip_to_hadevicesip_match, accessip_to_hostname_match):
    _devicehostname_ = str(_input_dict_value_[u'devicehostname'])
    _routing_address_ = str(_input_dict_value_[u'routing_address'])
    _zonenae_ = str(_input_dict_value_[u'zonename'])
-   _done_items_ = {"apiaccessip":str(hostname_to_accessip_match[unicode(_devicehostname_)]), "devicehostname":str(_devicehostname_), "update_method":'manual', "routing_address":str(_routing_address_), "zonename":str(_zonenae_)}
-
+   _apiaccessip_ = str(hostname_to_accessip_match[unicode(_devicehostname_)])
+   _done_items_ = {"apiaccessip":_apiaccessip_, "devicehostname":str(_devicehostname_), "update_method":'manual', "routing_address":str(_routing_address_), "zonename":str(_zonenae_)}
+         
    perfect_parameter = {"devicehostname":str(_devicehostname_), "routing_address":str(_routing_address_) , "zonename":str(_zonenae_)}
    perfect_matched = exact_findout(mongo_db_collection_name, perfect_parameter)
 
@@ -55,6 +63,9 @@ def confirm_adding_static_route(_input_dict_value_, this_processor_queue, mongo_
      if len(partial_matched):
        _msg_ = "routing info other zone duplicated!"
        insert_dictvalues_into_mongodb(mongo_db_collection_name, _done_items_)
+       #
+       _secondary_device_adding_static_route_(_apiaccessip_, _routing_address_, _zonenae_, apiaccessip_to_hadevicesip_match, accessip_to_hostname_match, mongo_db_collection_name)
+       # 
        this_processor_queue.put({"message":_msg_,"process_status":"done"})
      else:
        _this_net_ = IPNetwork(_routing_address_)
@@ -68,29 +79,35 @@ def confirm_adding_static_route(_input_dict_value_, this_processor_queue, mongo_
        if duplicated_status:
          _msg_ = "routing info network duplicated!"
          insert_dictvalues_into_mongodb(mongo_db_collection_name, _done_items_)
+         #
+         _secondary_device_adding_static_route_(_apiaccessip_, _routing_address_, _zonenae_, apiaccessip_to_hadevicesip_match, accessip_to_hostname_match, mongo_db_collection_name)
+         #
          this_processor_queue.put({"message":_msg_,"process_status":"done"})
        else:
          _msg_ = "static routing updated!"
          insert_dictvalues_into_mongodb(mongo_db_collection_name, _done_items_)
+         #
+         _secondary_device_adding_static_route_(_apiaccessip_, _routing_address_, _zonenae_, apiaccessip_to_hadevicesip_match, accessip_to_hostname_match, mongo_db_collection_name)
+         #
          this_processor_queue.put({"message":_msg_,"process_status":"done"})
 
    # thread timeout 
    time.sleep(1)
 
 
-@api_view(['GET','POST','DELETE'])
+@api_view(['POST','DELETE'])
 @csrf_exempt
 def juniper_showroute_static_update(request,format=None):
 
    mongo_db_collection_name = 'juniper_srx_routingtable'
 
    # get method
-   if request.method == 'GET':
-     #return_result = {"items":obtainjson_from_mongodb(mongo_db_collection_name)}
-     #return Response(json.dumps(return_result))
-     return Response(json.dumps({}))
+   #if request.method == 'GET':
+   #  #return_result = {"items":obtainjson_from_mongodb(mongo_db_collection_name)}
+   #  #return Response(json.dumps(return_result))
+   #  return Response(json.dumps({}))
 
-   elif request.method == 'POST':
+   if request.method == 'POST':
      if re.search(r"system", system_property["role"], re.I):
        _input_ = JSONParser().parse(request)
        # confirm input type 
@@ -108,8 +125,13 @@ def juniper_showroute_static_update(request,format=None):
          # end of if ('items' in _input_.keys()) and (u'items' in _input_.keys()):
            # 
            hostname_to_accessip_match = {}
+           apiaccessip_to_hadevicesip_match = {}
+           accessip_to_hostname_match = {}
            for _dictvalue_ in obtainjson_from_mongodb('juniper_srx_devices'):
               hostname_to_accessip_match[_dictvalue_[u"devicehostname"]] = _dictvalue_[u"apiaccessip"]
+              apiaccessip_to_hadevicesip_match[_dictvalue_[u"apiaccessip"]] = _dictvalue_[u"hadevicesip"]
+              accessip_to_hostname_match[_dictvalue_[u"apiaccessip"]] = _dictvalue_[u"devicehostname"]
+
            # queue generation
            processing_queues_list = []
            for _input_dict_value_ in _input_[u'items']:
@@ -119,7 +141,7 @@ def juniper_showroute_static_update(request,format=None):
            _processor_list_ = []
            for _input_dict_value_ in _input_[u'items']:
               this_processor_queue = processing_queues_list[count]
-              _processor_ = Process(target = confirm_adding_static_route, args = (_input_dict_value_, this_processor_queue, mongo_db_collection_name, hostname_to_accessip_match,))
+              _processor_ = Process(target = confirm_adding_static_route, args = (_input_dict_value_, this_processor_queue, mongo_db_collection_name, hostname_to_accessip_match, apiaccessip_to_hadevicesip_match, accessip_to_hostname_match))
               _processor_.start()
               _processor_list_.append(_processor_)
               count = count + 1
@@ -161,14 +183,33 @@ def juniper_showroute_static_update(request,format=None):
        auth_matched = re.match(ENCAP_PASSWORD, _input_['auth_key'])
        if auth_matched:
          if ('items' in _input_.keys()) and (u'items' in _input_.keys()):
+           #
+           # 
+           hostname_to_accessip_match = {}
+           apiaccessip_to_hadevicesip_match = {}
+           accessip_to_hostname_match = {}
+           for _dictvalue_ in obtainjson_from_mongodb('juniper_srx_devices'):
+              hostname_to_accessip_match[_dictvalue_[u"devicehostname"]] = _dictvalue_[u"apiaccessip"]
+              apiaccessip_to_hadevicesip_match[_dictvalue_[u"apiaccessip"]] = _dictvalue_[u"hadevicesip"]
+              accessip_to_hostname_match[_dictvalue_[u"apiaccessip"]] = _dictvalue_[u"devicehostname"]
+           #
+           removing_items_list = []
+           for _input_dict_value_ in _input_[u'items']:
+              _this_zonename_ = _input_dict_value_[u'zonename']
+              _this_routing_address_ = _input_dict_value_[u'routing_address']
+              removing_items_list.append(_input_dict_value_)
+              for _hadeviceip_ in apiaccessip_to_hadevicesip_match[_input_dict_value_[u'apiaccessip']]:
+                 _hadevicehostname_ = accessip_to_hostname_match[_hadeviceip_]
+                 removing_items_list.append({u'update_method': u'manual', u'apiaccessip':_hadeviceip_, u'devicehostname':_hadevicehostname_, u'routing_address':_this_routing_address_, u'zonename':_this_zonename_})
+           #      
            # queue generation
            processing_queues_list = []
-           for _input_dict_value_ in _input_[u'items']:
+           for _input_dict_value_ in removing_items_list:
               processing_queues_list.append(Queue(maxsize=0))
            # run processing to get information
            count = 0
            _processor_list_ = []
-           for _input_dict_value_ in _input_[u'items']:
+           for _input_dict_value_ in removing_items_list:
               this_processor_queue = processing_queues_list[count]
               _processor_ = Process(target = remove_info_in_db, args = (_input_dict_value_, this_processor_queue, mongo_db_collection_name,))
               _processor_.start()

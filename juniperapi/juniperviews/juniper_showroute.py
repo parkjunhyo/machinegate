@@ -59,15 +59,18 @@ def obtain_showroute(_primaryip_, device_information_values, this_processor_queu
         routing_net_value = searched_element.group(1).strip()        
         searched_element = re.search(pattern_end, securityzone_information[_start_end_index_list_[-1]])
         routing_nexthop_iface = searched_element.group(1).strip()
-        if (str(routing_nexthop_iface) in reversed_sorted_iface_to_zone.keys()) or (unicode(routing_nexthop_iface) in reversed_sorted_iface_to_zone.keys()):
-          routing_table_info = {}
-          routing_table_info[u'devicehostname'] = _this_hostname_
-          routing_table_info['apiaccessip'] = _primaryip_
-          routing_table_info['routing_address'] = routing_net_value
-          routing_table_info['zonename'] = reversed_sorted_iface_to_zone[routing_nexthop_iface]
-          routing_table_info['update_method'] = 'auto'  
-          # return the queue
-          insert_dictvalues_into_mongodb(mongo_db_collection_name, routing_table_info)
+        #
+        if not re.search('0.0.0.0/0', routing_net_value): 
+        #
+          if (str(routing_nexthop_iface) in reversed_sorted_iface_to_zone.keys()) or (unicode(routing_nexthop_iface) in reversed_sorted_iface_to_zone.keys()):
+            routing_table_info = {}
+            routing_table_info[u'devicehostname'] = _this_hostname_
+            routing_table_info['apiaccessip'] = _primaryip_
+            routing_table_info['routing_address'] = routing_net_value
+            routing_table_info['zonename'] = reversed_sorted_iface_to_zone[routing_nexthop_iface]
+            routing_table_info['update_method'] = 'auto'  
+            # return the queue
+            insert_dictvalues_into_mongodb(mongo_db_collection_name, routing_table_info)
 
    # thread timeout 
    done_msg = "%(_this_hostname_)s routing updated!" % {"_this_hostname_":_this_hostname_}
@@ -84,11 +87,19 @@ def juniper_showroute(request,format=None):
    if request.method == 'GET':
      parameter_from = request.query_params.dict()
      if u'devicehostname' not in parameter_from:
+       #
+       _devices_list_ = obtainjson_from_mongodb('juniper_srx_devices')
+       _primaryip_list_ = findout_primary_devices(_devices_list_)
+       #
+       accessip_to_hostname_match = {}
+       for _dictvalue_ in _devices_list_:
+          accessip_to_hostname_match[_dictvalue_[u"apiaccessip"]] = _dictvalue_[u"devicehostname"]
+       #
        hostname_list = []
-       for _dictvalue_ in obtainjson_from_mongodb(mongo_db_collection_name):
-          _hostname_ = _dictvalue_[u'devicehostname']
-          if _hostname_ not in hostname_list:
-            hostname_list.append(_hostname_)
+       for _primaryip_ in _primaryip_list_:
+          _searched_hostname_ = accessip_to_hostname_match[_primaryip_]
+          if _searched_hostname_ not in hostname_list:
+            hostname_list.append(_searched_hostname_)
        return_result = {"items":hostname_list}
        return Response(json.dumps(return_result))
      else:
@@ -117,16 +128,22 @@ def juniper_showroute(request,format=None):
 
          device_information_values = obtainjson_from_mongodb('juniper_srx_devices')
          primary_devices = findout_primary_devices(device_information_values)
-         # manual static route search
-         renewed_static_routing = []
-         for _primaryip_ in primary_devices:
-            manual_static_route = exact_findout(mongo_db_collection_name, {"apiaccessip":str(_primaryip_), "update_method":"manual"})
-            for _dictvalue_ in manual_static_route:
-               _temp_box_ = {}
-               for _keyname_ in _dictvalue_:
-                  if _keyname_ != u'_id':
-                    _temp_box_[str(_keyname_)] = str(_dictvalue_[_keyname_])
-               renewed_static_routing.append(_temp_box_)
+
+         ## manual static route search
+         #renewed_static_routing = []
+         #for _primaryip_ in primary_devices:
+         #   manual_static_route = exact_findout(mongo_db_collection_name, {"apiaccessip":str(_primaryip_), "update_method":"manual"})
+         #   for _dictvalue_ in manual_static_route:
+         #      _temp_box_ = {}
+         #      for _keyname_ in _dictvalue_:
+         #         if _keyname_ != u'_id':
+         #           _temp_box_[str(_keyname_)] = str(_dictvalue_[_keyname_])
+         #      renewed_static_routing.append(_temp_box_)
+
+         manual_static_route = exact_findout(mongo_db_collection_name, {"update_method":"manual"})
+         for _dictvalue_ in manual_static_route:
+            if u'_id' in _dictvalue_.keys():
+              del _dictvalue_[u'_id']
 
          # remove collections
          remove_collection(mongo_db_collection_name)
@@ -149,6 +166,10 @@ def juniper_showroute(request,format=None):
          for _processor_ in _processor_list_:
             _processor_.join()
 
+         # manual update 
+         for _dictvalue_ in manual_static_route:
+            insert_dictvalues_into_mongodb(mongo_db_collection_name, _dictvalue_)
+         
          # get information from the queue
          search_result = []
          for _queue_ in processing_queues_list:
