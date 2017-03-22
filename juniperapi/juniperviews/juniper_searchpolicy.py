@@ -27,6 +27,7 @@ from multiprocessing import Process, Queue, Lock
 from shared_function import obtainjson_from_mongodb as obtainjson_from_mongodb
 from shared_function import exact_findout as exact_findout
 from shared_function import findout_primary_devices as findout_primary_devices
+from shared_function import exact_findout as exact_findout
 
 
 class JSONResponse(HttpResponse):
@@ -39,21 +40,21 @@ class JSONResponse(HttpResponse):
         super(JSONResponse, self).__init__(content, **kwargs)
 
 
-def search_hadevice_string(_routing_dict_,_ipaddress_):
-   return_string = "none@none"
-   for _dataDict_ in _routing_dict_:
-      for _hadeviceip_ in _dataDict_[u"hadevicesip"]:
-         if re.search(str(_ipaddress_), str(_hadeviceip_), re.I):
-           return_string = "%(_devicename_)s@%(_deviceip_)s" % {"_devicename_":_dataDict_[u"devicehostname"],"_deviceip_":_dataDict_[u"apiaccessip"]} 
-           break
-   return return_string
+#def search_hadevice_string(_routing_dict_,_ipaddress_):
+#   return_string = "none@none"
+#   for _dataDict_ in _routing_dict_:
+#      for _hadeviceip_ in _dataDict_[u"hadevicesip"]:
+#         if re.search(str(_ipaddress_), str(_hadeviceip_), re.I):
+#           return_string = "%(_devicename_)s@%(_deviceip_)s" % {"_devicename_":_dataDict_[u"devicehostname"],"_deviceip_":_dataDict_[u"apiaccessip"]} 
+#           break
+#   return return_string
 
 
-def parsing_filename_to_data(_routing_dict_,_src_string_):
-   [ parsed_routing_netip, parsed_device ] = str(_src_string_).strip().split("@")
-   [ device_name, device_ip, zonename ] = parsed_device.strip().split(":")
-   deviceandip_string = search_hadevice_string(_routing_dict_, device_ip) 
-   return [ str(parsed_routing_netip), deviceandip_string, zonename ] 
+#def parsing_filename_to_data(_routing_dict_,_src_string_):
+#   [ parsed_routing_netip, parsed_device ] = str(_src_string_).strip().split("@")
+#   [ device_name, device_ip, zonename ] = parsed_device.strip().split(":")
+#   deviceandip_string = search_hadevice_string(_routing_dict_, device_ip) 
+#   return [ str(parsed_routing_netip), deviceandip_string, zonename ] 
 
 #def get_listvalue_matchedby_keyname(file_database,input_netip):
 #   return_values = []
@@ -259,79 +260,79 @@ def parsing_filename_to_data(_routing_dict_,_src_string_):
 #   return matched_policylist    
 
 
-def findout_policydetail_from_cache(_rulename_list_, device_fromtozone_string, file_database):
-   policy_detail = {}
-   for _rulename_string_ in _rulename_list_:
-      if unicode(_rulename_string_) not in policy_detail.keys():
-        unique_string_name = "%(_rulename_string_)s@%(device_fromtozone_string)s" % {"_rulename_string_":str(_rulename_string_), "device_fromtozone_string":str(device_fromtozone_string)}
-        policy_detail[unicode(_rulename_string_)] = file_database[unicode(unique_string_name)] 
-   return policy_detail
+#def findout_policydetail_from_cache(_rulename_list_, device_fromtozone_string, file_database):
+#   policy_detail = {}
+#   for _rulename_string_ in _rulename_list_:
+#      if unicode(_rulename_string_) not in policy_detail.keys():
+#        unique_string_name = "%(_rulename_string_)s@%(device_fromtozone_string)s" % {"_rulename_string_":str(_rulename_string_), "device_fromtozone_string":str(device_fromtozone_string)}
+#        policy_detail[unicode(_rulename_string_)] = file_database[unicode(unique_string_name)] 
+#   return policy_detail
       
 
-def _get_tcpudp_all_(_dictvalues_):
-   tcp_string = "tcp/"
-   udp_string = "udp/"
-   tcp_all = []
-   udp_all = []
-   keyname_list = _dictvalues_.keys()
-   for _keyname_ in keyname_list:
-      #
-      if re.search(tcp_string, _keyname_, re.I):
-        for _id_ in _dictvalues_[_keyname_]:
-           if _id_ not in tcp_all:
-             tcp_all.append(_id_)
-      #
-      if re.search(udp_string, _keyname_, re.I):
-        for _id_ in _dictvalues_[_keyname_]:
-           if _id_ not in udp_all:
-             udp_all.append(_id_)
-   return tcp_all, udp_all
+#def _get_tcpudp_all_(_dictvalues_):
+#   tcp_string = "tcp/"
+#   udp_string = "udp/"
+#   tcp_all = []
+#   udp_all = []
+#   keyname_list = _dictvalues_.keys()
+#   for _keyname_ in keyname_list:
+#      #
+#      if re.search(tcp_string, _keyname_, re.I):
+#        for _id_ in _dictvalues_[_keyname_]:
+#           if _id_ not in tcp_all:
+#             tcp_all.append(_id_)
+#      #
+#      if re.search(udp_string, _keyname_, re.I):
+#        for _id_ in _dictvalues_[_keyname_]:
+#           if _id_ not in udp_all:
+#             udp_all.append(_id_)
+#   return tcp_all, udp_all
 
-def _add_stringvalue_into_the_dictionary_(inputsrc_netip, _keystring_, searched_target_items):
-   if _keystring_ not in searched_target_items.keys():
-     searched_target_items[_keystring_] = ""
-   if inputsrc_netip not in searched_target_items[_keystring_]:
-     searched_target_items[_keystring_] = inputsrc_netip
-   return searched_target_items
+#def _add_stringvalue_into_the_dictionary_(inputsrc_netip, _keystring_, searched_target_items):
+#   if _keystring_ not in searched_target_items.keys():
+#     searched_target_items[_keystring_] = ""
+#   if inputsrc_netip not in searched_target_items[_keystring_]:
+#     searched_target_items[_keystring_] = inputsrc_netip
+#   return searched_target_items
 
-def _add_stringvalues_into_the_dictionaries_for_application_(_srcapp_keystring_, _dstapp_keystring_, searched_target_items, _srcapp_value_, _dstapp_value_):
-   if _srcapp_keystring_ not in searched_target_items.keys():
-     searched_target_items[_srcapp_keystring_] = ""
-   if _dstapp_keystring_ not in searched_target_items.keys():
-     searched_target_items[_dstapp_keystring_] = ""
-   searched_target_items[_srcapp_keystring_] = str(_srcapp_value_)
-   searched_target_items[_dstapp_keystring_] = str(_dstapp_value_)
-   return searched_target_items
+#def _add_stringvalues_into_the_dictionaries_for_application_(_srcapp_keystring_, _dstapp_keystring_, searched_target_items, _srcapp_value_, _dstapp_value_):
+#   if _srcapp_keystring_ not in searched_target_items.keys():
+#     searched_target_items[_srcapp_keystring_] = ""
+#   if _dstapp_keystring_ not in searched_target_items.keys():
+#     searched_target_items[_dstapp_keystring_] = ""
+#   searched_target_items[_srcapp_keystring_] = str(_srcapp_value_)
+#   searched_target_items[_dstapp_keystring_] = str(_dstapp_value_)
+#   return searched_target_items
 
-def _add_string_into_list_during_(_listvalue_, _temp_include_id_list_):
-   for _id_ in _listvalue_:
-      if _id_ not in _temp_include_id_list_:
-        _temp_include_id_list_.append(_id_)
-   return _temp_include_id_list_ 
+#def _add_string_into_list_during_(_listvalue_, _temp_include_id_list_):
+#   for _id_ in _listvalue_:
+#      if _id_ not in _temp_include_id_list_:
+#        _temp_include_id_list_.append(_id_)
+#   return _temp_include_id_list_ 
 
-def _getrangelist_from_range_(_range_string_):
-   splited_range = _range_string_.split("-")
-   [ _start_, _end_ ] = splited_range
-   _all_rangelist_ = range(int(_end_))
-   _all_rangelist_.append(int(_end_))
-   range_valuelist = _all_rangelist_[int(_start_):]
-   return range_valuelist
+#def _getrangelist_from_range_(_range_string_):
+#   splited_range = _range_string_.split("-")
+#   [ _start_, _end_ ] = splited_range
+#   _all_rangelist_ = range(int(_end_))
+#   _all_rangelist_.append(int(_end_))
+#   range_valuelist = _all_rangelist_[int(_start_):]
+#   return range_valuelist
 
-def _obtain_perfect_include_partial_application_(input_value, _netip_list_from_database_, database_dict, portrange_list, _temp_perfect_match_, _temp_include_match_, _temp_partial_match_):
-   # perfect match
-   if input_value in database_dict.keys():
-     _temp_perfect_match_ = database_dict[input_value]
-   for _netip_from_database_ in _netip_list_from_database_:
-      [ prototype_from_database, portrange_from_database ] =  str(_netip_from_database_).strip().split("/")
-      portrange_list_from_database = _getrangelist_from_range_(portrange_from_database)
-      intersection_portrange = set(portrange_list).intersection(portrange_list_from_database)
-      # include
-      if intersection_portrange == set(portrange_list):
-        _temp_include_match_ = _add_string_into_list_during_(database_dict[_netip_from_database_], _temp_include_match_)
-      # partial
-      if intersection_portrange == set(portrange_list_from_database):
-        _temp_partial_match_ = _add_string_into_list_during_(database_dict[_netip_from_database_], _temp_partial_match_)
-   return _temp_perfect_match_, _temp_include_match_, _temp_partial_match_
+#def _obtain_perfect_include_partial_application_(input_value, _netip_list_from_database_, database_dict, portrange_list, _temp_perfect_match_, _temp_include_match_, _temp_partial_match_):
+#   # perfect match
+#   if input_value in database_dict.keys():
+#     _temp_perfect_match_ = database_dict[input_value]
+#   for _netip_from_database_ in _netip_list_from_database_:
+#      [ prototype_from_database, portrange_from_database ] =  str(_netip_from_database_).strip().split("/")
+#      portrange_list_from_database = _getrangelist_from_range_(portrange_from_database)
+#      intersection_portrange = set(portrange_list).intersection(portrange_list_from_database)
+#      # include
+#      if intersection_portrange == set(portrange_list):
+#        _temp_include_match_ = _add_string_into_list_during_(database_dict[_netip_from_database_], _temp_include_match_)
+#      # partial
+#      if intersection_portrange == set(portrange_list_from_database):
+#        _temp_partial_match_ = _add_string_into_list_during_(database_dict[_netip_from_database_], _temp_partial_match_)
+#   return _temp_perfect_match_, _temp_include_match_, _temp_partial_match_
   
 #   if input_value in _netip_list_from_database_:
 #     # perfect match
@@ -349,17 +350,16 @@ def _obtain_perfect_include_partial_application_(input_value, _netip_list_from_d
 #          _temp_partial_match_ = _add_string_into_list_during_(database_dict[_netip_from_database_], _temp_partial_match_)
 #   return _temp_perfect_match_, _temp_include_match_, _temp_partial_match_
 
-def _multiple_intersection_(_list_in_lists_):
-   intersection_value = _list_in_lists_[0]
-   for _listvalue_ in _list_in_lists_[1:]:
-      intersection_value = set(intersection_value).intersection(_listvalue_)
-   return list(intersection_value)
+#def _multiple_intersection_(_list_in_lists_):
+#   intersection_value = _list_in_lists_[0]
+#   for _listvalue_ in _list_in_lists_[1:]:
+#      intersection_value = set(intersection_value).intersection(_listvalue_)
+#   return list(intersection_value)
 
 def procesing_searchingzone(_netip_, routing_info_per_devicehost, this_processor_queue):
    #
    _this_subnet_ = int(str(_netip_).split('/')[-1])
    _this_IPNetwork = IPNetwork(str(_netip_))
-
    # search and find default routing and zone 
    _default_gateway_zone_ = ''
    for _dictvalues_ in routing_info_per_devicehost:
@@ -386,7 +386,6 @@ def procesing_searchingzone(_netip_, routing_info_per_devicehost, this_processor
         _unique_string_ = '#unique#'.join([str(_netip_), str(_dictvalues_[u'devicehostname']), str(_dictvalues_[u'apiaccessip']), str(_dictvalues_[u'zonename']), str(_dictvalues_[u'routing_address'])])
         _selected_value_ = {'searching_netip':str(_netip_), 'devicehostname':str(_dictvalues_[u'devicehostname']), 'apiaccessip':str(_dictvalues_[u'apiaccessip']), 'zonename':str(_dictvalues_[u'zonename']), 'routing_address':str(_dictvalues_[u'routing_address']), 'unique_string':_unique_string_}
         logested_matched_routing.append(_selected_value_)
-
    #
    matched_routing = {}
    for _dictvalues_ in routing_info_per_devicehost:
@@ -401,25 +400,6 @@ def procesing_searchingzone(_netip_, routing_info_per_devicehost, this_processor
                _added_status_ = False 
           if _added_status_:
             logested_matched_routing.append(_selected_value_)
-
-
-#          if _in_subnet_ not in matched_routing.keys():
-#            matched_routing[_in_subnet_] = []
-#          matched_routing[_in_subnet_].append(_dictvalues_)
-
-#   _subnets_list_ = matched_routing.keys()
-#   _subnets_list_.sort()
-#   if len(_subnets_list_):
-#     _subnet_max_ = _subnets_list_[-1]
-#     for _dictvalues_ in matched_routing[_subnet_max_]:
-#        _unique_string_ = '#unique#'.join([str(_dictvalues_[u'routing_address']), str(_dictvalues_[u'devicehostname']), str(_dictvalues_[u'apiaccessip']), str(_dictvalues_[u'zonename']), str(_dictvalues_[u'routing_address'])])
-#        _selected_value_ = {'searching_netip':str(_dictvalues_[u'routing_address']), 'devicehostname':str(_dictvalues_[u'devicehostname']), 'apiaccessip':str(_dictvalues_[u'apiaccessip']), 'zonename':str(_dictvalues_[u'zonename']), 'routing_address':str(_dictvalues_[u'routing_address']), 'unique_string':_unique_string_}
-#        _added_status_ = True
-#        for _dict_ in logested_matched_routing:
-#           if re.search(_unique_string_, _dict_['unique_string']):
-#             _added_status_ = False
-#        if _added_status_:
-#          logested_matched_routing.append(_selected_value_)
    #
    searched_routing_list = {}
    for _dictvalues_ in logested_matched_routing:
@@ -429,11 +409,7 @@ def procesing_searchingzone(_netip_, routing_info_per_devicehost, this_processor
       searched_routing_list[_in_subnet_].append(_dictvalues_)
    _subnets_list_ = searched_routing_list.keys()
    _subnets_list_.sort()
-
-
-   #count = 0
-
-
+   #
    eleminated_routing_list = []
    for _index_ in range(len(_subnets_list_)):
       if _index_ < len(_subnets_list_) - 1: 
@@ -455,7 +431,7 @@ def procesing_searchingzone(_netip_, routing_info_per_devicehost, this_processor
         _subnet_max_ = _subnets_list_[_index_]
         for _dictvalues_ in searched_routing_list[_subnet_max_]:
            eleminated_routing_list.append(_dictvalues_)
-
+   #
    if len(eleminated_routing_list):
      for _dictvalues_ in eleminated_routing_list:
         if 'unique_string' in _dictvalues_.keys():
@@ -464,187 +440,404 @@ def procesing_searchingzone(_netip_, routing_info_per_devicehost, this_processor
    else:
      if _default_gateway_zone_:
        this_processor_queue.put({'searching_netip':str(_netip_), 'devicehostname':str(_dictvalues_[u'devicehostname']), 'apiaccessip':str(_dictvalues_[u'apiaccessip']), 'zonename':str(_default_gateway_zone_)}) 
-
-
-def procesing_searchingmatching(_each_processorData_, this_processor_queue):
-
-   any_input_pattern = "0.0.0.0/0:0.0.0.0/0"
-   any_application_pattern = "0-65535"
-   app_string_pattern = "%(app_proto)s/%(service_range)s"
-
-   for parameter_combination in _each_processorData_:
-      [ inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, _app_value_, cache_filename ] = parameter_combination 
-      string_Dictvalues = {
-                            "inputsrc_netip":inputsrc_netip,
-                            "inputsrc_device":inputsrc_device,
-                            "inputsrc_zone":inputsrc_zone,
-                            "inputdst_netip":inputdst_netip,
-                            "inputdst_device":inputdst_device,
-                            "inputdst_zone":inputdst_zone
-                          }
-
-      if re.match(inputsrc_device, inputdst_device, re.I):
-        #
-        device_fromtozone_string = "%(inputsrc_device)s_from_%(inputsrc_zone)s_to_%(inputdst_zone)s" % string_Dictvalues
-        policy_cache_filename = "cachepolicy_%(device_fromtozone_string)s.txt" % {"device_fromtozone_string":device_fromtozone_string}
-        #
-        if (str(policy_cache_filename) in cache_filename) or (unicode(policy_cache_filename) in cache_filename):
-          #
-          database_filefull = USER_VAR_CHCHES + policy_cache_filename
-          f = open(database_filefull,"r")
-          string_contents = f.readlines()
-          f.close()
-          stream = BytesIO(string_contents[0])
-          file_database = JSONParser().parse(stream)
-          # 
-          # initial valus
-          tempdict_box = {}
-          tempdict_box[u'sourceip'] = str(inputsrc_netip).strip().split(":")[0]
-          tempdict_box[u'destinationip'] = str(inputdst_netip).strip().split(":")[0]
-          tempdict_box[u'devicename'] = str(inputsrc_device)
-          tempdict_box[u'fromzone'] = str(inputsrc_zone)
-          tempdict_box[u'tozone'] = str(inputdst_zone)
-          tempdict_box[u'applicationprototype'] = str("unknown")
-          tempdict_box[u'sourceapplicationportrange'] = str("unknown")
-          tempdict_box[u'destinationapplicationportrange'] = str("unknown")
-          tempdict_box[u'matchedpolicy'] = {}
-          tempdict_box[u'matchedpolicy'][u'perfectmatch'] = []
-          tempdict_box[u'matchedpolicy'][u'includematch'] = []
-          tempdict_box[u'matchedpolicy'][u'partialmatch'] = []
-          tempdict_box[u'matchedpolicydetail'] = {}
-          tempdict_box[u'matchedpolicydetail'][u'perfectmatch'] = {}
-          tempdict_box[u'matchedpolicydetail'][u'includematch'] = {}
-          tempdict_box[u'matchedpolicydetail'][u'partialmatch'] = {}
-
-          #
-          # 2017.01.16 tcp, udp, all information 
-          source_tcp_any_cache, source_udp_any_cache = _get_tcpudp_all_(file_database[u"source_application"])
-          destination_tcp_any_cache, destination_udp_any_cache = _get_tcpudp_all_(file_database[u"destination_application"])
-          service_tcpudp_all_dictionary = {}
-          service_tcpudp_all_dictionary["source_application_tcp"] = source_tcp_any_cache
-          service_tcpudp_all_dictionary["source_application_udp"] = source_udp_any_cache
-          service_tcpudp_all_dictionary["destination_application_tcp"] = destination_tcp_any_cache
-          service_tcpudp_all_dictionary["destination_application_udp"] = destination_udp_any_cache
-          
-          #
-          # 2017.01.16 search valid items 
-          searched_target_items = {}
-          if not re.search(any_input_pattern, inputsrc_netip, re.I):
-            searched_target_items = _add_stringvalue_into_the_dictionary_(inputsrc_netip, "source", searched_target_items)
-          if not re.search(any_input_pattern, inputdst_netip, re.I):
-            searched_target_items = _add_stringvalue_into_the_dictionary_(inputdst_netip, "destination", searched_target_items)
-          #
-          if re.search(str("icmp"), _app_value_.strip(), re.I):
-            # icmp case
-            searched_target_items = _add_stringvalues_into_the_dictionaries_for_application_("source_application", "destination_application", searched_target_items, "icmp", "icmp") 
-            tempdict_box[u'applicationprototype'] = str("icmp")
-          else:
-            # other case : tcp, udp, any, 0
-            [ prototype, portrange ]  = _app_value_.strip().split("/")
-            [ src_portrange, dst_portrange ] = portrange.split(":")
-            srcapp_string = app_string_pattern % {"app_proto":str(prototype), "service_range":str(src_portrange)}
-            dstapp_string = app_string_pattern % {"app_proto":str(prototype), "service_range":str(dst_portrange)}
-            tempdict_box[u'applicationprototype'] = str(prototype)
-            tempdict_box[u'sourceapplicationportrange'] = str(src_portrange)
-            tempdict_box[u'destinationapplicationportrange'] = str(dstapp_string)
-            if re.search(str("0"), prototype, re.I) or re.search(str("any"), prototype, re.I):
-              if not re.search(any_application_pattern, srcapp_string, re.I):
-                searched_target_items = _add_stringvalue_into_the_dictionary_(srcapp_string, "source_application", searched_target_items)
-              if not re.search(any_application_pattern, dstapp_string, re.I):
-                searched_target_items = _add_stringvalue_into_the_dictionary_(dstapp_string, "destination_application", searched_target_items)
-            if re.search(str("tcp"), prototype, re.I) or re.search(str("udp"), prototype, re.I):
-              searched_target_items = _add_stringvalue_into_the_dictionary_(srcapp_string, "source_application", searched_target_items)
-              searched_target_items = _add_stringvalue_into_the_dictionary_(dstapp_string, "destination_application", searched_target_items)
-          #
-          # 2017.01.16, match value find out
-          intercompare_perfect_match = []
-          intercompare_include_match = []
-          intercompare_partial_match = []
-          compare_keyname_to_search = searched_target_items.keys()
-          for _policycache_file_keyname_ in compare_keyname_to_search:
-             #
-             _temp_perfect_match_ = []
-             _temp_include_match_ = []
-             _temp_partial_match_ = []
-             # network and ipaddress values
-             if (_policycache_file_keyname_ == str("source")) or (_policycache_file_keyname_ == str("destination")):
-               _netip_list_from_database_ = file_database[unicode(_policycache_file_keyname_)].keys()
-               input_value = unicode(searched_target_items[_policycache_file_keyname_].split(":")[0])
-               # perfect match
-               if input_value in file_database[unicode(_policycache_file_keyname_)].keys():
-                 _temp_perfect_match_ = file_database[unicode(_policycache_file_keyname_)][input_value]
-               for _netip_from_database_ in _netip_list_from_database_:
-                  # include match
-                  if (IPNetwork(input_value) in IPNetwork(_netip_from_database_)) and (IPNetwork(input_value) != IPNetwork(_netip_from_database_)):
-                    _temp_include_match_ = _add_string_into_list_during_(file_database[unicode(_policycache_file_keyname_)][_netip_from_database_], _temp_include_match_)
-                  # partial match
-                  if (IPNetwork(_netip_from_database_) in IPNetwork(input_value)) and (IPNetwork(input_value) != IPNetwork(_netip_from_database_)):
-                    _temp_partial_match_ = _add_string_into_list_during_(file_database[unicode(_policycache_file_keyname_)][_netip_from_database_], _temp_partial_match_)
-
-
-               #if input_value in _netip_list_from_database_:
-               #  # perfect match
-               #  _temp_perfect_match_ = file_database[unicode(_policycache_file_keyname_)][input_value]
-
-               #else:
-
-               #  for _netip_from_database_ in _netip_list_from_database_:
-               #     # include match
-               #     if IPNetwork(input_value) in IPNetwork(_netip_from_database_):
-               #       _temp_include_match_ = _add_string_into_list_during_(file_database[unicode(_policycache_file_keyname_)][_netip_from_database_], _temp_include_match_)
-               #     # partial match
-               #     if IPNetwork(_netip_from_database_) in IPNetwork(input_value):
-               #       _temp_partial_match_ = _add_string_into_list_during_(file_database[unicode(_policycache_file_keyname_)][_netip_from_database_], _temp_partial_match_)
-
-             # application
-             elif (_policycache_file_keyname_ == str("source_application")) or (_policycache_file_keyname_ == str("destination_application")):
-               _netip_list_from_database_ = file_database[unicode(_policycache_file_keyname_)].keys()
-               input_value = unicode(searched_target_items[_policycache_file_keyname_])
-               if re.search(str("icmp"), str(input_value), re.I):
-                 if unicode("icmp") in file_database[unicode(_policycache_file_keyname_)].keys():
-                   _temp_perfect_match_ = file_database[unicode(_policycache_file_keyname_)][u"icmp"]
-               else:
-                 # any, tcp udp case
-                 [ prototype, portrange ]  = searched_target_items[_policycache_file_keyname_].strip().split("/")
-                 portrange_list = _getrangelist_from_range_(portrange)    
-                 #
-                 remove_icmp_netip_list_from_database_ = copy.copy(_netip_list_from_database_)
-                 if u"icmp" in remove_icmp_netip_list_from_database_:
-                   remove_icmp_netip_list_from_database_.remove(u"icmp")
-                 #
-                 if re.search(str("0"), prototype, re.I) or re.search(str("any"), prototype, re.I):
-
-
-                   _temp_perfect_match_, _temp_include_match_, _temp_partial_match_ = _obtain_perfect_include_partial_application_(input_value, remove_icmp_netip_list_from_database_, file_database[unicode(_policycache_file_keyname_)], portrange_list, _temp_perfect_match_, _temp_include_match_, _temp_partial_match_)
-                 elif re.search(str("tcp"), prototype, re.I) or re.search(str("udp"), prototype, re.I):
-                   if re.search(any_application_pattern, portrange, re.I):
-                     _allservice_keyname_ = "%(_policycache_file_keyname_)s_%(prototype)s" % {"_policycache_file_keyname_":_policycache_file_keyname_, "prototype":prototype}
-                     _allservice_id_list_ = service_tcpudp_all_dictionary[_allservice_keyname_]
-                     _temp_perfect_match_ = _allservice_id_list_
-                     _temp_include_match_ = _allservice_id_list_
-                     _temp_partial_match_ = _allservice_id_list_
-                   else:
-                     _temp_perfect_match_, _temp_include_match_, _temp_partial_match_ = _obtain_perfect_include_partial_application_(input_value, remove_icmp_netip_list_from_database_, file_database[unicode(_policycache_file_keyname_)], portrange_list, _temp_perfect_match_, _temp_include_match_, _temp_partial_match_)
-             #
-             intercompare_perfect_match.append(_temp_perfect_match_)
-             intercompare_include_match.append(_temp_include_match_)
-             intercompare_partial_match.append(_temp_partial_match_)
-          # 2017.01.16, match value find out
-          tempdict_box[u'matchedpolicy'][u'perfectmatch'] = _multiple_intersection_(intercompare_perfect_match)
-          tempdict_box[u'matchedpolicy'][u'includematch'] = _multiple_intersection_(intercompare_include_match)
-          tempdict_box[u'matchedpolicy'][u'partialmatch'] = _multiple_intersection_(intercompare_partial_match)
-          tempdict_box[u'matchedpolicydetail'][u'perfectmatch'] = findout_policydetail_from_cache(tempdict_box[u'matchedpolicy'][u'perfectmatch'], device_fromtozone_string, file_database[u'policydetail'])
-          tempdict_box[u'matchedpolicydetail'][u'includematch'] = findout_policydetail_from_cache(tempdict_box[u'matchedpolicy'][u'includematch'], device_fromtozone_string, file_database[u'policydetail'])
-          tempdict_box[u'matchedpolicydetail'][u'partialmatch'] = findout_policydetail_from_cache(tempdict_box[u'matchedpolicy'][u'partialmatch'], device_fromtozone_string, file_database[u'policydetail'])
-
-           
-
-          # insert the queue
-          this_processor_queue.put(tempdict_box)
- 
-   print "processor is completed....!"
+   #
    time.sleep(1)
 
+#def procesing_searchingmatching(_each_processorData_, this_processor_queue):
+#
+#   any_input_pattern = "0.0.0.0/0:0.0.0.0/0"
+#   any_application_pattern = "0-65535"
+#   app_string_pattern = "%(app_proto)s/%(service_range)s"
+
+#   for parameter_combination in _each_processorData_:
+#      [ inputsrc_netip, inputsrc_device, inputsrc_zone, inputdst_netip, inputdst_device, inputdst_zone, _app_value_, cache_filename ] = parameter_combination 
+#      string_Dictvalues = {
+#                            "inputsrc_netip":inputsrc_netip,
+#                            "inputsrc_device":inputsrc_device,
+#                            "inputsrc_zone":inputsrc_zone,
+#                            "inputdst_netip":inputdst_netip,
+#                            "inputdst_device":inputdst_device,
+#                            "inputdst_zone":inputdst_zone
+#                          }
+#
+#      if re.match(inputsrc_device, inputdst_device, re.I):
+#        #
+#        device_fromtozone_string = "%(inputsrc_device)s_from_%(inputsrc_zone)s_to_%(inputdst_zone)s" % string_Dictvalues
+#        policy_cache_filename = "cachepolicy_%(device_fromtozone_string)s.txt" % {"device_fromtozone_string":device_fromtozone_string}
+#        #
+#        if (str(policy_cache_filename) in cache_filename) or (unicode(policy_cache_filename) in cache_filename):
+#          #
+#          database_filefull = USER_VAR_CHCHES + policy_cache_filename
+#          f = open(database_filefull,"r")
+#          string_contents = f.readlines()
+#          f.close()
+#          stream = BytesIO(string_contents[0])
+#          file_database = JSONParser().parse(stream)
+#          # 
+#          # initial valus
+#          tempdict_box = {}
+#          tempdict_box[u'sourceip'] = str(inputsrc_netip).strip().split(":")[0]
+#          tempdict_box[u'destinationip'] = str(inputdst_netip).strip().split(":")[0]
+#          tempdict_box[u'devicename'] = str(inputsrc_device)
+#          tempdict_box[u'fromzone'] = str(inputsrc_zone)
+#          tempdict_box[u'tozone'] = str(inputdst_zone)
+#          tempdict_box[u'applicationprototype'] = str("unknown")
+#          tempdict_box[u'sourceapplicationportrange'] = str("unknown")
+#          tempdict_box[u'destinationapplicationportrange'] = str("unknown")
+#          tempdict_box[u'matchedpolicy'] = {}
+#          tempdict_box[u'matchedpolicy'][u'perfectmatch'] = []
+#          tempdict_box[u'matchedpolicy'][u'includematch'] = []
+#          tempdict_box[u'matchedpolicy'][u'partialmatch'] = []
+#          tempdict_box[u'matchedpolicydetail'] = {}
+#          tempdict_box[u'matchedpolicydetail'][u'perfectmatch'] = {}
+#          tempdict_box[u'matchedpolicydetail'][u'includematch'] = {}
+#          tempdict_box[u'matchedpolicydetail'][u'partialmatch'] = {}
+
+#          #
+#          # 2017.01.16 tcp, udp, all information 
+#          source_tcp_any_cache, source_udp_any_cache = _get_tcpudp_all_(file_database[u"source_application"])
+#          destination_tcp_any_cache, destination_udp_any_cache = _get_tcpudp_all_(file_database[u"destination_application"])
+#          service_tcpudp_all_dictionary = {}
+#          service_tcpudp_all_dictionary["source_application_tcp"] = source_tcp_any_cache
+#          service_tcpudp_all_dictionary["source_application_udp"] = source_udp_any_cache
+#          service_tcpudp_all_dictionary["destination_application_tcp"] = destination_tcp_any_cache
+#          service_tcpudp_all_dictionary["destination_application_udp"] = destination_udp_any_cache
+#          
+#          #
+#          # 2017.01.16 search valid items 
+#          searched_target_items = {}
+#          if not re.search(any_input_pattern, inputsrc_netip, re.I):
+#            searched_target_items = _add_stringvalue_into_the_dictionary_(inputsrc_netip, "source", searched_target_items)
+#          if not re.search(any_input_pattern, inputdst_netip, re.I):
+#            searched_target_items = _add_stringvalue_into_the_dictionary_(inputdst_netip, "destination", searched_target_items)
+#          #
+#          if re.search(str("icmp"), _app_value_.strip(), re.I):
+#            # icmp case
+#            searched_target_items = _add_stringvalues_into_the_dictionaries_for_application_("source_application", "destination_application", searched_target_items, "icmp", "icmp") 
+#            tempdict_box[u'applicationprototype'] = str("icmp")
+#          else:
+#            # other case : tcp, udp, any, 0
+#            [ prototype, portrange ]  = _app_value_.strip().split("/")
+#            [ src_portrange, dst_portrange ] = portrange.split(":")
+#            srcapp_string = app_string_pattern % {"app_proto":str(prototype), "service_range":str(src_portrange)}
+#            dstapp_string = app_string_pattern % {"app_proto":str(prototype), "service_range":str(dst_portrange)}
+#            tempdict_box[u'applicationprototype'] = str(prototype)
+#            tempdict_box[u'sourceapplicationportrange'] = str(src_portrange)
+#            tempdict_box[u'destinationapplicationportrange'] = str(dstapp_string)
+#            if re.search(str("0"), prototype, re.I) or re.search(str("any"), prototype, re.I):
+#              if not re.search(any_application_pattern, srcapp_string, re.I):
+#                searched_target_items = _add_stringvalue_into_the_dictionary_(srcapp_string, "source_application", searched_target_items)
+#              if not re.search(any_application_pattern, dstapp_string, re.I):
+#                searched_target_items = _add_stringvalue_into_the_dictionary_(dstapp_string, "destination_application", searched_target_items)
+#            if re.search(str("tcp"), prototype, re.I) or re.search(str("udp"), prototype, re.I):
+#              searched_target_items = _add_stringvalue_into_the_dictionary_(srcapp_string, "source_application", searched_target_items)
+#              searched_target_items = _add_stringvalue_into_the_dictionary_(dstapp_string, "destination_application", searched_target_items)
+#          #
+#          # 2017.01.16, match value find out
+#          intercompare_perfect_match = []
+#          intercompare_include_match = []
+#          intercompare_partial_match = []
+#          compare_keyname_to_search = searched_target_items.keys()
+#          for _policycache_file_keyname_ in compare_keyname_to_search:
+#             #
+#             _temp_perfect_match_ = []
+#             _temp_include_match_ = []
+#             _temp_partial_match_ = []
+#             # network and ipaddress values
+#             if (_policycache_file_keyname_ == str("source")) or (_policycache_file_keyname_ == str("destination")):
+#               _netip_list_from_database_ = file_database[unicode(_policycache_file_keyname_)].keys()
+#               input_value = unicode(searched_target_items[_policycache_file_keyname_].split(":")[0])
+#               # perfect match
+#               if input_value in file_database[unicode(_policycache_file_keyname_)].keys():
+#                 _temp_perfect_match_ = file_database[unicode(_policycache_file_keyname_)][input_value]
+#               for _netip_from_database_ in _netip_list_from_database_:
+#                  # include match
+#                  if (IPNetwork(input_value) in IPNetwork(_netip_from_database_)) and (IPNetwork(input_value) != IPNetwork(_netip_from_database_)):
+#                    _temp_include_match_ = _add_string_into_list_during_(file_database[unicode(_policycache_file_keyname_)][_netip_from_database_], _temp_include_match_)
+#                  # partial match
+#                  if (IPNetwork(_netip_from_database_) in IPNetwork(input_value)) and (IPNetwork(input_value) != IPNetwork(_netip_from_database_)):
+#                    _temp_partial_match_ = _add_string_into_list_during_(file_database[unicode(_policycache_file_keyname_)][_netip_from_database_], _temp_partial_match_)
+#
+#
+#               #if input_value in _netip_list_from_database_:
+#               #  # perfect match
+#               #  _temp_perfect_match_ = file_database[unicode(_policycache_file_keyname_)][input_value]
+#
+#               #else:
+#
+#               #  for _netip_from_database_ in _netip_list_from_database_:
+#               #     # include match
+#               #     if IPNetwork(input_value) in IPNetwork(_netip_from_database_):
+#               #       _temp_include_match_ = _add_string_into_list_during_(file_database[unicode(_policycache_file_keyname_)][_netip_from_database_], _temp_include_match_)
+#               #     # partial match
+#               #     if IPNetwork(_netip_from_database_) in IPNetwork(input_value):
+#               #       _temp_partial_match_ = _add_string_into_list_during_(file_database[unicode(_policycache_file_keyname_)][_netip_from_database_], _temp_partial_match_)
+#
+#             # application
+#             elif (_policycache_file_keyname_ == str("source_application")) or (_policycache_file_keyname_ == str("destination_application")):
+#               _netip_list_from_database_ = file_database[unicode(_policycache_file_keyname_)].keys()
+#               input_value = unicode(searched_target_items[_policycache_file_keyname_])
+#               if re.search(str("icmp"), str(input_value), re.I):
+#                 if unicode("icmp") in file_database[unicode(_policycache_file_keyname_)].keys():
+#                   _temp_perfect_match_ = file_database[unicode(_policycache_file_keyname_)][u"icmp"]
+#               else:
+#                 # any, tcp udp case
+#                 [ prototype, portrange ]  = searched_target_items[_policycache_file_keyname_].strip().split("/")
+#                 portrange_list = _getrangelist_from_range_(portrange)    
+#                 #
+#                 remove_icmp_netip_list_from_database_ = copy.copy(_netip_list_from_database_)
+#                 if u"icmp" in remove_icmp_netip_list_from_database_:
+#                   remove_icmp_netip_list_from_database_.remove(u"icmp")
+#                 #
+#                 if re.search(str("0"), prototype, re.I) or re.search(str("any"), prototype, re.I):
+#
+#
+#                   _temp_perfect_match_, _temp_include_match_, _temp_partial_match_ = _obtain_perfect_include_partial_application_(input_value, remove_icmp_netip_list_from_database_, file_database[unicode(_policycache_file_keyname_)], portrange_list, _temp_perfect_match_, _temp_include_match_, _temp_partial_match_)
+#                 elif re.search(str("tcp"), prototype, re.I) or re.search(str("udp"), prototype, re.I):
+#                   if re.search(any_application_pattern, portrange, re.I):
+#                     _allservice_keyname_ = "%(_policycache_file_keyname_)s_%(prototype)s" % {"_policycache_file_keyname_":_policycache_file_keyname_, "prototype":prototype}
+#                     _allservice_id_list_ = service_tcpudp_all_dictionary[_allservice_keyname_]
+#                     _temp_perfect_match_ = _allservice_id_list_
+#                     _temp_include_match_ = _allservice_id_list_
+#                     _temp_partial_match_ = _allservice_id_list_
+#                   else:
+#                     _temp_perfect_match_, _temp_include_match_, _temp_partial_match_ = _obtain_perfect_include_partial_application_(input_value, remove_icmp_netip_list_from_database_, file_database[unicode(_policycache_file_keyname_)], portrange_list, _temp_perfect_match_, _temp_include_match_, _temp_partial_match_)
+#             #
+#             intercompare_perfect_match.append(_temp_perfect_match_)
+#             intercompare_include_match.append(_temp_include_match_)
+#             intercompare_partial_match.append(_temp_partial_match_)
+#          # 2017.01.16, match value find out
+#          tempdict_box[u'matchedpolicy'][u'perfectmatch'] = _multiple_intersection_(intercompare_perfect_match)
+#          tempdict_box[u'matchedpolicy'][u'includematch'] = _multiple_intersection_(intercompare_include_match)
+#          tempdict_box[u'matchedpolicy'][u'partialmatch'] = _multiple_intersection_(intercompare_partial_match)
+#          tempdict_box[u'matchedpolicydetail'][u'perfectmatch'] = findout_policydetail_from_cache(tempdict_box[u'matchedpolicy'][u'perfectmatch'], device_fromtozone_string, file_database[u'policydetail'])
+#          tempdict_box[u'matchedpolicydetail'][u'includematch'] = findout_policydetail_from_cache(tempdict_box[u'matchedpolicy'][u'includematch'], device_fromtozone_string, file_database[u'policydetail'])
+#          tempdict_box[u'matchedpolicydetail'][u'partialmatch'] = findout_policydetail_from_cache(tempdict_box[u'matchedpolicy'][u'partialmatch'], device_fromtozone_string, file_database[u'policydetail'])
+#
+#          # insert the queue
+#          this_processor_queue.put(tempdict_box)
+#   print "processor is completed....!"
+#   time.sleep(1)
+
+def _range_list_(_string_):
+   _basic_search_ = re.search('([0-9]+)\-([0-9]+)', _string_)
+   if _basic_search_:
+     _range_start_ = int(_basic_search_.group(1).strip())
+     _range_end_ = int(_basic_search_.group(2).strip())
+     _range_length_ = _range_end_ - _range_start_ + 1
+     _basic_ = list(map(lambda x:x+_range_start_, range(_range_length_)))
+   else:
+     # other procotocol such as 'icmp'
+     if re.search('icmp', _string_):
+       _basic_ = [0] 
+   return _basic_
+
+def procesing_cachelookup(_dictvalue_, this_processor_queue):
+   #
+   _lookup_keynames_ = _dictvalue_.keys()
+   # 
+   search_key = {}
+   return_basic_dictvalue_form = {}
+   if ('src_netip' in _lookup_keynames_) and ('dst_netip' in _lookup_keynames_):
+     search_key = {"to_zone" : str(_dictvalue_['dst_netip']['zonename']), "devicehostname" : str(_dictvalue_['src_netip']['devicehostname']), "from_zone" : str(_dictvalue_['src_netip']['zonename'])}
+     return_basic_dictvalue_form = copy.copy(search_key)
+     return_basic_dictvalue_form['src_netip'] = str(_dictvalue_['src_netip']['searching_netip'])
+     return_basic_dictvalue_form['dst_netip'] = str(_dictvalue_['dst_netip']['searching_netip'])
+   elif ('src_netip' in _lookup_keynames_) and ('dst_netip' not in _lookup_keynames_):
+     search_key = {"devicehostname" : str(_dictvalue_['src_netip']['devicehostname']), "from_zone" : str(_dictvalue_['src_netip']['zonename'])}
+     return_basic_dictvalue_form = copy.copy(search_key)
+     return_basic_dictvalue_form['src_netip'] = str(_dictvalue_['src_netip']['searching_netip'])
+   elif ('src_netip' not in _lookup_keynames_) and ('dst_netip' in _lookup_keynames_):
+     search_key = {"to_zone" : str(_dictvalue_['dst_netip']['zonename']), "devicehostname" : str(_dictvalue_['dst_netip']['devicehostname'])}
+     return_basic_dictvalue_form = copy.copy(search_key)
+     return_basic_dictvalue_form['dst_netip'] = str(_dictvalue_['dst_netip']['searching_netip'])
+
+   # result 
+   _this_result_out_ = {}
+   # perfect match processing 
+   _comp_list_to_match_ = {}
+   for _keyname_ in _lookup_keynames_:
+      copied_search_key = copy.copy(search_key)
+      copied_search_key['type'] = str(_keyname_)
+      #
+      if _keyname_ not in _comp_list_to_match_:
+        _comp_list_to_match_[_keyname_] = []
+      #
+      if re.search('src_netip', str(_keyname_)) or re.search('dst_netip', str(_keyname_)):
+        copied_search_key['key'] = str(_dictvalue_[_keyname_]['searching_netip'])
+        copied_search_key['subnet_size'] = int(str(_dictvalue_[_keyname_]['searching_netip']).split('/')[-1])
+        # 
+        _searched_result_ = exact_findout('juniper_srx_element_cache', copied_search_key)
+        if _searched_result_:
+          for _indict_ in _searched_result_:
+             _comp_list_to_match_[_keyname_] = _comp_list_to_match_[_keyname_] + _indict_[u'values'] 
+      elif re.search('src_port', str(_keyname_)) or re.search('dst_port', str(_keyname_)): 
+        searched_portvalues = re.search('([a-zA-Z0-9]+)\/([0-9]+)\-([0-9]+)', str(_dictvalue_[_keyname_]))
+        if searched_portvalues:
+          _protocol_ = searched_portvalues.group(1).strip()
+          if re.search('icmp', _protocol_):
+            copied_search_key['key'] = 'icmp'
+            copied_search_key['port_count'] = int(0)
+            #
+            _searched_result_ = exact_findout('juniper_srx_element_cache', copied_search_key)
+            if _searched_result_:
+              for _indict_ in _searched_result_:
+                 _comp_list_to_match_[_keyname_] = _comp_list_to_match_[_keyname_] + _indict_[u'values']
+          elif re.search('tcp', _protocol_) or re.search('udp', _protocol_):
+            copied_search_key['key'] = str(_dictvalue_[_keyname_])
+            copied_search_key['port_count'] = int(searched_portvalues.group(3).strip()) - int(searched_portvalues.group(2).strip()) + 1
+            #
+            _searched_result_ = exact_findout('juniper_srx_element_cache', copied_search_key)
+            if _searched_result_:
+              for _indict_ in _searched_result_:
+                 _comp_list_to_match_[_keyname_] = _comp_list_to_match_[_keyname_] + _indict_[u'values']
+          else:
+            # other protocol added
+            pass
+   #
+   _comp_list_to_match_values_ = _comp_list_to_match_.values()
+   start_list = _comp_list_to_match_values_[0]
+   for _index_ in range(len(_comp_list_to_match_values_) - 1):
+      _this_index_ = _index_ + 1
+      start_list = list(set(start_list).intersection(_comp_list_to_match_values_[_this_index_]))
+   #
+   _this_result_out_['prefectmatch'] = start_list
+      
+   # included match processing
+   for _keyname_ in _lookup_keynames_:
+      copied_search_key = copy.copy(search_key)
+      copied_search_key['type'] = _keyname_
+      #
+      if re.search('src_netip', str(_keyname_)) or re.search('dst_netip', str(_keyname_)):
+        copied_search_key['subnet_size'] = { '$lt':int(str(_dictvalue_[_keyname_]['searching_netip']).split('/')[-1]) }
+        #
+        _searched_result_ = exact_findout('juniper_srx_element_cache', copied_search_key)
+        if _searched_result_:
+          _basic_ = IPNetwork(unicode(_dictvalue_[_keyname_]['searching_netip']))
+          for _indict_ in _searched_result_:
+             if _basic_ in IPNetwork(unicode(_indict_[u'key'])):
+               _comp_list_to_match_[_keyname_] = _comp_list_to_match_[_keyname_] + _indict_[u'values']
+      elif re.search('src_port', str(_keyname_)) or re.search('dst_port', str(_keyname_)):
+        searched_portvalues = re.search('([a-zA-Z0-9]+)\/([0-9]+)\-([0-9]+)', str(_dictvalue_[_keyname_]))
+        if searched_portvalues:
+          _protocol_ = searched_portvalues.group(1).strip()
+          if re.search('icmp', _protocol_):
+            copied_search_key['key'] = 'icmp'
+            copied_search_key['port_count'] = { '$gt':int(0) }
+            #
+            _searched_result_ = exact_findout('juniper_srx_element_cache', copied_search_key)
+            if _searched_result_:
+              for _indict_ in _searched_result_:
+                 _comp_list_to_match_[_keyname_] = _comp_list_to_match_[_keyname_] + _indict_[u'values']
+          elif re.search('tcp', _protocol_) or re.search('udp', _protocol_):
+            copied_search_key['port_count'] = { '$gt':int(searched_portvalues.group(3).strip()) - int(searched_portvalues.group(2).strip()) + 1 }
+            #
+            _searched_result_ = exact_findout('juniper_srx_element_cache', copied_search_key)
+            if _searched_result_:
+              _basic_ = _range_list_(str(_dictvalue_[_keyname_]))
+              _set_basic_ = set(_basic_)
+              for _indict_ in _searched_result_:
+                 _indict_rangelist_ = _range_list_(str(_indict_[u"key"]))
+                 _intersection_ = list(_set_basic_.intersection(_indict_rangelist_))
+                 if _intersection_ == _basic_:
+                   _comp_list_to_match_[_keyname_] = _comp_list_to_match_[_keyname_] + _indict_[u'values']
+          else:
+            # other protocol added
+            pass
+   #
+   _comp_list_to_match_values_ = _comp_list_to_match_.values()
+   start_list = _comp_list_to_match_values_[0]
+   for _index_ in range(len(_comp_list_to_match_values_) - 1):
+      _this_index_ = _index_ + 1
+      start_list = list(set(start_list).intersection(_comp_list_to_match_values_[_this_index_]))
+   #
+   _this_result_out_['includedmatch'] = list(set(start_list) - set(_this_result_out_['prefectmatch']))
+
+   # partial match process
+   for _keyname_ in _lookup_keynames_:
+      copied_search_key = copy.copy(search_key)
+      copied_search_key['type'] = _keyname_
+      #
+      if re.search('src_netip', str(_keyname_)) or re.search('dst_netip', str(_keyname_)):
+        copied_search_key['subnet_size'] = { '$gt':int(str(_dictvalue_[_keyname_]['searching_netip']).split('/')[-1]) }
+        #
+        _searched_result_ = exact_findout('juniper_srx_element_cache', copied_search_key)
+        if _searched_result_:
+          _basic_ = IPNetwork(unicode(_dictvalue_[_keyname_]['searching_netip']))
+          for _indict_ in _searched_result_:
+             if IPNetwork(unicode(_indict_[u'key'])) in _basic_:
+               _comp_list_to_match_[_keyname_] = _comp_list_to_match_[_keyname_] + _indict_[u'values']
+      elif re.search('src_port', str(_keyname_)) or re.search('dst_port', str(_keyname_)):
+        searched_portvalues = re.search('([a-zA-Z0-9]+)\/([0-9]+)\-([0-9]+)', str(_dictvalue_[_keyname_]))
+        if searched_portvalues:
+          _protocol_ = searched_portvalues.group(1).strip()
+          if re.search('icmp', _protocol_):
+            copied_search_key['key'] = 'icmp'
+            copied_search_key['port_count'] = { '$lt':int(0) }
+            #
+            _searched_result_ = exact_findout('juniper_srx_element_cache', copied_search_key)
+            if _searched_result_:
+              for _indict_ in _searched_result_:
+                 _comp_list_to_match_[_keyname_] = _comp_list_to_match_[_keyname_] + _indict_[u'values']
+          elif re.search('tcp', _protocol_) or re.search('udp', _protocol_):
+            copied_search_key['port_count'] = { '$lt':int(searched_portvalues.group(3).strip()) - int(searched_portvalues.group(2).strip()) + 1 }
+            #
+            _searched_result_ = exact_findout('juniper_srx_element_cache', copied_search_key)
+            if _searched_result_:
+              _basic_ = _range_list_(str(_dictvalue_[_keyname_]))
+              _set_basic_ = set(_basic_)
+              for _indict_ in _searched_result_:
+                 _indict_rangelist_ = _range_list_(str(_indict_[u"key"]))
+                 _intersection_ = list(_set_basic_.intersection(_indict_rangelist_))
+                 if _intersection_ == _indict_rangelist_:
+                   _comp_list_to_match_[_keyname_] = _comp_list_to_match_[_keyname_] + _indict_[u'values']
+          else:
+            # other protocol added
+            pass
+   #
+   _comp_list_to_match_values_ = _comp_list_to_match_.values()
+   start_list = _comp_list_to_match_values_[0]
+   for _index_ in range(len(_comp_list_to_match_values_) - 1):
+      _this_index_ = _index_ + 1
+      start_list = list(set(start_list).intersection(_comp_list_to_match_values_[_this_index_]))
+   #
+   _this_result_out_['partialmatch'] = list(set(start_list) - set(_this_result_out_['prefectmatch']) - set(_this_result_out_['includedmatch']))
+   #
+   _zonenames_in_thisdeivce_ = []
+   for _find_dict_ in exact_findout('juniper_srx_element_cache', {'devicehostname':return_basic_dictvalue_form['devicehostname']}):
+      for _find_zonename_ in _find_dict_['zonesinfo'].keys():
+         if str(_find_zonename_) not in _zonenames_in_thisdeivce_:
+           _zonenames_in_thisdeivce_.append(str(_find_zonename_))
+
+   #if 'src_netip' not in return_basic_dictvalue_form.keys():
+
+   #if 'dst_netip' not in return_basic_dictvalue_form.keys():
+
+   #if 'src_port' not in return_basic_dictvalue_form.keys():
+
+   #if 'dst_port' not in return_basic_dictvalue_form.keys():
+
+   print return_basic_dictvalue_form 
+   print _this_result_out_
+     
+   print "------------"
+      
+
+   # 
+   time.sleep(1)
+
+
+
+   
+
+
+   #if 'src_netip' in _lookup_keynames_:
+   #  _dictvalue_['src_netip']
+   #elif 'dst_netip' in _lookup_keynames_:
+   #else:
+
+   #src_netip = _dictvalue_['src_netip']
+   #dst_netip =
 
 
 def _findout_matched_zone_(routing_info_per_devicehost, _netip_, _candi_src_netip_):
@@ -714,6 +907,7 @@ def juniper_searchpolicy(request,format=None):
          primary_devices = findout_primary_devices(device_information_values)
 
          # confirm input type 
+
          if type(_input_) != type({}):
            return_object = {"items":[{"message":"input should be object or dictionary!!","process_status":"error"}]}
            return Response(json.dumps(return_object))
@@ -727,6 +921,7 @@ def juniper_searchpolicy(request,format=None):
            _searching_target_.append(u'src_port')
          if not re.search('0\/[0-9]+\-65535', _input_[u'dst_port']) and not re.search('0\/[0-9]+\-0', _input_[u'dst_port']):
            _searching_target_.append(u'dst_port')
+
 
          #
          _routing_table_ = obtainjson_from_mongodb('juniper_srx_routingtable')
@@ -754,23 +949,51 @@ def juniper_searchpolicy(request,format=None):
            _netip_ = _input_[u'dst_netip']
            _candi_dst_netip_ = _findout_matched_zone_(routing_info_per_devicehost, _netip_, _candi_dst_netip_)
 
-         # intersection
-         _candi_comb_ = []
-         for _src_dictvalue_ in _candi_src_netip_:
-            for _dst_dictvalue_ in _candi_dst_netip_:
-               if re.match(str(_src_dictvalue_['devicehostname']), str(_dst_dictvalue_['devicehostname'])):
-                 if not re.match(str(_src_dictvalue_['zonename']), str(_dst_dictvalue_['zonename'])):
-                   _candi_comb_.append({'src_netip':_src_dictvalue_ ,'dst_netip':_dst_dictvalue_})
+         # intersection : this is import to decrease the searching time.
+         if len(_candi_src_netip_):
+           if len(_candi_dst_netip_):
+             _candi_comb_ = []
+             for _src_dictvalue_ in _candi_src_netip_:
+                for _dst_dictvalue_ in _candi_dst_netip_:
+                   if re.match(str(_src_dictvalue_['devicehostname']), str(_dst_dictvalue_['devicehostname'])):
+                     if not re.match(str(_src_dictvalue_['zonename']), str(_dst_dictvalue_['zonename'])):
+                       _candi_comb_.append({'src_netip':_src_dictvalue_ ,'dst_netip':_dst_dictvalue_})
+           else:
+             _candi_comb_ = []
+             for _src_dictvalue_ in _candi_src_netip_:
+                _candi_comb_.append({'src_netip':_src_dictvalue_})
+         else:
+           if len(_candi_dst_netip_):
+             _candi_comb_ = []
+             for _dst_dictvalue_ in _candi_dst_netip_:
+                _candi_comb_.append({'dst_netip':_dst_dictvalue_})
+           else:
+             return_object = {"items":[{"message":"all any is not allowed!","process_status":"error"}]}
+             return Response(json.dumps(return_object))
          # 
          if u'src_port' in _searching_target_:
            for _dictvalue_ in _candi_comb_:
-              _dictvalue_[u'src_port'] = _input_[u'src_port']
+              _dictvalue_['src_port'] = _input_[u'src_port']
          #
          if u'dst_port' in _searching_target_:
            for _dictvalue_ in _candi_comb_:
-              _dictvalue_[u'dst_port'] = _input_[u'dst_port']
-                     
-         print _candi_comb_ 
+              _dictvalue_['dst_port'] = _input_[u'dst_port']
+         #            
+         processing_queues_list = []
+         for _dictvalue_ in _candi_comb_:
+            processing_queues_list.append(Queue(maxsize=0))
+         #
+         count = 0
+         _processor_list_ = []
+         for _dictvalue_ in _candi_comb_:
+            this_processor_queue = processing_queues_list[count]
+            _processor_ = Process(target = procesing_cachelookup, args = (_dictvalue_, this_processor_queue,))
+            _processor_.start()
+            _processor_list_.append(_processor_)
+            count = count + 1
+         for _processor_ in _processor_list_:
+            _processor_.join()
+         #
 
 
          #print routing_info_per_devicehost 

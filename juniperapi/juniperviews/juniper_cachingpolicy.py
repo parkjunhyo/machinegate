@@ -93,6 +93,7 @@ def _put_queue_for_address_(_dict_value_, _devicehostname_, _from_zone_, _to_zon
 
 def _put_queue_for_service_(_dict_value_, _devicehostname_, _from_zone_, _to_zone_, _colletion_, this_processor_queue, _keyname_string_):
    for _keyname_ in _dict_value_.keys():
+      # this will be used for icmp
       _port_range_ = int(0)
       searched_value = re.search("([0-9]+)\-([0-9]+)", _keyname_)
       if searched_value:
