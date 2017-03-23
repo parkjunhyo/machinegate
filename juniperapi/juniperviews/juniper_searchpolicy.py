@@ -337,6 +337,7 @@ def procesing_cachelookup(_dictvalue_, this_processor_queue):
           for _indict_ in _searched_result_:
              if IPNetwork(unicode(_indict_[u'key'])) in _basic_:
                _comp_list_to_match_[_keyname_] = _comp_list_to_match_[_keyname_] + _indict_[u'values']
+               unique_per_zonematching = _update_unique_per_zonematching_(_indict_[u'from_zone'], _indict_[u'to_zone'], _indict_[u'values'], unique_per_zonematching, 'partialmatch')
                #
 
       # searching into the database for src_port and dst_port
@@ -376,17 +377,19 @@ def procesing_cachelookup(_dictvalue_, this_processor_queue):
    #
    _this_result_out_['partialmatch'] = list(set(_recursive_instersection_(_comp_list_to_match_)) - set(_this_result_out_['includedmatch']) - set(_this_result_out_['prefectmatch']))
 
+
+   #
    # recovery processing for any input valuse : port recovery
    for _maybe_keyname_ in _maybe_any_keynames_:
       if re.search('src_port', _maybe_keyname_) or re.search('dst_port', _maybe_keyname_): 
         return_basic_dictvalue_form[_maybe_keyname_] = '0/0-0'
 
-
    if ('src_netip' in _maybe_any_keynames_) or ('dst_netip' in _maybe_any_keynames_):
      for _maybe_keyname_ in _maybe_any_keynames_:
-        _tempdict_box_ = copy.copy(return_basic_dictvalue_form)
+        #_tempdict_box_ = copy.copy(return_basic_dictvalue_form)
         if re.search('src_netip', _maybe_keyname_):
           for _rcv_zone_ in _zonenames_in_thisdeivce_:
+             _tempdict_box_ = copy.copy(return_basic_dictvalue_form)
              if not re.search(_tempdict_box_['to_zone'], _rcv_zone_):
                _tempdict_box_['from_zone'] = _rcv_zone_
                _tempdict_box_['src_netip'] = '0.0.0.0/0'
@@ -396,6 +399,7 @@ def procesing_cachelookup(_dictvalue_, this_processor_queue):
 
         if re.search('dst_netip', _maybe_keyname_): 
           for _rcv_zone_ in _zonenames_in_thisdeivce_:
+             _tempdict_box_ = copy.copy(return_basic_dictvalue_form)
              if not re.search(_tempdict_box_['from_zone'], _rcv_zone_):
                _tempdict_box_['to_zone'] = _rcv_zone_
                _tempdict_box_['dst_netip'] = '0.0.0.0/0'
@@ -407,7 +411,6 @@ def procesing_cachelookup(_dictvalue_, this_processor_queue):
      _fromto_keyname_ = _tempdict_box_['from_zone'] + '_' + _tempdict_box_['to_zone']
      _tempdict_box_ = _inersection_by_from_to_zones_(_tempdict_box_, _this_result_out_, unique_per_zonematching, _fromto_keyname_)
      this_processor_queue.put({"message":"searching done", "process_status":"done", "process_done_item":_tempdict_box_})
-      
    # 
    time.sleep(1)
 
@@ -577,11 +580,15 @@ def juniper_searchpolicy(request,format=None):
          for _processor_ in _processor_list_:
             _processor_.join()
          #
-
-         #
-         return Response(json.dumps({}))
-          
-
+         search_result = []
+         for _queue_ in processing_queues_list:
+            while not _queue_.empty():
+                 _get_values_ = _queue_.get()
+                 if re.search(_get_values_['process_status'], 'done'):
+                   search_result.append(_get_values_['process_done_item'])
+           
+         #print search_result
+         return Response(json.dumps({"items":search_result})) 
 
        # end of if re.search(r"system", system_property["role"], re.I):
        else:
