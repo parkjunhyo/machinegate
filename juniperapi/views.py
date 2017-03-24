@@ -10,3 +10,4 @@ from juniperapi.juniperviews.juniper_searchzonefromroute import juniper_searchzo
 from juniperapi.juniperviews.juniper_searchpolicy import juniper_searchpolicy
 from juniperapi.juniperviews.juniper_device_regi import juniper_device_regi
 from juniperapi.juniperviews.juniper_showroute_static_update import juniper_showroute_static_update
+from juniperapi.juniperviews.juniper_showrulebyrequest import juniper_showrulebyrequest
