@@ -480,120 +480,115 @@ def juniper_searchpolicy(request,format=None):
 
 
    elif request.method == 'POST':
-       if re.search(r"system", system_property["role"], re.I):
-         _input_ = JSONParser().parse(request)
+       _input_ = JSONParser().parse(request)
 
-         #
-         device_information_values = obtainjson_from_mongodb('juniper_srx_devices')
-         primary_devices = findout_primary_devices(device_information_values)
+       #
+       device_information_values = obtainjson_from_mongodb('juniper_srx_devices')
+       primary_devices = findout_primary_devices(device_information_values)
 
-         # confirm input type 
-         if type(_input_) != type({}):
-           return_object = {"items":[{"message":"input should be object or dictionary!!","process_status":"error"}]}
-           return Response(json.dumps(return_object))
-
-         # Any Source/Destination, Any service will be eliminated because it is not necessary to search.
-         _searching_target_ = []
-         if not re.search('0.0.0.0/0', _input_[u'src_netip']):
-           _searching_target_.append(u'src_netip') 
-         if not re.search('0.0.0.0/0', _input_[u'dst_netip']):
-           _searching_target_.append(u'dst_netip')
-         if not re.search('0\/[0-9]+\-65535', _input_[u'src_port']) and not re.search('0\/[0-9]+\-0', _input_[u'src_port']):
-           _searching_target_.append(u'src_port')
-         if not re.search('0\/[0-9]+\-65535', _input_[u'dst_port']) and not re.search('0\/[0-9]+\-0', _input_[u'dst_port']):
-           _searching_target_.append(u'dst_port')
-
-
-         #
-         _routing_table_ = obtainjson_from_mongodb('juniper_srx_routingtable')
-         if not len(_routing_table_):
-           return_object = {"items":[{"message":"there is no routing table registered!!","process_status":"error"}]}
-           return Response(json.dumps(return_object))
-
-         # This information is import because it will be used to find out the zone matched.
-         routing_info_per_devicehost = {}
-         for _dictvalues_ in _routing_table_:
-            if _dictvalues_[u"apiaccessip"] in primary_devices:
-              _devicehost_ = _dictvalues_[u'devicehostname']
-              if _devicehost_ not in routing_info_per_devicehost.keys():
-                routing_info_per_devicehost[_devicehost_] = []
-              routing_info_per_devicehost[_devicehost_].append(_dictvalues_)
-
-         # findout source zone
-         _candi_src_netip_ = []
-         if u'src_netip' in _searching_target_:
-           _netip_ = _input_[u'src_netip']
-           _candi_src_netip_ = _findout_matched_zone_(routing_info_per_devicehost, _netip_, _candi_src_netip_)
-
-         # findout destination zone
-         _candi_dst_netip_ = []
-         if u'dst_netip' in _searching_target_:
-           _netip_ = _input_[u'dst_netip']
-           _candi_dst_netip_ = _findout_matched_zone_(routing_info_per_devicehost, _netip_, _candi_dst_netip_)
-
-         # intersection : this is import to decrease the searching time.
-         if len(_candi_src_netip_):
-           if len(_candi_dst_netip_):
-             _candi_comb_ = []
-             for _src_dictvalue_ in _candi_src_netip_:
-                for _dst_dictvalue_ in _candi_dst_netip_:
-                   if re.match(str(_src_dictvalue_['devicehostname']), str(_dst_dictvalue_['devicehostname'])):
-                     if not re.match(str(_src_dictvalue_['zonename']), str(_dst_dictvalue_['zonename'])):
-                       _candi_comb_.append({'src_netip':_src_dictvalue_ ,'dst_netip':_dst_dictvalue_})
-           else:
-             _candi_comb_ = []
-             for _src_dictvalue_ in _candi_src_netip_:
-                _candi_comb_.append({'src_netip':_src_dictvalue_})
-         else:
-           if len(_candi_dst_netip_):
-             _candi_comb_ = []
-             for _dst_dictvalue_ in _candi_dst_netip_:
-                _candi_comb_.append({'dst_netip':_dst_dictvalue_})
-           else:
-             return_object = {"items":[{"message":"all any is not allowed!","process_status":"error"}]}
-             return Response(json.dumps(return_object))
-
-         # 
-         if u'src_port' in _searching_target_:
-           for _dictvalue_ in _candi_comb_:
-              _dictvalue_['src_port'] = _input_[u'src_port']
-         #
-         if u'dst_port' in _searching_target_:
-           for _dictvalue_ in _candi_comb_:
-              _dictvalue_['dst_port'] = _input_[u'dst_port']
-
-         ###################################################################
-         # until this, zone was found by the routing table
-         ###################################################################
-         processing_queues_list = []
-         for _dictvalue_ in _candi_comb_:
-            processing_queues_list.append(Queue(maxsize=0))
-         #
-         count = 0
-         _processor_list_ = []
-         for _dictvalue_ in _candi_comb_:
-            this_processor_queue = processing_queues_list[count]
-            _processor_ = Process(target = procesing_cachelookup, args = (_dictvalue_, this_processor_queue,))
-            _processor_.start()
-            _processor_list_.append(_processor_)
-            count = count + 1
-         for _processor_ in _processor_list_:
-            _processor_.join()
-         #
-         search_result = []
-         for _queue_ in processing_queues_list:
-            while not _queue_.empty():
-                 _get_values_ = _queue_.get()
-                 if re.search(_get_values_['process_status'], 'done'):
-                   search_result.append(_get_values_['process_done_item'])
-           
-         #print search_result
-         return Response(json.dumps({"items":search_result})) 
-
-       # end of if re.search(r"system", system_property["role"], re.I):
-       else:
-         return_object = {"items":[{"message":"this host has no authorizaition!","process_status":"error"}]}
+       # confirm input type 
+       if type(_input_) != type({}):
+         return_object = {"items":[{"message":"input should be object or dictionary!!","process_status":"error"}]}
          return Response(json.dumps(return_object))
+
+       # Any Source/Destination, Any service will be eliminated because it is not necessary to search.
+       _searching_target_ = []
+       if not re.search('0.0.0.0/0', _input_[u'src_netip']):
+         _searching_target_.append(u'src_netip') 
+       if not re.search('0.0.0.0/0', _input_[u'dst_netip']):
+         _searching_target_.append(u'dst_netip')
+       if not re.search('0\/[0-9]+\-65535', _input_[u'src_port']) and not re.search('0\/[0-9]+\-0', _input_[u'src_port']):
+         _searching_target_.append(u'src_port')
+       if not re.search('0\/[0-9]+\-65535', _input_[u'dst_port']) and not re.search('0\/[0-9]+\-0', _input_[u'dst_port']):
+         _searching_target_.append(u'dst_port')
+
+
+       #
+       _routing_table_ = obtainjson_from_mongodb('juniper_srx_routingtable')
+       if not len(_routing_table_):
+         return_object = {"items":[{"message":"there is no routing table registered!!","process_status":"error"}]}
+         return Response(json.dumps(return_object))
+
+       # This information is import because it will be used to find out the zone matched.
+       routing_info_per_devicehost = {}
+       for _dictvalues_ in _routing_table_:
+          if _dictvalues_[u"apiaccessip"] in primary_devices:
+            _devicehost_ = _dictvalues_[u'devicehostname']
+            if _devicehost_ not in routing_info_per_devicehost.keys():
+              routing_info_per_devicehost[_devicehost_] = []
+            routing_info_per_devicehost[_devicehost_].append(_dictvalues_)
+
+       # findout source zone
+       _candi_src_netip_ = []
+       if u'src_netip' in _searching_target_:
+         _netip_ = _input_[u'src_netip']
+         _candi_src_netip_ = _findout_matched_zone_(routing_info_per_devicehost, _netip_, _candi_src_netip_)
+
+       # findout destination zone
+       _candi_dst_netip_ = []
+       if u'dst_netip' in _searching_target_:
+         _netip_ = _input_[u'dst_netip']
+         _candi_dst_netip_ = _findout_matched_zone_(routing_info_per_devicehost, _netip_, _candi_dst_netip_)
+
+       # intersection : this is import to decrease the searching time.
+       if len(_candi_src_netip_):
+         if len(_candi_dst_netip_):
+           _candi_comb_ = []
+           for _src_dictvalue_ in _candi_src_netip_:
+              for _dst_dictvalue_ in _candi_dst_netip_:
+                 if re.match(str(_src_dictvalue_['devicehostname']), str(_dst_dictvalue_['devicehostname'])):
+                   if not re.match(str(_src_dictvalue_['zonename']), str(_dst_dictvalue_['zonename'])):
+                     _candi_comb_.append({'src_netip':_src_dictvalue_ ,'dst_netip':_dst_dictvalue_})
+         else:
+           _candi_comb_ = []
+           for _src_dictvalue_ in _candi_src_netip_:
+                _candi_comb_.append({'src_netip':_src_dictvalue_})
+       else:
+         if len(_candi_dst_netip_):
+           _candi_comb_ = []
+           for _dst_dictvalue_ in _candi_dst_netip_:
+              _candi_comb_.append({'dst_netip':_dst_dictvalue_})
+         else:
+           return_object = {"items":[{"message":"all any is not allowed!","process_status":"error"}]}
+           return Response(json.dumps(return_object))
+
+       # 
+       if u'src_port' in _searching_target_:
+         for _dictvalue_ in _candi_comb_:
+            _dictvalue_['src_port'] = _input_[u'src_port']
+       #
+       if u'dst_port' in _searching_target_:
+         for _dictvalue_ in _candi_comb_:
+            _dictvalue_['dst_port'] = _input_[u'dst_port']
+
+       ###################################################################
+       # until this, zone was found by the routing table
+       ###################################################################
+       processing_queues_list = []
+       for _dictvalue_ in _candi_comb_:
+          processing_queues_list.append(Queue(maxsize=0))
+       #
+       count = 0
+       _processor_list_ = []
+       for _dictvalue_ in _candi_comb_:
+          this_processor_queue = processing_queues_list[count]
+          _processor_ = Process(target = procesing_cachelookup, args = (_dictvalue_, this_processor_queue,))
+          _processor_.start()
+          _processor_list_.append(_processor_)
+          count = count + 1
+       for _processor_ in _processor_list_:
+          _processor_.join()
+       #
+       search_result = []
+       for _queue_ in processing_queues_list:
+          while not _queue_.empty():
+               _get_values_ = _queue_.get()
+               if re.search(_get_values_['process_status'], 'done'):
+                 search_result.append(_get_values_['process_done_item'])
+           
+       #print search_result
+       return Response(json.dumps({"items":search_result})) 
+
 
 #
 ######################################################################################
