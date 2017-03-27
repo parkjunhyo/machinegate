@@ -11,5 +11,5 @@ RUNSERVER_PORT=`cat $CURRENT_DIR/apiserverport.txt`
 ENCAP_PASSWORD=`cat $CURRENT_DIR/apiserverkey.txt`
 
 #curl -H "Accept: application/json" -X POST -d "[{\"auth_key\":\"$ENCAP_PASSWORD\"}]" http://localhost:$RUNSERVER_PORT/juniper/exportpolicy/ > /dev/null
-curl -H "Accept: application/json" -X POST -d "{\"auth_key\":\"$ENCAP_PASSWORD\"}" http://localhost:$RUNSERVER_PORT/juniper/exportpolicy/ > /dev/null
+curl -H "Accept: application/json" -X POST -d "{\"auth_key\":\"$ENCAP_PASSWORD\"}" http://$RUNSERVER_IP:$RUNSERVER_PORT/juniper/exportpolicy/ > /dev/null
 
