@@ -12,5 +12,5 @@ RUNSERVER_PORT=`cat $CURRENT_DIR/apiserverport.txt`
 ENCAP_PASSWORD=`cat $CURRENT_DIR/apiserverkey.txt`
 
 #curl -H "Accept: application/json" -X POST -d "[{\"auth_key\":\"$ENCAP_PASSWORD\"}]" http://192.168.56.102:$RUNSERVER_PORT/juniper/devicelist/ > /dev/null
-curl -H "Accept: application/json" -X POST -d "{\"auth_key\":\"$ENCAP_PASSWORD\"}" http://192.168.56.102:$RUNSERVER_PORT/juniper/devicelist/ > /dev/null
+curl -H "Accept: application/json" -X POST -d "{\"auth_key\":\"$ENCAP_PASSWORD\"}" http://$RUNSERVER_IP:$RUNSERVER_PORT/juniper/devicelist/ > /dev/null
 
