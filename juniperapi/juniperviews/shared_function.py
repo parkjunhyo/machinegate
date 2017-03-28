@@ -141,6 +141,17 @@ def insert_dictvalues_into_mongodb(collection_name, inserting_values):
    this_collection.insert(exchanged_dot_to_string(inserting_values))
    connection.close()
 
+def insert_dictvalues_list_into_mongodb(collection_name, inserting_values_list):
+   access_information = {"_dbname_":mongodb["dbname"], "_username_":mongodb["username"], "_password_":mongodb["password"]}
+   connection = pymongo.MongoClient(mongodb["ip"],int(mongodb["port"]))
+   auth_string = "connection.%(_dbname_)s.authenticate(\"%(_username_)s\",\"%(_password_)s\")" % access_information
+   eval(auth_string)
+   this_dbname = eval("connection.%(_dbname_)s" % access_information)
+   this_collection = eval("this_dbname.%(collection_name)s" % {"collection_name":collection_name})
+   for _inserting_values_ in inserting_values_list:
+      this_collection.insert(exchanged_dot_to_string(_inserting_values_))
+   connection.close()   
+   
 def obtainjson_from_mongodb(collection_name):
    access_information = {"_dbname_":mongodb["dbname"], "_username_":mongodb["username"], "_password_":mongodb["password"]}
    connection = pymongo.MongoClient(mongodb["ip"],int(mongodb["port"]))
