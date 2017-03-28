@@ -25,7 +25,9 @@ from multiprocessing import Process, Queue, Lock
 
 from shared_function import start_end_parse_from_string as start_end_parse_from_string
 from shared_function import insert_dictvalues_into_mongodb as insert_dictvalues_into_mongodb
+from shared_function import insert_dictvalues_list_into_mongodb as insert_dictvalues_list_into_mongodb
 from shared_function import remove_collection as remove_collection
+
 
 class JSONResponse(HttpResponse):
     """
@@ -276,12 +278,16 @@ def caching_policy(_filename_, this_processor_queue):
      _put_queue_for_address_(_dst_netip_cache_, _devicehostname_, _from_zone_, _to_zone_, 'juniper_srx_element_cache', this_processor_queue, 'dst_netip')
      _put_queue_for_service_(_src_port_cache_, _devicehostname_, _from_zone_, _to_zone_, 'juniper_srx_element_cache', this_processor_queue, 'src_port')
      _put_queue_for_service_(_dst_port_cache_, _devicehostname_, _from_zone_, _to_zone_, 'juniper_srx_element_cache', this_processor_queue, 'dst_port')
+     
+     _temp_mongoin_list_ = []
      mongodb_input = {'devicehostname':_devicehostname_, 'from_zone':_from_zone_, 'to_zone':_to_zone_}
      for _keyname_ in _action_cache_:
         mongodb_input['key'] = _keyname_
-        mongodb_input['values'] = _action_cache_[_keyname_] 
-        insert_dictvalues_into_mongodb('juniper_srx_element_cache', mongodb_input)
-
+        mongodb_input['values'] = _action_cache_[_keyname_]
+        _temp_mongoin_list_.append(mongodb_input)  
+        #insert_dictvalues_into_mongodb('juniper_srx_element_cache', mongodb_input)
+     insert_dictvalues_list_into_mongodb('juniper_srx_element_cache', _temp_mongoin_list_)   
+        
      # policy cache
      for _keyname_ in _rule_cache_.keys():
         mongodb_input = {
