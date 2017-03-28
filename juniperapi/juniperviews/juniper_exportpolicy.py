@@ -42,11 +42,18 @@ from shared_function import exact_findout as exact_findout
 from shared_function import sftp_file_download as sftp_file_download
 from shared_function import runssh_clicommand as runssh_clicommand
 
-def export_policy(_primaryip_, secondary_devices, this_processor_queue):
+#def export_policy(_primaryip_, secondary_devices, this_processor_queue):
+def export_policy(_primaryip_, primary_detail_info, this_processor_queue):
    # policy
-   _primary_hostname_ = secondary_devices["primary_hostname"]
-   _accessip_ = secondary_devices["selected_hadevicesip"]
-   _zones_namelist_ = secondary_devices["selected_zonenames"]
+   #_primary_hostname_ = secondary_devices["primary_hostname"]
+   #_accessip_ = secondary_devices["selected_hadevicesip"]
+   #_zones_namelist_ = secondary_devices["selected_zonenames"]
+
+
+   _primary_hostname_ = primary_detail_info["primary_hostname"]
+   _accessip_ = str(_primaryip_)
+   _zones_namelist_ = primary_detail_info["selected_zonenames"]
+
    for _src_zone_ in _zones_namelist_:
       for _dst_zone_ in _zones_namelist_:
          if not re.match(_src_zone_, _dst_zone_, re.I):
@@ -113,6 +120,7 @@ def juniper_exportpolicy(request,format=None):
          return Response(json.dumps(return_object))
        # 
        auth_matched = re.match(ENCAP_PASSWORD, _input_['auth_key'])
+
        if auth_matched:
        # end of if auth_matched:
          device_information_values = obtainjson_from_mongodb('juniper_srx_devices')
@@ -132,16 +140,28 @@ def juniper_exportpolicy(request,format=None):
 
          # policy files will be created at the one of secondary devices. 
          # during, this processing runs save and sftp.
-         secondary_devices = {}
+
+         #secondary_devices = {}
+         #for _primaryip_ in primary_devices:
+         #   searched_information = exact_findout('juniper_srx_devices', {"apiaccessip":str(_primaryip_)})
+         #   _dictvalue_ = searched_information[0]
+         #   secondary_devices[str(_primaryip_)] = {}
+         #   selected_secondaryip = str(_dictvalue_[u"hadevicesip"][0])
+         #   secondary_devices[str(_primaryip_)]["selected_hadevicesip"] = selected_secondaryip
+         #   secondary_devices[str(_primaryip_)]["primary_hostname"] = str(_dictvalue_[u"devicehostname"])
+         #   secondaryip_searched = exact_findout('juniper_srx_devices', {"apiaccessip":str(selected_secondaryip)})
+         #   secondary_devices[str(_primaryip_)]["selected_zonenames"] = secondaryip_searched[0][u'zonesinfo'].keys()
+
+         primary_detail_info = {}
          for _primaryip_ in primary_devices:
             searched_information = exact_findout('juniper_srx_devices', {"apiaccessip":str(_primaryip_)})
             _dictvalue_ = searched_information[0]
-            secondary_devices[str(_primaryip_)] = {}
-            selected_secondaryip = str(_dictvalue_[u"hadevicesip"][0])
-            secondary_devices[str(_primaryip_)]["selected_hadevicesip"] = selected_secondaryip
-            secondary_devices[str(_primaryip_)]["primary_hostname"] = str(_dictvalue_[u"devicehostname"])
-            secondaryip_searched = exact_findout('juniper_srx_devices', {"apiaccessip":str(selected_secondaryip)})
-            secondary_devices[str(_primaryip_)]["selected_zonenames"] = secondaryip_searched[0][u'zonesinfo'].keys()
+            primary_detail_info[str(_primaryip_)] = {}
+            primary_detail_info[str(_primaryip_)]["primary_hostname"] = str(_dictvalue_[u"devicehostname"])
+            primary_detail_info[str(_primaryip_)]["selected_zonenames"] = searched_information[0][u'zonesinfo'].keys()
+          
+
+         print primary_devices
 
          # queue generation
          processing_queues_list = []
@@ -152,7 +172,8 @@ def juniper_exportpolicy(request,format=None):
          _processor_list_ = []
          for _primaryip_ in primary_devices:
             this_processor_queue = processing_queues_list[count]
-            _processor_ = Process(target = export_policy, args = (_primaryip_, secondary_devices[str(_primaryip_)], this_processor_queue,))
+            #_processor_ = Process(target = export_policy, args = (_primaryip_, secondary_devices[str(_primaryip_)], this_processor_queue,))
+            _processor_ = Process(target = export_policy, args = (_primaryip_, primary_detail_info[str(_primaryip_)], this_processor_queue,))
             _processor_.start()
             _processor_list_.append(_processor_)
             # for next queue
