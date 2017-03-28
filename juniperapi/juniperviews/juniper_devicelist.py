@@ -24,6 +24,7 @@ from shared_function import runssh_clicommand as runssh_clicommand
 from shared_function import obtainjson_from_mongodb as obtainjson_from_mongodb 
 from shared_function import remove_collection as remove_collection
 from shared_function import insert_dictvalues_into_mongodb as insert_dictvalues_into_mongodb
+from shared_function import exact_findout as exact_findout
 
 class JSONResponse(HttpResponse):
     """
@@ -130,8 +131,17 @@ def juniper_devicelist(request,format=None):
    mongo_db_collection_name = 'juniper_srx_devices'
 
    if request.method == 'GET':
-     return_result = {"items":obtainjson_from_mongodb(mongo_db_collection_name)}
-     return Response(json.dumps(return_result))
+     parameter_from = request.query_params.dict()
+     if u'devicehostname' not in parameter_from:
+       return_result = {"items":obtainjson_from_mongodb(mongo_db_collection_name)}
+       return Response(json.dumps(return_result))
+     else:
+       parameter_hostname = parameter_from[u'devicehostname']
+       _obtained_values_ = exact_findout(mongo_db_collection_name, {"devicehostname":str(parameter_hostname)})
+       for _dictvalues_ in _obtained_values_:
+          del _dictvalues_[u'_id']
+       return Response(json.dumps({"items":_obtained_values_}))
+
 
    elif request.method == 'POST':
       if re.search(r"system", system_property["role"], re.I):
