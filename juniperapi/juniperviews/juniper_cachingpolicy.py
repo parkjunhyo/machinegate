@@ -251,8 +251,8 @@ def caching_policy(_filename_, this_processor_queue):
            elif re.search('0',_app_proto_):
              for _app_string_ in _application_contents_:
                 _src_port_cache_, _rule_cache_[_policy_name_sequence_]['src_port'] = _caching_port_process_(_source_app_pattern_, _app_string_, 'tcp', _src_port_cache_, _policy_name_sequence_, _rule_cache_[_policy_name_sequence_]['src_port'])
-                _dst_port_cache_, _rule_cache_[_policy_name_sequence_]['dst_port'] = _caching_port_process_(_destination_app_pattern_, _app_string_, 'udp', _dst_port_cache_, _policy_name_sequence_, _rule_cache_[_policy_name_sequence_]['dst_port'])
-                _src_port_cache_, _rule_cache_[_policy_name_sequence_]['src_port'] = _caching_port_process_(_source_app_pattern_, _app_string_, 'tcp', _src_port_cache_, _policy_name_sequence_, _rule_cache_[_policy_name_sequence_]['src_port'])
+                _dst_port_cache_, _rule_cache_[_policy_name_sequence_]['dst_port'] = _caching_port_process_(_destination_app_pattern_, _app_string_, 'tcp', _dst_port_cache_, _policy_name_sequence_, _rule_cache_[_policy_name_sequence_]['dst_port'])
+                _src_port_cache_, _rule_cache_[_policy_name_sequence_]['src_port'] = _caching_port_process_(_source_app_pattern_, _app_string_, 'udp', _src_port_cache_, _policy_name_sequence_, _rule_cache_[_policy_name_sequence_]['src_port'])
                 _dst_port_cache_, _rule_cache_[_policy_name_sequence_]['dst_port'] = _caching_port_process_(_destination_app_pattern_, _app_string_, 'udp', _dst_port_cache_, _policy_name_sequence_, _rule_cache_[_policy_name_sequence_]['dst_port'])
 
            else:
