@@ -289,6 +289,7 @@ def caching_policy(_filename_, this_processor_queue):
      insert_dictvalues_list_into_mongodb('juniper_srx_element_cache', _temp_mongoin_list_)   
         
      # policy cache
+     _temp_mongoin_list_ = []
      for _keyname_ in _rule_cache_.keys():
         mongodb_input = {
                            'devicehostname':_devicehostname_, 
@@ -300,8 +301,10 @@ def caching_policy(_filename_, this_processor_queue):
                            'dst_port':_rule_cache_[_keyname_]['dst_port'],
                            'action':_rule_cache_[_keyname_]['action'],
                            'unique_name':_keyname_
-                         }  
-        insert_dictvalues_into_mongodb('juniper_srx_rule_table_cache', mongodb_input)
+                         }
+        _temp_mongoin_list_.append(mongodb_input)
+        #insert_dictvalues_into_mongodb('juniper_srx_rule_table_cache', mongodb_input)
+     insert_dictvalues_list_into_mongodb('juniper_srx_rule_table_cache', _temp_mongoin_list_)   
      #
      _completed_msg_ = "%(_target_msg_)s  ... cached!" % {'_target_msg_':_target_msg_}
      print _completed_msg_
