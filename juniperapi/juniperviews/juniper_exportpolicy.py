@@ -71,7 +71,7 @@ def export_policy(_primaryip_, primary_detail_info, this_processor_queue):
    # show security nat source rule all node primary
    _origin_filepath_ = "/var/tmp/this_sourcerule"
    _cmd_ = "show security nat source rule all node primary | no-more | save %(_origin_filepath_)s\n" % {"_origin_filepath_":_origin_filepath_}
-   laststring_pattern = "Wrote [0-9]* lines of output to \'%(_origin_filepath_)s\'[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+" % {"_origin_filepath_":_origin_filepath_}
+   laststring_pattern = "Wrote [0-9]* line[s]* of output to \'%(_origin_filepath_)s\'[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+" % {"_origin_filepath_":_origin_filepath_}
    _remote_filename_ = re.sub('-', '#dash#', "%(_primary_hostname_)s_sourcerule" % {"_primary_hostname_":_primary_hostname_})
    _remote_filepath_ = USER_VAR_NAT + _remote_filename_
    runssh_clicommand(_accessip_, laststring_pattern, _cmd_)
@@ -80,7 +80,7 @@ def export_policy(_primaryip_, primary_detail_info, this_processor_queue):
    # show security nat source pool all node primary
    _origin_filepath_ = "/var/tmp/this_sourcepool"
    _cmd_ = "show security nat source pool all node primary | no-more | save %(_origin_filepath_)s\n" % {"_origin_filepath_":_origin_filepath_}
-   laststring_pattern = "Wrote [0-9]* lines of output to \'%(_origin_filepath_)s\'[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+" % {"_origin_filepath_":_origin_filepath_}
+   laststring_pattern = "Wrote [0-9]* line[s]* of output to \'%(_origin_filepath_)s\'[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+" % {"_origin_filepath_":_origin_filepath_}
    _remote_filename_ = re.sub('-', '#dash#', "%(_primary_hostname_)s_sourcepool" % {"_primary_hostname_":_primary_hostname_})
    _remote_filepath_ = USER_VAR_NAT + _remote_filename_
    runssh_clicommand(_accessip_, laststring_pattern, _cmd_)
@@ -89,7 +89,7 @@ def export_policy(_primaryip_, primary_detail_info, this_processor_queue):
    # show security nat static rule all node primary
    _origin_filepath_ = "/var/tmp/this_staticrule"
    _cmd_ = "show security nat static rule all node primary | no-more | save %(_origin_filepath_)s\n" % {"_origin_filepath_":_origin_filepath_}
-   laststring_pattern = "Wrote [0-9]* lines of output to \'%(_origin_filepath_)s\'[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+" % {"_origin_filepath_":_origin_filepath_}
+   laststring_pattern = "Wrote [0-9]* line[s]* of output to \'%(_origin_filepath_)s\'[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+" % {"_origin_filepath_":_origin_filepath_}
    _remote_filename_ = re.sub('-', '#dash#', "%(_primary_hostname_)s_staticrule" % {"_primary_hostname_":_primary_hostname_})
    _remote_filepath_ = USER_VAR_NAT + _remote_filename_
    runssh_clicommand(_accessip_, laststring_pattern, _cmd_)
