@@ -62,7 +62,7 @@ def export_policy(_primaryip_, primary_detail_info, this_processor_queue):
            _origin_filepath_ = "/var/tmp/%(_origin_filename_)s" % {"_origin_filename_":_origin_filename_}
            _params_["_origin_filepath_"] = _origin_filepath_          
            _cmd_ = "show security policies detail from-zone %(_src_zone_)s to-zone %(_dst_zone_)s | no-more | save %(_origin_filepath_)s\n" % _params_
-           laststring_pattern = "Wrote [0-9]* lines of output to \'%(_origin_filepath_)s\'[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+" % _params_
+           laststring_pattern = "Wrote [0-9]* line[s]* of output to \'%(_origin_filepath_)s\'[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+" % _params_
            _remote_filename_ = re.sub('-', '#dash#', "%(_primary_hostname_)s_from_%(_src_zone_)s_to_%(_dst_zone_)s" % _params_)
            _remote_filepath_ = USER_VAR_POLICIES + _remote_filename_
            runssh_clicommand(_accessip_, laststring_pattern, _cmd_)
