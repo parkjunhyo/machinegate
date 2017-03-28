@@ -80,6 +80,7 @@ def _caching_net_process_(_string_list_, _dict_box_, _this_value_, _this_list_va
 
 
 def _put_queue_for_address_(_dict_value_, _devicehostname_, _from_zone_, _to_zone_, _colletion_, this_processor_queue, _keyname_string_):
+   _temp_mongoin_list_ = [] 
    for _keyname_ in _dict_value_.keys():
       _subnet_size_ = 'unknown'
       searched_value = re.search("\/([0-9]+)", _keyname_)
@@ -87,13 +88,16 @@ def _put_queue_for_address_(_dict_value_, _devicehostname_, _from_zone_, _to_zon
         _subnet_size_ = int(searched_value.group(1).strip())
       if not re.search(str(_subnet_size_), 'unknown'):
         mongodb_input = {'devicehostname':_devicehostname_, 'from_zone':_from_zone_, 'to_zone':_to_zone_, 'subnet_size':int(_subnet_size_), 'values':_dict_value_[_keyname_], 'type':_keyname_string_, 'key':_keyname_}
-        insert_dictvalues_into_mongodb(_colletion_, mongodb_input) 
+        _temp_mongoin_list_.append(mongodb_input)
+        #insert_dictvalues_into_mongodb(_colletion_, mongodb_input) 
+   insert_dictvalues_list_into_mongodb(_colletion_, _temp_mongoin_list_)      
       #
       #done_msg = "%(_devicehostname_)s completed!" % {"_devicehostname_":_devicehostname_}
       #this_processor_queue.put({"message":done_msg,"process_status":"done","process_done_items":mongodb_input, "collection":_colletion_})
       
 
 def _put_queue_for_service_(_dict_value_, _devicehostname_, _from_zone_, _to_zone_, _colletion_, this_processor_queue, _keyname_string_):
+   _temp_mongoin_list_ = [] 
    for _keyname_ in _dict_value_.keys():
       # this will be used for icmp
       _port_range_ = int(0)
@@ -101,7 +105,9 @@ def _put_queue_for_service_(_dict_value_, _devicehostname_, _from_zone_, _to_zon
       if searched_value:
         _port_range_ = int(searched_value.group(2).strip()) - int(searched_value.group(1).strip()) + 1
       mongodb_input = {'devicehostname':_devicehostname_, 'from_zone':_from_zone_, 'to_zone':_to_zone_, 'port_count':int(_port_range_), 'values':_dict_value_[_keyname_], 'type':_keyname_string_, 'key':_keyname_}
-      insert_dictvalues_into_mongodb(_colletion_, mongodb_input)
+      _temp_mongoin_list_.append(mongodb_input)
+      #insert_dictvalues_into_mongodb(_colletion_, mongodb_input)
+   insert_dictvalues_list_into_mongodb(_colletion_, _temp_mongoin_list_) 
       #
       #done_msg = "%(_devicehostname_)s completed!" % {"_devicehostname_":_devicehostname_}
       #this_processor_queue.put({"message":done_msg,"process_status":"done","process_done_items":mongodb_input, "collection":_colletion_})
