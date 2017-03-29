@@ -205,8 +205,9 @@ def procesing_cachelookup(_dictvalue_, this_processor_queue):
    unique_per_zonematching['includedmatch'] = {}
    unique_per_zonematching['partialmatch'] = {}
    for _tmp_from_ in _zonenames_in_thisdeivce_:
+      _tmp_from_pattern_ = "^"+str(_tmp_from_)+"$"   
       for _tmp_to_ in _zonenames_in_thisdeivce_:
-         if not re.search(_tmp_from_, _tmp_to_):
+         if not re.search(_tmp_from_pattern_, _tmp_to_):
            _fromto_keyname_ = _tmp_from_ + '_' + _tmp_to_
            unique_per_zonematching['prefectmatch'][_fromto_keyname_] = []
            unique_per_zonematching['includedmatch'][_fromto_keyname_] = []
