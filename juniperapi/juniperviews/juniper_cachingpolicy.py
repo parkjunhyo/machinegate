@@ -235,7 +235,7 @@ def caching_policy(_filename_, this_processor_queue):
 
            # 6 : tcp
            # 17 : udp
-           elif re.search('tcp',_app_proto_) or re.search('udp',_app_proto_) or re.search('6',_app_proto_) or re.search('17',_app_proto_):
+           elif re.search('tcp',_app_proto_) or re.search('udp',_app_proto_) or re.search('^6$',_app_proto_) or re.search('^17$',_app_proto_):
              for _app_string_ in _application_contents_:
                 _src_port_cache_, _rule_cache_[_policy_name_sequence_]['src_port'] = _caching_port_process_(_source_app_pattern_, _app_string_, _app_proto_, _src_port_cache_, _policy_name_sequence_, _rule_cache_[_policy_name_sequence_]['src_port'])
                 _dst_port_cache_, _rule_cache_[_policy_name_sequence_]['dst_port'] = _caching_port_process_(_destination_app_pattern_, _app_string_, _app_proto_, _dst_port_cache_, _policy_name_sequence_, _rule_cache_[_policy_name_sequence_]['dst_port'])
@@ -243,7 +243,7 @@ def caching_policy(_filename_, this_processor_queue):
            # esp : Encap Security Payload
            # ah : Authentication Header
            # 89 : OSPFIGP
-           elif re.search('esp',_app_proto_) or re.search('ah',_app_proto_) or re.search('89',_app_proto_):
+           elif re.search('esp',_app_proto_) or re.search('ah',_app_proto_) or re.search('^89$',_app_proto_):
              for _app_string_ in _application_contents_:
                 _src_port_cache_, _rule_cache_[_policy_name_sequence_]['src_port'] = _caching_port_process_(_source_app_pattern_, _app_string_, _app_proto_, _src_port_cache_, _policy_name_sequence_, _rule_cache_[_policy_name_sequence_]['src_port'])
                 _dst_port_cache_, _rule_cache_[_policy_name_sequence_]['dst_port'] = _caching_port_process_(_destination_app_pattern_, _app_string_, _app_proto_, _dst_port_cache_, _policy_name_sequence_, _rule_cache_[_policy_name_sequence_]['dst_port'])     
