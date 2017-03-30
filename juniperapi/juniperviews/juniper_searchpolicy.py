@@ -391,7 +391,8 @@ def procesing_cachelookup(_dictvalue_, this_processor_queue):
         if re.search('src_netip', _maybe_keyname_):
           for _rcv_zone_ in _zonenames_in_thisdeivce_:
              _tempdict_box_ = copy.copy(return_basic_dictvalue_form)
-             if not re.search(_tempdict_box_['to_zone'], _rcv_zone_):
+             _tempdict_zone_pattern_ = "^" + str(_tempdict_box_['to_zone']) + "$"
+             if not re.search(_tempdict_zone_pattern_, _rcv_zone_):
                _tempdict_box_['from_zone'] = _rcv_zone_
                _tempdict_box_['src_netip'] = '0.0.0.0/0'
                _fromto_keyname_ = _rcv_zone_ + '_' + _tempdict_box_['to_zone']
@@ -401,7 +402,8 @@ def procesing_cachelookup(_dictvalue_, this_processor_queue):
         if re.search('dst_netip', _maybe_keyname_): 
           for _rcv_zone_ in _zonenames_in_thisdeivce_:
              _tempdict_box_ = copy.copy(return_basic_dictvalue_form)
-             if not re.search(_tempdict_box_['from_zone'], _rcv_zone_):
+             _tempdict_zone_pattern_ = "^" + str(_tempdict_box_['from_zone']) + "$"   
+             if not re.search(_tempdict_zone_pattern_, _rcv_zone_):
                _tempdict_box_['to_zone'] = _rcv_zone_
                _tempdict_box_['dst_netip'] = '0.0.0.0/0'
                _fromto_keyname_ = _tempdict_box_['from_zone'] + '_' + _rcv_zone_
