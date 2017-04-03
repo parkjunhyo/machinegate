@@ -556,13 +556,26 @@ def juniper_searchpolicy(request,format=None):
            return Response(json.dumps(return_object))
 
        # 
+       _service_proto_pattern_ = "([a-zA-Z0-9]*)\/([0-9]*\-[0-9]*)"
        if u'src_port' in _searching_target_:
          for _dictvalue_ in _candi_comb_:
-            _dictvalue_['src_port'] = _input_[u'src_port']
+            _searched_values_ = re.search(_service_proto_pattern_, str(_input_[u'src_port']))
+            _searched_proto_ = str(_searched_values_.group(1))
+            _searched_service_range_ = str(_searched_values_.group(2))
+            if re.search("^0\-0$", _searched_service_range_) or re.search("^65535\-65535$", _searched_service_range_):
+              _dictvalue_['src_port'] = unicode("%(_searched_values_)s/0-65535" % {"_searched_values_":_searched_values_})   
+            else:
+              _dictvalue_['src_port'] = _input_[u'src_port']
        #
        if u'dst_port' in _searching_target_:
          for _dictvalue_ in _candi_comb_:
-            _dictvalue_['dst_port'] = _input_[u'dst_port']
+            _searched_values_ = re.search(_service_proto_pattern_, str(_input_[u'dst_port']))
+            _searched_proto_ = str(_searched_values_.group(1))
+            _searched_service_range_ = str(_searched_values_.group(2))
+            if re.search("^0\-0$", _searched_service_range_) or re.search("^65535\-65535$", _searched_service_range_):
+              _dictvalue_['dst_port'] = unicode("%(_searched_values_)s/0-65535" % {"_searched_values_":_searched_values_})
+            else:
+              _dictvalue_['dst_port'] = _input_[u'dst_port']
 
        ###################################################################
        # until this, zone was found by the routing table
