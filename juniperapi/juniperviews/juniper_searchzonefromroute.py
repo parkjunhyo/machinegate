@@ -8,7 +8,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.utils.six import BytesIO
 
-from juniperapi.setting import USER_DATABASES_DIR
+#from juniperapi.setting import USER_DATABASES_DIR
 from juniperapi.setting import USER_NAME
 from juniperapi.setting import USER_PASSWORD
 from juniperapi.setting import ENCAP_PASSWORD

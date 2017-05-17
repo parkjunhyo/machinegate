@@ -56,6 +56,7 @@ def runssh_clicommand(_ipaddress_, laststring_pattern, runcli_command):
              break
         except:
            wait_count = wait_count + 1
+           #print "[ %(runcli_command)s ] timeout [ %(wait_count)s ] seconds" % {"runcli_command":runcli_command.strip(), "wait_count":str(wait_count)}
            continue
       else:
         break
@@ -106,9 +107,12 @@ def exact_findout(collection_name, inserting_values):
    eval(auth_string)
    this_dbname = eval("connection.%(_dbname_)s" % access_information)
    this_collection = eval("this_dbname.%(collection_name)s" % {"collection_name":collection_name})
-   findout_value = this_collection.find(exchanged_dot_to_string(inserting_values))
+   #findout_value = this_collection.find(exchanged_dot_to_string(inserting_values))
+   findout_value = this_collection.find(inserting_values)
    connection.close()
-   return recovery_dot_from_string(dumps(findout_value))
+   #return recovery_dot_from_string(dumps(findout_value))
+   #return dumps(findout_value)
+   return loads(dumps(findout_value))
 
 def remove_collection(collection_name):
    access_information = {"_dbname_":mongodb["dbname"], "_username_":mongodb["username"], "_password_":mongodb["password"]}
@@ -127,7 +131,8 @@ def remove_data_in_collection(collection_name, removing_values):
    eval(auth_string)
    this_dbname = eval("connection.%(_dbname_)s" % access_information)
    this_collection = eval("this_dbname.%(collection_name)s" % {"collection_name":collection_name})
-   removed_status = this_collection.remove(exchanged_dot_to_string(removing_values))
+   #removed_status = this_collection.remove(exchanged_dot_to_string(removing_values))
+   removed_status = this_collection.remove(removing_values)
    connection.close()
    return removed_status
 
@@ -138,7 +143,8 @@ def insert_dictvalues_into_mongodb(collection_name, inserting_values):
    eval(auth_string)
    this_dbname = eval("connection.%(_dbname_)s" % access_information)
    this_collection = eval("this_dbname.%(collection_name)s" % {"collection_name":collection_name})
-   this_collection.insert(exchanged_dot_to_string(inserting_values))
+   #this_collection.insert(exchanged_dot_to_string(inserting_values))
+   this_collection.insert(inserting_values)
    connection.close()
 
 def insert_dictvalues_list_into_mongodb(collection_name, inserting_values_list):
@@ -149,8 +155,10 @@ def insert_dictvalues_list_into_mongodb(collection_name, inserting_values_list):
    this_dbname = eval("connection.%(_dbname_)s" % access_information)
    this_collection = eval("this_dbname.%(collection_name)s" % {"collection_name":collection_name})
    for _inserting_values_ in inserting_values_list:
-      this_collection.insert(exchanged_dot_to_string(_inserting_values_))
+      #this_collection.insert(exchanged_dot_to_string(_inserting_values_))
+      this_collection.insert(_inserting_values_)
    connection.close()   
+
    
 def obtainjson_from_mongodb(collection_name):
    access_information = {"_dbname_":mongodb["dbname"], "_username_":mongodb["username"], "_password_":mongodb["password"]}
@@ -162,10 +170,14 @@ def obtainjson_from_mongodb(collection_name):
    _finded_string_ = dumps(this_collection.find())
    connection.close()
    #
-   _find_info_ = recovery_dot_from_string(_finded_string_)
-   for _dict_ in _find_info_:
+   #_find_info_ = recovery_dot_from_string(_finded_string_) 
+   #for _dict_ in _find_info_:
+   #   del _dict_[u'_id']
+   #return _find_info_
+   _json_ = loads(_finded_string_);
+   for _dict_ in _json_:
       del _dict_[u'_id']
-   return _find_info_ 
+   return _json_ 
 
 def findout_primary_devices(_devices_infomations_):
    searched_list = []
@@ -192,7 +204,53 @@ def remove_info_in_db(dataDict_value, this_processor_queue, mongo_db_collection_
    remove_status = exact_findout(mongo_db_collection_name, dataDict_value)
    if len(remove_status):
      remove_data_in_collection(mongo_db_collection_name, dataDict_value) 
-     this_processor_queue.put({"message":"matched and deleted!","process_status":"done"})
+     return_object = {
+           "items":[],
+           "process_status":"done",
+           "process_msg":"%(_removed_)s removed" % {"_removed_":str(dataDict_value[u'hostname'])}
+     }
+     this_processor_queue.put(return_object)
    else:
-     this_processor_queue.put({"message":"no matched in database!","process_status":"error"})
+     return_object = {
+           "items":[],
+           "process_status":"error",
+           "process_msg":"%(_removed_)s not matched to remove" % {"_removed_":str(dataDict_value[u'hostname'])}
+     }
+     this_processor_queue.put(return_object)
+
+def _defaultClustering_in_db_(mongo_db_clusterGroup_collection_name, _dictValue_):
+   remove_status = exact_findout(mongo_db_clusterGroup_collection_name, _dictValue_)
+   if len(remove_status):
+     for _removeDict_ in remove_status:
+        _default_cluster_info_ = {u'hostname': _removeDict_[u'hostname'], u'hahostname':'none', u'clusterStatus':'none'}
+        remove_data_in_collection(mongo_db_clusterGroup_collection_name, _removeDict_)
+        insert_dictvalues_into_mongodb(mongo_db_clusterGroup_collection_name, _default_cluster_info_)
+
+
+def _find_clusteringMember_(_deviceInfoDB_, _clusteringDB_, _dbKeyName_, _dbSearchValue_):
+   #fromDB_infomations = exact_findout(_deviceInfoDB_,{"apiaccessip" : str(_ipAddress_)})
+   fromDB_infomations = exact_findout(_deviceInfoDB_,{_dbKeyName_ : str(_dbSearchValue_)})
+   _hostNamesList_ = []
+   for _dictValue_ in fromDB_infomations:
+      _stringValue_ = str(_dictValue_[u'hostname'])
+      if _stringValue_ not in _hostNamesList_:
+        _hostNamesList_.append(_stringValue_)
+   #
+   _hostNameEvery_ = copy.copy(_hostNamesList_)
+   #
+   for _hostName_ in _hostNamesList_:
+      fromDB_infomations = exact_findout(_clusteringDB_,{"hostname":str(_hostName_), "clusterStatus" : "clustered"})
+      if len(fromDB_infomations):
+        for _dictFromDB_ in fromDB_infomations:
+           _stringValue_ = str(_dictFromDB_[u'hahostname'])
+           if _stringValue_ not in _hostNameEvery_:
+             _hostNameEvery_.append(_stringValue_)
+   #
+   return _hostNameEvery_ 
+
+
+
+
+
+
 

@@ -12,7 +12,9 @@ pip install paramiko
 pip install netaddr
 #
 pip install django-cors-headers
-
+#
+pip install py-radix
+# https://pypi.python.org/pypi/py-radix
 
 # mongo db -usage-
 db.createUser({user: "adminuser", pwd: "adminuser", roles: [{role:"userAdminAnyDatabase"}]});

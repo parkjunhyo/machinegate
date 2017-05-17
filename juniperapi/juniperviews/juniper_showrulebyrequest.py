@@ -8,13 +8,13 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.utils.six import BytesIO
 
-from juniperapi.setting import USER_DATABASES_DIR
+#from juniperapi.setting import USER_DATABASES_DIR
 from juniperapi.setting import USER_NAME
 from juniperapi.setting import USER_PASSWORD
 from juniperapi.setting import ENCAP_PASSWORD
 from juniperapi.setting import RUNSERVER_PORT
 from juniperapi.setting import PARAMIKO_DEFAULT_TIMEWAIT
-from juniperapi.setting import USER_VAR_CHCHES
+#from juniperapi.setting import USER_VAR_CHCHES
 from juniperapi.setting import PYTHON_MULTI_PROCESS
 from juniperapi.setting import PYTHON_MULTI_THREAD
 from juniperapi.setting import system_property
@@ -38,37 +38,112 @@ class JSONResponse(HttpResponse):
         super(JSONResponse, self).__init__(content, **kwargs)
 
 
-@api_view(['GET'])
+@api_view(['GET','POST'])
 @csrf_exempt
 def juniper_showrulebyrequest(request,format=None):
 
    # get method
    if request.method == 'GET':
-     parameter_from = request.query_params.dict()
+   
+     _fromDB_values_ = exact_findout('juniperSrx_devicesInfomation', {"failover" : "primary","zoneValidation" : "enable"})
+     _outValuseList_ = []
+     for _dictValue_ in _fromDB_values_:
+        _msgInput_ = {
+           'hostname':_dictValue_[u'hostname'],
+           'from_zone':_dictValue_[u'from_zone'],
+           'to_zone':_dictValue_[u'to_zone']
+        }
+        _uniqueString_ = "%(hostname)s#%(from_zone)s#%(to_zone)s" % _msgInput_
+        if _uniqueString_ not in _outValuseList_:
+          _outValuseList_.append(_msgInput_)
+     #   
+     return_object = {
+              "items":_outValuseList_,
+              "process_status":"done",
+              "process_msg":"done"
+     }
+     return Response(json.dumps(return_object))
 
-     if u'to_zone' not in parameter_from:
-       return_object = {"items":[{"message":"there is no proper values, to_zone!","process_status":"error"}]}
-       return Response(json.dumps(return_object))
-     if u'unique_name' not in parameter_from:
-       return_object = {"items":[{"message":"there is no proper values, unique_name!","process_status":"error"}]}
-       return Response(json.dumps(return_object))
-     if u'devicehostname' not in parameter_from:
-       return_object = {"items":[{"message":"there is no proper values, devicehostname!","process_status":"error"}]}
-       return Response(json.dumps(return_object))
-     if u'from_zone' not in parameter_from:
-       return_object = {"items":[{"message":"there is no proper values, from_zone!","process_status":"error"}]}
+
+
+   # post method
+   elif request.method == 'POST':
+     if re.search(r"system", system_property["role"], re.I):
+       _input_ = JSONParser().parse(request)
+       # confirm input type 
+       if type(_input_) != type({}):
+         return_object = {
+              "items":[],
+              "process_status":"error",
+              "process_msg":"input wrong format"
+         }
+         return Response(json.dumps(return_object))
+
+       # {u'items': [{u'to_zone': u'PCI', u'hostname': u'KRIS10-PUBF02-5400FW', u'from_zone': u'PRI'}]}
+       # [{u'to_zone': u'PCI', u'hostname': u'KRIS10-PUBF02-5400FW', u'from_zone': u'PUB', u'option': u'no option'}]
+       _outValuseList_ = []
+       for _dictValue_ in _input_[u'items']:
+          _copiedvalues_ = copy.copy(_dictValue_)
+          if u'option' in _copiedvalues_:
+            _optionString_ = str(_copiedvalues_[u'option']).strip()
+            if re.search('deviceonly', _optionString_, re.I):
+              del _copiedvalues_[u'from_zone']
+              del _copiedvalues_[u'to_zone']
+            del _copiedvalues_[u'option']
+          #_fromDB_values_ = exact_findout('juniperSrx_cachePolicyTable', _dictValue_)
+          _fromDB_values_ = exact_findout('juniperSrx_cachePolicyTable', _copiedvalues_)
+          for _dict_ in _fromDB_values_:
+             _copyiedDcit_ = copy.copy(_dict_)
+             del _copyiedDcit_[u'_id']
+             _outValuseList_.append(_copyiedDcit_)
+       #  
+       _sortingBox_ = {}
+       for _dictValue_ in _outValuseList_:
+          _hostNameKey_ = "%(hostname)s %(from_zone)s %(to_zone)s" % _dictValue_
+          if _hostNameKey_ not in _sortingBox_.keys():
+            _sortingBox_[_hostNameKey_] = {}
+          _intIndex_ = int(_dictValue_[u'sequence_number'])
+          if _intIndex_ not in _sortingBox_[_hostNameKey_].keys():
+            _sortingBox_[_hostNameKey_][_intIndex_] = {}
+          _sortingBox_[_hostNameKey_][_intIndex_] = _dictValue_
+       #
+       _outValuseList_ = []
+       _hostGroup_ = _sortingBox_.keys()
+       for hostZone in _hostGroup_:
+          _indexNumber_ = _sortingBox_[hostZone].keys()
+          _indexNumber_.sort()
+          for _Number_ in _indexNumber_:
+             _outValuseList_.append(_sortingBox_[hostZone][_Number_])
+       #
+       #_sortingBox_ = {} 
+       #for _dictValue_ in _outValuseList_:
+       #   _intIndex_ = int(_dictValue_[u'sequence_number'])
+       #   if _intIndex_ not in _sortingBox_.keys():
+       #     _sortingBox_[_intIndex_] = {}
+       #   _sortingBox_[_intIndex_] = _dictValue_
+       #
+       #_indexNumber_ = _sortingBox_.keys()
+       #_indexNumber_.sort()
+       #
+       #_outValuseList_ = []
+       #for _Number_ in _indexNumber_:
+       ##   _outValuseList_.append(_sortingBox_[_Number_])
+
+       return_object = {
+              "items":_outValuseList_,
+              "process_status":"done",
+              "process_msg":"done"
+       }
        return Response(json.dumps(return_object))
 
-     input_for_dbquery = {}
-     input_for_dbquery['to_zone'] = str(parameter_from[u'to_zone'])
-     input_for_dbquery['unique_name'] = str(parameter_from[u'unique_name'])
-     input_for_dbquery['devicehostname'] = str(parameter_from[u'devicehostname'])
-     input_for_dbquery['from_zone'] = str(parameter_from[u'from_zone'])
-
-     _obtained_values_ = exact_findout('juniper_srx_rule_table_cache', input_for_dbquery)
-     for _dictvalues_ in _obtained_values_:
-        del _dictvalues_[u'_id']
-     return Response(json.dumps({"items":_obtained_values_}))
+     # end of if re.search(r"system", system_property["role"], re.I):
+     else:
+       return_object = {
+              "items":[],
+              "process_status":"error",
+              "process_msg":"host is not system"
+       }
+       return Response(json.dumps(return_object))
 
 
 ######################################################################################

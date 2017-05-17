@@ -3,8 +3,10 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from juniperapi import views
 
 urlpatterns = [
+    url(r'^juniper/confirmauth/$', views.confirmauth),
     url(r'^juniper/devicelist/$', views.juniper_devicelist),
     url(r'^juniper/devicelist/register/$', views.juniper_device_regi),
+    url(r'^juniper/devicelist/clustering/$', views.juniper_clustering),
     url(r'^juniper/showroute/$', views.juniper_showroute),
     url(r'^juniper/showroute/staticupdate/$', views.juniper_showroute_static_update),
     url(r'^juniper/showrulebyrequest/$', views.juniper_showrulebyrequest),

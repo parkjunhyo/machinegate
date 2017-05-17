@@ -7,13 +7,17 @@ USER_VAR_CHCHES = USER_JUNIPER_DIR + "var/caches/"
 
 USER_VAR_NAT = USER_JUNIPER_DIR + "var/nat/"
 
-USER_DATABASES_DIR = USER_JUNIPER_DIR + "databases/"
+#USER_DATABASES_DIR = USER_JUNIPER_DIR + "databases/"
 
-USER_NAME = ""
+USER_VAR_ROUTING = USER_JUNIPER_DIR + "var/routing/"
+
+USER_VAR_INTERFACES = USER_JUNIPER_DIR + "var/interfaces/"
+
+USER_NAME = "j1002391"
 	
-USER_PASSWORD = ""
+USER_PASSWORD = "Start@1jhyo"
 
-ENCAP_PASSWORD = ""
+ENCAP_PASSWORD = "Adfakladjfqern@sdfjlaf1!"
 
 PARAMIKO_DEFAULT_TIMEWAIT = 5
 
@@ -33,9 +37,9 @@ system_property = {
 
 ## MongoDB information
 mongodb = {
- "ip":'10.10.10.2',
- "port":'38390',
- "dbname":'juniper_srx',
+ "ip":'192.168.56.101',
+ "port":'54321',
+ "dbname":'juniperSrx',
  "username":'nwenguser',
  "password":'nwenguser'
 }
@@ -44,6 +48,6 @@ mongodb = {
 paramiko_conf = {
  "output_wait_timeout":0.1,
  # x output_wait_timeout : 6000 (600 seconds = 10 minutes)
- "max_wait_timeout_count":6000,
+ "max_wait_timeout_count":600,
  "connect_timeout":60,
 }
