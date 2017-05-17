@@ -240,7 +240,10 @@ def juniper_devicelist(request,format=None):
           for _disabledDict_ in _fromDB_for_disable_:
              if u'_id' in _disabledDict_:
                del _disabledDict_[u'_id']
-             remove_data_in_collection(mongo_db_collection_name, _disabledDict_)
+             copiedDisableDict = copy.copy(_disabledDict_)
+             if u'zoneValidation' in copiedDisableDict.keys():
+               del copiedDisableDict[u'zoneValidation']
+             remove_data_in_collection(mongo_db_collection_name, copiedDisableDict)
              _disabled_recovery_.append(_disabledDict_)
           insert_dictvalues_list_into_mongodb(mongo_db_collection_name, _disabled_recovery_)
           #
