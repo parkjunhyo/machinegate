@@ -1,0 +1,40 @@
+node1:
+--------------------------------------------------------------------------
+
+Security zone: COM
+  Send reset for non-SYN session TCP packets: Off
+  Policy configurable: Yes  
+  Screen: ip-spoofing  
+  Interfaces bound: 1
+  Interfaces:
+    reth2.0
+
+Security zone: PCI
+  Send reset for non-SYN session TCP packets: Off
+  Policy configurable: Yes  
+  Screen: ip-spoofing  
+  Interfaces bound: 1
+  Interfaces:
+    reth3.0
+
+Security zone: PRI
+  Send reset for non-SYN session TCP packets: Off
+  Policy configurable: Yes  
+  Screen: ip-spoofing  
+  Interfaces bound: 1
+  Interfaces:
+    reth1.0
+
+Security zone: PUB
+  Send reset for non-SYN session TCP packets: Off
+  Policy configurable: Yes  
+  Screen: ip-spoofing  
+  Interfaces bound: 1
+  Interfaces:
+    reth0.0
+
+Security zone: junos-host
+  Send reset for non-SYN session TCP packets: Off
+  Policy configurable: Yes  
+  Interfaces bound: 0
+  Interfaces:
