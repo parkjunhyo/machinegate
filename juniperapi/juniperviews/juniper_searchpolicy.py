@@ -605,6 +605,8 @@ def juniper_searchpolicy(request,format=None):
            ##############################################
            # choose the firewall and zone               #
            ##############################################
+           startTime = time.time()
+           print "start searching zone and devices processing"  
            processing_queues_list = []
            for _element_ in primaryHostNames:
               processing_queues_list.append(Queue(maxsize=0))
@@ -626,9 +628,14 @@ def juniper_searchpolicy(request,format=None):
               while not _queue_.empty():
                        fwAndZone_selectedList.append(_queue_.get())
 
+           endTime = time.time()
+           timeGapString = str(int(endTime - startTime))
+           print "include matching done. %(timeGapString)s seconds spent" % {'timeGapString':timeGapString}
            ##############################################
            # perfect match                              #
            ##############################################
+           startTime = time.time()
+           print "start perfect matching processing"
            processing_queues_list = []
            for _element_ in fwAndZone_selectedList:
               processing_queues_list.append(Queue(maxsize=0)) 
@@ -649,10 +656,15 @@ def juniper_searchpolicy(request,format=None):
            for _queue_ in processing_queues_list:
               while not _queue_.empty():
                        statusAfterPerfectMatchProcessor.append(_queue_.get())
-         
+                    
+           endTime = time.time()
+           timeGapString = str(int(endTime - startTime))
+           print "perfect matching done. %(timeGapString)s seconds spent" % {'timeGapString':timeGapString}
            ##############################################
            # include match                              #
            ##############################################
+           startTime = time.time() 
+           print "start include matching processing"
            processing_queues_list = []
            for _element_ in fwAndZone_selectedList:
               processing_queues_list.append(Queue(maxsize=0))
@@ -672,11 +684,16 @@ def juniper_searchpolicy(request,format=None):
            statusAfterIncludeMatchProcessor = []
            for _queue_ in processing_queues_list:
               while not _queue_.empty():
-                       statusAfterIncludeMatchProcessor.append(_queue_.get())          
- 
+                       statusAfterIncludeMatchProcessor.append(_queue_.get())
+                        
+           endTime = time.time()
+           timeGapString = str(int(endTime - startTime))
+           print "include matching done. %(timeGapString)s seconds spent" % {'timeGapString':timeGapString}
            ##############################################
            # partial match                              #
            ##############################################
+           startTime = time.time() 
+           print "start partial matching processing"
            processing_queues_list = []
            for _element_ in fwAndZone_selectedList:
               processing_queues_list.append(Queue(maxsize=0))
@@ -697,17 +714,26 @@ def juniper_searchpolicy(request,format=None):
               while not _queue_.empty():
                        statusAfterPartialMatchProcessor.append(_queue_.get())
 
+           endTime = time.time()
+           timeGapString = str(int(endTime - startTime))
+           print "partial matching done. %(timeGapString)s seconds spent" % {'timeGapString':timeGapString}              
            ##############################################
            # combine and summary                        # 
            ##############################################
+           startTime = time.time()
+           print "start information re-organization processing"
            _returnOutputMemory_ = {}
            _returnOutputMemory_ = convertDictFromMatched(_returnOutputMemory_, statusAfterPerfectMatchProcessor, 'perfect')
            _returnOutputMemory_ = convertDictFromMatched(_returnOutputMemory_, statusAfterIncludeMatchProcessor, 'include')
            _returnOutputMemory_ = convertDictFromMatched(_returnOutputMemory_, statusAfterPartialMatchProcessor, 'partial')
-
+           endTime = time.time()
+           timeGapString = str(int(endTime - startTime))
+           print "information re-organization done. %(timeGapString)s seconds spent" % {'timeGapString':timeGapString}
            ##############################################
            # analysis                                   #
            ##############################################
+           startTime = time.time()
+           print "start analysis processing" 
            returnitems = []
            _hostNameZoneName_ = _returnOutputMemory_.keys() 
            for _keyName_ in _hostNameZoneName_:
@@ -737,6 +763,9 @@ def juniper_searchpolicy(request,format=None):
               }
               returnitems.append(returnOutputDict)
            #
+           endTime = time.time()
+           timeGapString = str(int(endTime - startTime))
+           print "analysis done. %(timeGapString)s seconds spent" % {'timeGapString':timeGapString} 
            return_object = {
                   "items":returnitems,
                   "process_status":"done",
