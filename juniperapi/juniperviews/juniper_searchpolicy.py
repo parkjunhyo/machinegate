@@ -299,6 +299,7 @@ def obtainIncludeAddress(_element_, _typeValue_, thisSrcIp):
 
 def obtainIncludePort(_element_, _typeValue_, thisSrcIp):
    if re.search('tcp/', thisSrcIp, re.I) or re.search('udp/', thisSrcIp, re.I):
+     protocolName = str(thisSrcIp.split('/')[0]).strip()
      portRangeList = str(thisSrcIp.split('/')[-1]).strip().split('-')
      startNumber = int(portRangeList[0])
      endNumber = int(portRangeList[1])
@@ -307,6 +308,7 @@ def obtainIncludePort(_element_, _typeValue_, thisSrcIp):
      valuesForQuery = copy.copy(_element_)
      valuesForQuery["type"] = str(_typeValue_)
      valuesForQuery["size"] = { '$gte':_thisPortCount_ }
+     valuesForQuery["protocol"] = protocolName
      _fromDB_values_ = exact_findout('juniperSrx_cacheObjects', valuesForQuery)
      itemValuesList = []
      for _dictValue_ in _fromDB_values_:
