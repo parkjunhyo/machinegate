@@ -355,8 +355,7 @@ def includeMatchProcessor(_element_, inputObject, this_processor_queue):
 # 0.0.0.0/0 include every things, this means every object in devices.
 ######################################################################
 def obtainPatialAddress(_element_, _typeValue_, thisSrcIp):
-   #if re.search('^all$',thisSrcIp, re.I) or re.search('^0.0.0.0/0$',thisSrcIp, re.I):
-   if re.search('^all$',thisSrcIp, re.I): 
+   if re.search('^all$',thisSrcIp, re.I) or re.search('^0.0.0.0/0$',thisSrcIp, re.I):
      return perfectMatch_valueSearch(_element_, _typeValue_, 'all')
    else:
      valuesForQuery = copy.copy(_element_)
@@ -443,7 +442,8 @@ def obtainItemsRuleHas(_element_, partialMatchList):
 
 
 def partialAddressValidation(_sourceEveryNet_, thisSrcIp):
-   if re.search('^all$',thisSrcIp, re.I) or re.search('^0.0.0.0/0$',thisSrcIp, re.I):
+   #if re.search('^all$',thisSrcIp, re.I) or re.search('^0.0.0.0/0$',thisSrcIp, re.I):
+   if re.search('^all$',thisSrcIp, re.I): 
      return 1
    else:
      netList = removeIncluded_netAddress(_sourceEveryNet_)
