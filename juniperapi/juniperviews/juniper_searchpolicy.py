@@ -418,10 +418,10 @@ def obtainItemsRuleHas(_element_, partialMatchList):
       _copiedElement_["sequence_number"] = _ruleNameSeq_[1]
       _fromDB_values_ = exact_findout('juniperSrx_cachePolicyTable', _copiedElement_)
       for _dictValue_ in _fromDB_values_:
-         _fromDB_srcIp_ = str(_dictValue_[u'srcIp']).strip()
-         _fromDB_dstIp_ = str(_dictValue_[u'dstIp']).strip()
-         _fromDB_srcPort_ = str(_dictValue_[u'srcPort']).strip()
-         _fromDB_dstPort_ = str(_dictValue_[u'dstPort']).strip()
+         #_fromDB_srcIp_ = str(_dictValue_[u'srcIp']).strip()
+         #_fromDB_dstIp_ = str(_dictValue_[u'dstIp']).strip()
+         #_fromDB_srcPort_ = str(_dictValue_[u'srcPort']).strip()
+         #_fromDB_dstPort_ = str(_dictValue_[u'dstPort']).strip()
          for _fromDB_srcIp_ in _dictValue_[u'srcIp']:
             _stringText_ = str(_fromDB_srcIp_).strip()
             if _stringText_ not in _sourceEveryNet_:
