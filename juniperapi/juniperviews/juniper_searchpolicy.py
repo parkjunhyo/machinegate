@@ -441,24 +441,24 @@ def obtainItemsRuleHas(_element_, partialMatchList):
    return _sourceEveryNet_, _destinationEveryNet_, _sourceEveryPort_, _destinationEveryPort_
 
 #def partialAddressValidation(_sourceEveryNet_, thisSrcIp):
-def partialAddressValidation(_sourceEveryNet_, thisSrcIp, this_processor_queue):    
+def partialAddressValidation(_sourceEveryNet_, thisSrcIp, _thisSmQueue_):    
    #if re.search('^all$',thisSrcIp, re.I) or re.search('^0.0.0.0/0$',thisSrcIp, re.I):
    if re.search('^all$',thisSrcIp, re.I): 
      #return 1
-     this_processor_queue.put(1)
+     _thisSmQueue_.put(1)
    else:
      netList = removeIncluded_netAddress(_sourceEveryNet_)
      if checkSubnetStatus(netList, thisSrcIp):
-       this_processor_queue.put(0) 
+       _thisSmQueue_.put(0) 
        #return 0
      else:
-       this_processor_queue.put(1) 
+       _thisSmQueue_.put(1) 
        #return 1
    #
    time.sleep(1)
 
 #def partialPortValidation(_sourceEveryPort_, thisSrcIp):
-def partialPortValidation(_sourceEveryPort_, thisSrcIp, this_processor_queue):
+def partialPortValidation(_sourceEveryPort_, thisSrcIp, _thisSmQueue_):
    if re.search('tcp/', thisSrcIp, re.I) or re.search('udp/', thisSrcIp, re.I):
      portRangeList = str(thisSrcIp.split('/')[-1]).strip().split('-')
      startNumber = int(portRangeList[0])
@@ -475,21 +475,21 @@ def partialPortValidation(_sourceEveryPort_, thisSrcIp, this_processor_queue):
           itemValuesList = itemValuesList + _fromDBPortNumber_
      if len(list(set(itemValuesList).intersection(_thisPortNumber_))) == len(_thisPortNumber_):
        #return 1
-       this_processor_queue.put(1) 
+       _thisSmQueue_.put(1) 
      else:
        #return 0
-       this_processor_queue.put(0)
+       _thisSmQueue_.put(0)
    elif re.search('all', thisSrcIp, re.I) or re.search('0/0-65535', thisSrcIp, re.I):
      #return 1
-     this_processor_queue.put(1)
+     _thisSmQueue_.put(1)
    else:   
      _stringText_ = str(thisSrcIp).strip()
      if _stringText_ in _sourceEveryPort_:
        #return 1
-       this_processor_queue.put(1)
+       _thisSmQueue_.put(1)
      else:
        #return 0
-       this_processor_queue.put(0)
+       _thisSmQueue_.put(0)
    #
    time.sleep(1) 
  
@@ -523,17 +523,17 @@ def patialMatchProcessor(_element_, inputObject, this_processor_queue):
      count = 0
      smallProcessList = []
      for _smElement_ in runProcessFunctionList:
-        _thisQueue_ = smallProcessQueueList[count]
-        _processor_ = Process(target = _smElement_['functionName'], args = (_smElement_['argList'], _smElement_['argString'], _thisQueue_,))
-        _processor_.start()
-        smallProcessList.append(_processor_)
+        _thisSmQueue_ = smallProcessQueueList[count]
+        _smProcessor_ = Process(target = _smElement_['functionName'], args = (_smElement_['argList'], _smElement_['argString'], _thisSmQueue_,))
+        _smProcessor_.start()
+        smallProcessList.append(_smProcessor_)
         count = count + 1
-     for _processor_ in smallProcessList:
-        _processor_.join()
+     for _smProcessor_ in smallProcessList:
+        _smProcessor_.join()
      matchingBit = 1   
-     for _queue_ in smallProcessQueueList:
-        while not _queue_.empty():
-             matchingBit = matchingBit & int(_queue_.get())
+     for _smQueue_ in smallProcessQueueList:
+        while not _smQueue_.empty():
+             matchingBit = matchingBit & int(_smQueue_.get())
      #
      copiedElement['matchstatus'] = matchingBit
      #
