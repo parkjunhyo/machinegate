@@ -130,8 +130,13 @@ def obtain_showroute(_primaryip_, this_processor_queue, mongo_db_collection_name
    _count_ = 0
    for _line_ in contents:
       _lineNoSpace_ = str(_line_).strip()
-      if re.search("[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+", _lineNoSpace_):
-        if not re.search("0\.0\.0\.0", _lineNoSpace_):
+      ipAddressPattern = "([0-9]+)\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+"
+      _searchStatus_ = re.search(ipAddressPattern, _lineNoSpace_)
+      if _searchStatus_: 
+      #if re.search("[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+", _lineNoSpace_):
+        _fristNumber_ = int(_searchStatus_.group(1))
+        if not (_fristNumber_ == int(0) and re.search("0\.0\.0\.0", _lineNoSpace_)):
+        #if not re.search("^0\.0\.0\.0$", _lineNoSpace_):
           _addressIndex_.append(_count_)
       _count_ = _count_ + 1
    #
