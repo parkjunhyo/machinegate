@@ -12,6 +12,7 @@ from django.utils.six import BytesIO
 #from juniperapi.setting import USER_NAME
 #from juniperapi.setting import USER_PASSWORD
 from juniperapi.setting import ENCAP_PASSWORD
+from juniperapi.setting import system_property 
 
 import re, json
 
@@ -30,7 +31,14 @@ def confirmauth(request,format=None):
 
 
    if request.method == 'POST':
-
+     if re.search(r"system", system_property["role"], re.I):
+       return_output = {
+         "items":[],
+         "process_status":"error",
+         "process_msg":"this host does not have admin roles"
+       }
+       return Response(json.dumps(return_output))
+    
      _input_ = JSONParser().parse(request)
      if u'auth_password' not in _input_:
        return_output = {
