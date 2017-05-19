@@ -31,11 +31,11 @@ def confirmauth(request,format=None):
 
 
    if request.method == 'POST':
-     if re.search(r"system", system_property["role"], re.I):
+     if not re.search(r"^system$", system_property["role"], re.I):
        return_output = {
          "items":[],
          "process_status":"error",
-         "process_msg":"this host does not have admin roles"
+         "process_msg":"this application does not have admin role!"
        }
        return Response(json.dumps(return_output))
     
