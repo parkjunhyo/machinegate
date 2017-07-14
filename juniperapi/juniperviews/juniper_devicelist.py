@@ -125,7 +125,8 @@ def juniper_devicelist(request,format=None):
              #
              for from_zone in _validZoneName_:
                 for to_zone in _validZoneName_:
-                   if not re.search(from_zone, to_zone) and not re.search(to_zone, from_zone):
+                   #if not re.search(from_zone, to_zone) and not re.search(to_zone, from_zone): 
+                   if not (re.search(from_zone, to_zone) and re.search(to_zone, from_zone)):
                       _outCreated_ = copy.copy(copied_dict)
                       _outCreated_[u'zoneValidation'] = unicode('enable')
                       _outCreated_[u'from_zone'] = from_zone
