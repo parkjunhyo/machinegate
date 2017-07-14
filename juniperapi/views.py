@@ -13,3 +13,5 @@ from juniperapi.juniperviews.juniper_device_regi import juniper_device_regi
 from juniperapi.juniperviews.juniper_showroute_static_update import juniper_showroute_static_update
 from juniperapi.juniperviews.juniper_showrulebyrequest import juniper_showrulebyrequest
 from juniperapi.juniperviews.juniper_clustering import juniper_clustering
+from juniperapi.juniperviews.juniper_hastatusupdate import juniper_hastatusupdate
+from juniperapi.juniperviews.juniper_zonestatus import juniper_zonestatus

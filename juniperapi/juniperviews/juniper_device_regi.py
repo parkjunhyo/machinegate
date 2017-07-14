@@ -109,7 +109,7 @@ def confirm_ip_reachable(_dictvalues_, this_processor_queue, registered_ip_strin
    # end of def confirm_ip_reachable(_dictvalues_, this_processor_queue, registered_ip_string, registered_ip_unicode, mongo_db_collection_name):
      
 
-def _delete_registered_info_(dataDict_value, this_processor_queue, mongo_db_collection_name, mongo_db_clusterGroup_collection_name, mongo_db_devicesInfo_collection_name, mongo_db_routingTable_collection_name):
+def _delete_registered_info_(dataDict_value, this_processor_queue, mongo_db_collection_name, mongo_db_clusterGroup_collection_name, mongo_db_devicesInfo_collection_name, mongo_db_routingTable_collection_name, mongo_db_hastatus_collection_name, mongo_db_zonestatus_collection_name, mongo_db_cachePolicyTable, mongo_db_cacheObject):
    remove_info_in_db(dataDict_value, this_processor_queue, mongo_db_collection_name)
    # cluster DB update
    cluster_info = {u'hostname':dataDict_value[u'hostname']}
@@ -131,6 +131,26 @@ def _delete_registered_info_(dataDict_value, this_processor_queue, mongo_db_coll
    if len(remove_status):
      for _removeDict_ in remove_status:
         remove_data_in_collection(mongo_db_routingTable_collection_name, _removeDict_)
+   #
+   remove_status = exact_findout(mongo_db_hastatus_collection_name, cluster_info)
+   if len(remove_status):
+     for _removeDict_ in remove_status:
+        remove_data_in_collection(mongo_db_hastatus_collection_name, _removeDict_)
+   #
+   remove_status = exact_findout(mongo_db_zonestatus_collection_name, cluster_info)
+   if len(remove_status):
+     for _removeDict_ in remove_status:
+        remove_data_in_collection(mongo_db_zonestatus_collection_name, _removeDict_)
+   #
+   remove_status = exact_findout(mongo_db_cachePolicyTable, cluster_info)
+   if len(remove_status):
+     for _removeDict_ in remove_status:
+        remove_data_in_collection(mongo_db_cachePolicyTable, _removeDict_)
+   #
+   remove_status = exact_findout(mongo_db_cacheObject, cluster_info)
+   if len(remove_status):
+     for _removeDict_ in remove_status:
+        remove_data_in_collection(mongo_db_cacheObject, _removeDict_)
    
 
 @api_view(['GET','POST','DELETE'])
@@ -141,6 +161,10 @@ def juniper_device_regi(request,format=None):
    mongo_db_clusterGroup_collection_name = 'juniperSrx_clusterGroup'
    mongo_db_devicesInfo_collection_name = 'juniperSrx_devicesInfomation'
    mongo_db_routingTable_collection_name = 'juniperSrx_routingTable'
+   mongo_db_hastatus_collection_name = 'juniperSrx_hastatus'
+   mongo_db_zonestatus_collection_name = 'juniperSrx_zonestatus'
+   mongo_db_cachePolicyTable = 'juniperSrx_cachePolicyTable'
+   mongo_db_cacheObject = 'juniperSrx_cacheObjects'
 
    if request.method == 'GET':
      return_object = {
@@ -264,7 +288,7 @@ def juniper_device_regi(request,format=None):
             _processor_list_ = []
             for dataDict_value in _input_[u'items']:
                this_processor_queue = processing_queues_list[count]
-               _processor_ = Process(target = _delete_registered_info_, args = (dataDict_value, this_processor_queue, mongo_db_collection_name, mongo_db_clusterGroup_collection_name, mongo_db_devicesInfo_collection_name, mongo_db_routingTable_collection_name,))
+               _processor_ = Process(target = _delete_registered_info_, args = (dataDict_value, this_processor_queue, mongo_db_collection_name, mongo_db_clusterGroup_collection_name, mongo_db_devicesInfo_collection_name, mongo_db_routingTable_collection_name, mongo_db_hastatus_collection_name, mongo_db_zonestatus_collection_name, mongo_db_cachePolicyTable, mongo_db_cacheObject,))
                _processor_.start()
                _processor_list_.append(_processor_)
                # for next queue

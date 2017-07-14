@@ -45,8 +45,10 @@ def juniper_showrulebyrequest(request,format=None):
    # get method
    if request.method == 'GET':
    
-     _fromDB_values_ = exact_findout('juniperSrx_devicesInfomation', {"failover" : "primary","zoneValidation" : "enable"})
+     #_fromDB_values_ = exact_findout('juniperSrx_devicesInfomation', {"failover" : "primary","zoneValidation" : "enable"})
+     _fromDB_values_ = obtainjson_from_mongodb('juniperSrx_cachePolicyTable')
      _outValuseList_ = []
+     returnItems = []
      for _dictValue_ in _fromDB_values_:
         _msgInput_ = {
            'hostname':_dictValue_[u'hostname'],
@@ -56,9 +58,10 @@ def juniper_showrulebyrequest(request,format=None):
         _uniqueString_ = "%(hostname)s#%(from_zone)s#%(to_zone)s" % _msgInput_
         if _uniqueString_ not in _outValuseList_:
           _outValuseList_.append(_msgInput_)
+          returnItems.append(_msgInput_)
      #   
      return_object = {
-              "items":_outValuseList_,
+              "items":returnItems,
               "process_status":"done",
               "process_msg":"done"
      }
@@ -90,6 +93,7 @@ def juniper_showrulebyrequest(request,format=None):
               del _copiedvalues_[u'from_zone']
               del _copiedvalues_[u'to_zone']
             del _copiedvalues_[u'option']
+
           #_fromDB_values_ = exact_findout('juniperSrx_cachePolicyTable', _dictValue_)
           _fromDB_values_ = exact_findout('juniperSrx_cachePolicyTable', _copiedvalues_)
           for _dict_ in _fromDB_values_:

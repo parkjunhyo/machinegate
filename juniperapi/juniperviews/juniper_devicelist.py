@@ -27,6 +27,7 @@ from shared_function import insert_dictvalues_list_into_mongodb as insert_dictva
 from shared_function import exact_findout as exact_findout
 from shared_function import remove_data_in_collection as remove_data_in_collection
 from shared_function import insert_dictvalues_into_mongodb as insert_dictvalues_into_mongodb
+from shared_function import replace_dictvalues_into_mongodb as replace_dictvalues_into_mongodb
 
 
 class JSONResponse(HttpResponse):
@@ -37,115 +38,6 @@ class JSONResponse(HttpResponse):
         content = JSONRenderer().render(data)
         kwargs['content_type'] = 'application/json'
         super(JSONResponse, self).__init__(content, **kwargs)
-
-
-def obtain_deviceinfo(dataDict_value, this_processor_queue, mongo_db_collection_name):
-   #
-   #
-   dictBox = copy.copy(dataDict_value);
-   #
-   laststring_pattern = r"[ \t\n\r\f\v]+Interfaces:[ \t\n\r\f\v]+[ \t\n\r\f\va-zA-Z0-9\-\./_]+[ \t\n\r\f\v]+\{[a-zA-Z0-9]+:[a-zA-Z0-9]+\}[ \t\n\r\f\v]+"
-   securityzone_information = runssh_clicommand(dictBox[u'apiaccessip'], laststring_pattern, "show security zones detail | no-more\n")
-   
-   _fromDB_for_hahostname_ = exact_findout('juniperSrx_clusterGroup', {"hostname":str(dictBox[u'hostname']), "clusterStatus" : "clustered"})
-   
-   if not len(_fromDB_for_hahostname_):
-     return_object = {
-       "items":[],
-       "process_status":"error",
-       "process_msg":"%(_hostname_)s does not have clustering" % {"_hostname_":str(dataDict_value[u'hostname'])}
-     }
-     this_processor_queue.put(return_object)
-   else:
-     #dictBox[u"hahostname"] = _fromDB_for_hahostname_[0][u"hahostname"]
-     #
-     stringcombination = str("".join(securityzone_information))
-     pattern_search = "{(\w+):(\w+)}"
-     searched_element = re.search(pattern_search, stringcombination, re.I)
-     if searched_element:
-       dictBox[u'failover'] = searched_element.group(1).strip()
-     #
-     count = 0
-     zone_index_list = []
-     interface_index_list = []
-     for _string_ in securityzone_information:
-        if re.search("^Security zone:", _string_, re.I):
-          zone_index_list.append(count)
-        if re.search("[ \t\n\r\f\v]+Interfaces:", _string_, re.I):
-          interface_index_list.append(count)
-        count = count + 1
-     zone_index_count = len(zone_index_list)
-     if (zone_index_list[-1] < len(securityzone_information)-1):
-       zone_index_list.append(len(securityzone_information)-1)
-     #
-     _existed_zone_list_ = []
-     for _index_ in range(zone_index_count):
-        _zonename_ = (securityzone_information[zone_index_list[_index_]].strip().split()[-1])
-        if not re.search(r"junos-host", _zonename_, re.I):
-          if _zonename_ not in _existed_zone_list_:
-            _existed_zone_list_.append(_zonename_)
-     #
-     _mongoInput_values_ = []
-     for _fromzone_ in _existed_zone_list_:
-        for _tozone_ in _existed_zone_list_:
-           _fromzone_pattern_ = "^"+_fromzone_+"$"
-           _tozone_pattern_ = "^"+_tozone_+"$"
-           if (not re.match(_fromzone_pattern_, _tozone_)) or (not re.match(_tozone_pattern_, _fromzone_)):
-             _this_dictBox_ = copy.copy(dictBox)
-             _this_dictBox_[u'from_zone'] = _fromzone_
-             _this_dictBox_[u'to_zone'] = _tozone_
-             _this_dictBox_[u'zoneValidation'] = 'enable'
-             _mongoInput_values_.append(_this_dictBox_)
-     #
-     insert_dictvalues_list_into_mongodb(mongo_db_collection_name, _mongoInput_values_)
-     #
-     return_object = {
-         "items":[],
-         "process_status":"done",
-         "process_msg":"%(_hostname_)s informations are updated!" % {"_hostname_":str(dictBox[u'hostname'])}
-     }
-     this_processor_queue.put(return_object)
-
-   # thread timeout 
-   time.sleep(2)
-
-
-def _updateChangeStatus_(dataDict_value, this_processor_queue, mongo_db_collection_name):
-   #
-   _insideDict_values_  = copy.copy(dataDict_value);
-   #
-   _thisFromZone_ = _insideDict_values_[u'from_zone']
-   _thisToZone_ = _insideDict_values_[u'to_zone']
-   _changeTo_status_ = _insideDict_values_[u'zoneValidationChange']
-   _beforeStatus_ = _insideDict_values_[u'zoneValidation']
-   _thisHostname_ = _insideDict_values_[u'hostname']
-   #
-   _fromDB_for_hahostname_ = exact_findout('juniperSrx_clusterGroup', {"hostname":str(_thisHostname_), "clusterStatus" : "clustered"})
-   _thisHaHostname_ = _fromDB_for_hahostname_[0]['hahostname']
-   #
-   _hostnamesList_ = [str(_thisHostname_), str(_thisHaHostname_)]
-   for _hostName_ in _hostnamesList_:
-      _searchTarget_ = {"hostname":str(_hostName_), "from_zone":str(_thisFromZone_), "to_zone":str(_thisToZone_)}
-      _fromDB_matched_ = exact_findout(mongo_db_collection_name, _searchTarget_)
-      if len(_fromDB_matched_):
-        remove_data_in_collection(mongo_db_collection_name, _searchTarget_)
-        _thisMatched_values_ = _fromDB_matched_[0]
-        _searchTarget_[u'zoneValidation'] = _changeTo_status_
-        _searchTarget_[u'failover'] = _thisMatched_values_[u'failover']
-        _searchTarget_[u'version'] = _thisMatched_values_ [u'version']
-        _searchTarget_[u'location'] = _thisMatched_values_[u'location']
-        _searchTarget_[u'model'] = _thisMatched_values_[u'model']
-        _searchTarget_[u'apiaccessip'] = _thisMatched_values_[u'apiaccessip']
-        insert_dictvalues_into_mongodb(mongo_db_collection_name, _searchTarget_)
-   # 
-   return_object = {
-         "items":[],
-         "process_status":"done",
-         "process_msg":"%(_beforeStatus_) status change to %(_changeTo_status_)s" % {"_beforeStatus_":str(_beforeStatus_), "_changeTo_status_":str(_changeTo_status_)}
-   }
-   this_processor_queue.put(return_object)
-   #
-   time.sleep(2)
 
 
 @api_view(['GET','POST', 'PUT'])
@@ -161,17 +53,6 @@ def juniper_devicelist(request,format=None):
          "process_msg":"done"
      }
      return Response(json.dumps(return_object))
-
-     #parameter_from = request.query_params.dict()
-     #if u'devicehostname' not in parameter_from:
-     #  return_result = {"items":obtainjson_from_mongodb(mongo_db_collection_name)}
-     #  return Response(json.dumps(return_result))
-     #else:
-     #  parameter_hostname = parameter_from[u'devicehostname']
-     #  _obtained_values_ = exact_findout(mongo_db_collection_name, {"devicehostname":str(parameter_hostname)})
-     #  for _dictvalues_ in _obtained_values_:
-     #     del _dictvalues_[u'_id']
-     #  return Response(json.dumps({"items":_obtained_values_}))
 
 
    elif request.method == 'POST':
@@ -196,56 +77,84 @@ def juniper_devicelist(request,format=None):
         # 
         auth_matched = re.match(ENCAP_PASSWORD, _input_['auth_key'])
         if auth_matched:
-          # 
-          _fromDB_for_disable_ = exact_findout(mongo_db_collection_name, {"zoneValidation" : "disable"})
           #
-          data_from_databasefile = obtainjson_from_mongodb('juniperSrx_registeredDevices')
-          # queue generation
-          processing_queues_list = []
-          for dataDict_value in data_from_databasefile:
-             processing_queues_list.append(Queue(maxsize=0))
- 
-          # remove collection
+          _zonedisabled_ = exact_findout(mongo_db_collection_name, {'zoneValidation':'disable'})
+          #
           remove_collection(mongo_db_collection_name)
-
-          # run processing to get information
-          count = 0
-          _processor_list_ = []
-          for dataDict_value in data_from_databasefile:
-             this_processor_queue = processing_queues_list[count]
-             _processor_ = Process(target = obtain_deviceinfo, args = (dataDict_value, this_processor_queue, mongo_db_collection_name))
-             _processor_.start()
-             _processor_list_.append(_processor_)
-             count = count + 1
-          for _processor_ in _processor_list_:
-             _processor_.join()
-
-          # get information from the queue
-          search_result = []
-          for _queue_ in processing_queues_list:
-             while not _queue_.empty():
-                  _get_values_ = _queue_.get()
-                  search_result.append(_get_values_)
           # 
-          if not len(search_result):
-            remove_collection(mongo_db_collection_name)
-            return_object = {
-                "items":[],
-                "process_status":"error",
-                "process_msg":"all of registered devices information have been cleared"
-            }
-            return Response(json.dumps(return_object))
+          _activeStatusMemoryByIP_ = {}
+          _activeStatusMemoryByHostname_ = {}
+          for _dict_ in obtainjson_from_mongodb('juniperSrx_hastatus'):
+             if _dict_[u'apiaccessip'] not in _activeStatusMemoryByIP_.keys():
+               _activeStatusMemoryByIP_[_dict_[u'apiaccessip']] = _dict_[u'failover']
+             if _dict_[u'hostname'] not in _activeStatusMemoryByHostname_.keys():
+               _activeStatusMemoryByHostname_[_dict_[u'hostname']] = _dict_[u'failover']
+         
+          #_clusterStatusMemory_ = {} 
+          #for _dict_ in exact_findout('juniperSrx_clusterGroup', {"clusterStatus" : "clustered"}):
+          #   if _dict_[u'hostname'] not in _clusterStatusMemory_.keys():
+          #     _clusterStatusMemory_[_dict_[u'hostname']] = _dict_[u'hahostname']
+          
+          _zoneStatusMemoryByHostname_ = {}
+          for _dict_ in obtainjson_from_mongodb('juniperSrx_zonestatus'):
+             if _dict_[u'hostname'] not in _zoneStatusMemoryByHostname_.keys():
+               _zoneStatusMemoryByHostname_[_dict_[u'hostname']] = []
+             if re.match(str(_dict_[u'status']), 'on', re.I):
+               if _dict_[u'zonename'] not in _zoneStatusMemoryByHostname_[_dict_[u'hostname']]:
+                 _zoneStatusMemoryByHostname_[_dict_[u'hostname']].append(_dict_[u'zonename'])
+
           #
-          _disabled_recovery_ = []
-          for _disabledDict_ in _fromDB_for_disable_:
-             if u'_id' in _disabledDict_:
-               del _disabledDict_[u'_id']
-             copiedDisableDict = copy.copy(_disabledDict_)
-             if u'zoneValidation' in copiedDisableDict.keys():
-               del copiedDisableDict[u'zoneValidation']
-             remove_data_in_collection(mongo_db_collection_name, copiedDisableDict)
-             _disabled_recovery_.append(_disabledDict_)
-          insert_dictvalues_list_into_mongodb(mongo_db_collection_name, _disabled_recovery_)
+          _recreated_deviceinformation_ = []
+          for _dict_ in obtainjson_from_mongodb('juniperSrx_registeredDevices'):
+             copied_dict = copy.copy(_dict_)
+             copied_keyname = copied_dict.keys()
+             if u'_id' in copied_keyname:
+               del copied_dict[u'_id']
+             #
+             copied_dict[u'failover'] = _activeStatusMemoryByHostname_[copied_dict[u'hostname']]
+             #
+             _validZoneName_ = []
+             _thisHostName_ = copied_dict[u'hostname']
+             if _thisHostName_ in _zoneStatusMemoryByHostname_.keys():
+               _validZoneName_ = _zoneStatusMemoryByHostname_[_thisHostName_]
+             #else:
+             #  if _thisHostName_ in _clusterStatusMemory_.keys():
+             #    _reverseHostName_ = _clusterStatusMemory_[_thisHostName_]
+             #    if _reverseHostName_ in _zoneStatusMemoryByHostname_.keys():
+             #      _validZoneName_ = _zoneStatusMemoryByHostname_[_reverseHostName_]
+             #
+             for from_zone in _validZoneName_:
+                for to_zone in _validZoneName_:
+                   if not re.search(from_zone, to_zone) and not re.search(to_zone, from_zone):
+                      _outCreated_ = copy.copy(copied_dict)
+                      _outCreated_[u'zoneValidation'] = unicode('enable')
+                      _outCreated_[u'from_zone'] = from_zone
+                      _outCreated_[u'to_zone'] = to_zone
+                      _recreated_deviceinformation_.append(_outCreated_) 
+                
+
+          insert_dictvalues_list_into_mongodb(mongo_db_collection_name, _recreated_deviceinformation_)
+
+          # recover disable
+          for _dict_ in _zonedisabled_:
+             _copied_ = copy.copy(_dict_)
+             if u'_id' in _copied_:
+               del _copied_[u'_id']
+             if u'zoneValidation' in _copied_:
+               del _copied_[u'zoneValidation']
+             for _origin_ in  exact_findout(mongo_db_collection_name, _copied_):
+                _copiedOrigin_ = copy.copy(_origin_)
+                if u'_id' in _copiedOrigin_:
+                  del _copiedOrigin_[u'_id']
+                _changedOrign_ = copy.copy(_copiedOrigin_)
+                _changedOrign_[u'zoneValidation'] = unicode('disable')
+                replace_dictvalues_into_mongodb(mongo_db_collection_name, _copiedOrigin_, _changedOrign_)
+          #
+          search_result = {
+              "items":[],
+              "process_status":"done",
+              "process_msg":"done"
+          }
           #
           return Response(json.dumps(search_result))
           #return Response(json.dumps({"items":search_result}))
@@ -283,32 +192,46 @@ def juniper_devicelist(request,format=None):
         auth_matched = re.match(ENCAP_PASSWORD, _input_['auth_key'])
         if auth_matched:
           #
+          #_clusterStatusMemory_ = {}
+          #for _dict_ in exact_findout('juniperSrx_clusterGroup', {"clusterStatus" : "clustered"}):
+          #   if _dict_[u'hostname'] not in _clusterStatusMemory_.keys():
+          #     _clusterStatusMemory_[_dict_[u'hostname']] = _dict_[u'hahostname']
+          #
           _thisGet_value_ = copy.copy(_input_[u'items'])
 
-          # queue generation
-          processing_queues_list = []
-          for dataDict_value in _thisGet_value_:
-             processing_queues_list.append(Queue(maxsize=0))
-          #
-          count = 0
-          _processor_list_ = []
-          for dataDict_value in _thisGet_value_:
-             this_processor_queue = processing_queues_list[count]
-             _processor_ = Process(target = _updateChangeStatus_, args = (dataDict_value, this_processor_queue, mongo_db_collection_name,))
-             _processor_.start()
-             _processor_list_.append(_processor_)
-             count = count + 1
-          for _processor_ in _processor_list_:
-             _processor_.join()
-          
-          # get information from the queue
-          search_result = []
-          for _queue_ in processing_queues_list:
-             while not _queue_.empty():
-                  _get_values_ = _queue_.get()
-                  search_result.append(_get_values_)
-
-          #return Response(json.dumps({"items":search_result}))
+          for _dict_ in _thisGet_value_:
+             for _matcheddict_ in exact_findout(mongo_db_collection_name, _dict_):
+                copied_matched = copy.copy(_matcheddict_)
+                #
+                if u'_id' in copied_matched:
+                  del copied_matched[u'_id']
+                change_dict = copy.copy(copied_matched)
+                if re.match(str(change_dict[u'zoneValidation']), 'enable', re.I):
+                  change_dict[u'zoneValidation'] = unicode('disable')
+                else:
+                  change_dict[u'zoneValidation'] = unicode('enable')
+                #
+                replace_dictvalues_into_mongodb(mongo_db_collection_name, copied_matched, change_dict)
+                #
+                #if copied_matched[u'hostname'] in _clusterStatusMemory_.keys():
+                #  _clusterdeviceName_ = _clusterStatusMemory_[copied_matched[u'hostname']]
+                #  for _reversematched_ in exact_findout(mongo_db_collection_name, {"hostname":_clusterdeviceName_, "from_zone":copied_matched[u'from_zone'], "to_zone":copied_matched[u'to_zone']}):
+                #     reverseCopied = copy.copy(_reversematched_);
+                #     if u'_id' in reverseCopied:
+                #       del reverseCopied[u'_id']
+                #     reverseChange = copy.copy(reverseCopied)
+                #     if re.match(str(reverseChange[u'zoneValidation']), 'enable', re.I):
+                #       reverseChange[u'zoneValidation'] = unicode('disable')
+                #     else:
+                #       reverseChange[u'zoneValidation'] = unicode('enable')
+                #     #
+                #     replace_dictvalues_into_mongodb(mongo_db_collection_name, reverseCopied, reverseChange)
+                #  #
+          search_result = {
+              "items":[],
+              "process_status":"done",
+              "process_msg":"done"
+          }
           return Response(json.dumps(search_result))
 
         # end of if auth_matched:

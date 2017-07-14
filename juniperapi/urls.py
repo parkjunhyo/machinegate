@@ -6,6 +6,8 @@ urlpatterns = [
     url(r'^juniper/confirmauth/$', views.confirmauth),
     url(r'^juniper/devicelist/$', views.juniper_devicelist),
     url(r'^juniper/devicelist/register/$', views.juniper_device_regi),
+    url(r'^juniper/devicelist/hastatus/$', views.juniper_hastatusupdate),
+    url(r'^juniper/devicelist/zonestatus/$', views.juniper_zonestatus),
     url(r'^juniper/devicelist/clustering/$', views.juniper_clustering),
     url(r'^juniper/showroute/$', views.juniper_showroute),
     url(r'^juniper/showroute/staticupdate/$', views.juniper_showroute_static_update),

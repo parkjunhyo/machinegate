@@ -81,7 +81,6 @@ def updateClustering_mongo(dataDict_value, this_processor_queue, mongo_db_cluste
 def _delete_registered_info_(dataDict_value, this_processor_queue, mongo_db_clusterGroup_collection_name):
    #
    hostnameValues = dataDict_value.values()
-   print hostnameValues
    for _hostname_ in hostnameValues:
       for _hahostname_ in hostnameValues:
          if (not re.match(str(_hostname_),str(_hahostname_))) and (not re.match(str(_hahostname_),str(_hostname_))):
@@ -146,11 +145,16 @@ def juniper_clustering(request,format=None):
             for _processor_ in _processor_list_:
                _processor_.join()
             # get information from the queue
-            search_result = []
-            for _queue_ in processing_queues_list:
-               while not _queue_.empty():
-                    search_result.append(_queue_.get())
+            #search_result = []
+            #for _queue_ in processing_queues_list:
+            #   while not _queue_.empty():
+            #        search_result.append(_queue_.get())
             #
+            search_result = {
+                "items":[],
+                "process_status":"done",
+                "process_msg":"done"
+            }
             return Response(json.dumps(search_result))
 
           # end of if ('items' in _input_.keys()) and (u'items' in _input_.keys()):
@@ -218,11 +222,16 @@ def juniper_clustering(request,format=None):
             for _processor_ in _processor_list_:
                _processor_.join()
             # get information from the queue
-            search_result = []
-            for _queue_ in processing_queues_list:
-               while not _queue_.empty():
-                    search_result.append(_queue_.get())
+            #search_result = []
+            #for _queue_ in processing_queues_list:
+            #   while not _queue_.empty():
+            #        search_result.append(_queue_.get())
             # return
+            search_result = {
+                "items":[],
+                "process_status":"done",
+                "process_msg":"done"
+            }
             return Response(json.dumps(search_result))
           # end of if ('items' in _input_.keys()) and (u'items' in _input_.keys()):
           else:
